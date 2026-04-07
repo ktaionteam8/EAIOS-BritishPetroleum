@@ -1,0 +1,22 @@
+{
+  "model": "claude-sonnet-4-6",
+  "memory": "project",
+  "agents": {
+    "defaultModel": "claude-sonnet-4-6"
+  },
+  "hooks": {
+    "preCommit": ".claude/hooks/pre-commit.sh",
+    "onSave": ".claude/hooks/lint-on-save.sh"
+  },
+  "rules": [
+    ".claude/rules/frontend.md",
+    ".claude/rules/database.md",
+    ".claude/rules/api.md"
+  ],
+  "context": {
+    "includeFiles": [
+      "CLAUDE.md",
+      ".claude/rules/*.md"
+    ]
+  }
+}
