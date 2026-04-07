@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.env
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+build/
+.env.local
+
+# Airflow
+logs/
+airflow.db
+
+# DB
+*.sqlite3
+
+# OS
+.DS_Store
