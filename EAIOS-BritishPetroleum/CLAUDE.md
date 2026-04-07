@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+
 ## Project
 
 AI Operations System for British Petroleum (EAIOS). Three-layer architecture:
@@ -9,6 +11,8 @@ AI Operations System for British Petroleum (EAIOS). Three-layer architecture:
 - **frontend/** — React 18 + TypeScript dashboard
 - **backend/** — FastAPI (Python) REST API with async SQLAlchemy + Redis cache
 - **data-pipelines/** — Apache Airflow DAGs for data ingestion and processing
+
+---
 
 ## Stack
 
@@ -21,7 +25,21 @@ AI Operations System for British Petroleum (EAIOS). Three-layer architecture:
 | Pipelines | Apache Airflow 2.9 |
 | Dev infra | Docker Compose |
 
-## Commands
+---
+
+## Services & Ports
+
+| Service | Port | Tech |
+|---|---|---|
+| Frontend | 3000 | React 18 + TypeScript |
+| Backend API | 8000 | FastAPI + PostgreSQL + Redis |
+| Airflow | 8080 | Apache Airflow 2.9 |
+| PostgreSQL | 5432 | Postgres 16 |
+| Redis | 6379 | Redis 7 |
+
+---
+
+## Dev Commands
 
 ### Run everything
 ```bash
@@ -58,6 +76,8 @@ airflow webserver &
 airflow scheduler
 ```
 
+---
+
 ## Architecture Notes
 
 - Backend entry point: `backend/src/main.py` — FastAPI app with CORS configured for `localhost:3000`
@@ -65,6 +85,123 @@ airflow scheduler
 - Redis client: `backend/src/middleware/cache.py` — singleton via `get_redis()` dependency
 - Airflow DAGs live in `data-pipelines/ingestion/` and are mounted into the Airflow container
 - All services connect to the same PostgreSQL instance; Airflow uses its own `airflow` database
+- The codebase is a scaffold — business logic, data models, UI components, and pipeline tasks are ready to be built
+
+---
+
+## Full Project Structure
+
+```
+EAIOS-BritishPetroleum/
+├── CLAUDE.md
+├── README.md
+├── .gitignore
+├── docker-compose.yml
+│
+├── .claude/
+│   ├── settings.json                  ← model: sonnet, memory: project
+│   ├── agents/
+│   │   ├── code-reviewer.md           ← Bugs, security & performance reviews
+│   │   ├── debugger.md                ← Root cause analysis & fixes
+│   │   ├── test-writer.md             ← Unit + integration tests
+│   │   ├── refactorer.md              ← Structure improvements, no behaviour change
+│   │   ├── doc-writer.md              ← Technical documentation
+│   │   └── security-auditor.md        ← Security vulnerability audits
+│   ├── commands/
+│   │   ├── fix-issue.md               ← /fix-issue <number>
+│   │   ├── deploy.md                  ← /deploy [staging|production]
+│   │   └── pr-review.md               ← /pr-review <number>
+│   ├── hooks/
+│   │   ├── pre-commit.sh              ← tsc + eslint + ruff + secret scan (executable)
+│   │   └── lint-on-save.sh            ← Lint current file by extension (executable)
+│   ├── rules/
+│   │   ├── frontend.md                ← React, TypeScript, component & styling rules
+│   │   ├── database.md                ← Models, queries, migrations, indexes
+│   │   └── api.md                     ← REST design, errors, pagination, caching
+│   └── skills/                        ← Empty, reserved for future skills
+│
+├── tasks/
+│   ├── todo.md                        ← Active task tracker (plan-first workflow)
+│   └── lessons.md                     ← Lessons learned log (updated after corrections)
+│
+├── backend/
+│   ├── .env.example                   ← DATABASE_URL, REDIS_URL, SECRET_KEY
+│   ├── requirements.txt
+│   └── src/
+│       ├── main.py                    ← FastAPI app + CORS
+│       ├── middleware/
+│       │   └── cache.py               ← Redis singleton
+│       └── models/
+│           ├── __init__.py
+│           └── database.py            ← Async engine + Base + get_db()
+│
+├── frontend/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── public/index.html
+│   └── src/
+│       ├── index.tsx                  ← React entry point
+│       └── App.tsx                    ← Router + root component
+│
+└── data-pipelines/
+    ├── requirements.txt
+    ├── config/airflow.cfg
+    └── ingestion/
+        └── example_dag.py             ← DAG: bp_data_ingestion (@daily)
+```
+
+---
+
+## Git Workflow
+
+- **Development branch**: `claude/eaios-bp-setup-371sm`
+- Always develop and push to this branch: `git push -u origin claude/eaios-bp-setup-371sm`
+- Never push to `main` without explicit permission
+- Do NOT create a pull request unless the user explicitly asks
+- Commit messages follow: `<type>: <description>` (fix/feat/chore/docs/refactor)
+- Stage specific files by name — never `git add -A` blindly
+
+---
+
+## .claude/ Configuration
+
+### settings.json
+- Default model: `claude-sonnet-4-6`
+- Memory: `project`
+- Hooks wired to `pre-commit.sh` and `lint-on-save.sh`
+- Rules auto-loaded from `.claude/rules/`
+
+### Agents (all use `model: sonnet`, `memory: project`)
+| Agent | Purpose |
+|---|---|
+| `code-reviewer` | Review PRs for bugs, security, performance |
+| `debugger` | Systematic root cause analysis and fixes |
+| `test-writer` | Unit + integration tests (pytest, RTL, Airflow) |
+| `refactorer` | Improve structure without changing behaviour |
+| `doc-writer` | Docstrings, READMEs, OpenAPI docs |
+| `security-auditor` | Secrets, auth, injection, dependency CVEs |
+
+### Slash Commands
+| Command | Purpose |
+|---|---|
+| `/fix-issue <n>` | Reproduce → fix → test → commit a GitHub issue end-to-end |
+| `/deploy [env]` | Pre-deploy checklist + deploy to staging or production |
+| `/pr-review <n>` | Full structured PR review using code-reviewer agent |
+
+### Hooks
+| Hook | Trigger | What it does |
+|---|---|---|
+| `pre-commit.sh` | Before every commit | `tsc --noEmit`, ESLint, ruff/flake8, secret scan |
+| `lint-on-save.sh` | On file save | Lints `.ts/.tsx` (ESLint), `.py` (ruff/flake8), `.sh` (shellcheck) |
+
+To activate pre-commit hook: `cp .claude/hooks/pre-commit.sh .git/hooks/pre-commit`
+
+### Domain Rules
+| File | Covers |
+|---|---|
+| `rules/frontend.md` | Component structure, TypeScript strict mode, hooks, state, routing, styling |
+| `rules/database.md` | SQLAlchemy 2.0 models, naming conventions, queries, N+1 avoidance, Alembic |
+| `rules/api.md` | URL design, Pydantic schemas, HTTP status codes, error format, pagination, caching |
 
 ---
 
