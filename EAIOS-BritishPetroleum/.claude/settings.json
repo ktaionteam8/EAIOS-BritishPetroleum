@@ -2,7 +2,8 @@
   "model": "claude-sonnet-4-6",
   "memory": "project",
   "agents": {
-    "defaultModel": "claude-sonnet-4-6"
+    "defaultModel": "claude-sonnet-4-6",
+    "planningModel": "claude-opus-4-6"
   },
   "hooks": {
     "preCommit": ".claude/hooks/pre-commit.sh",

@@ -8,7 +8,7 @@ tools:
   - Bash
   - Edit
   - Write
-model: sonnet
+model: opus
 memory: project
 ---
 

@@ -6,7 +6,7 @@ tools:
   - Grep
   - Glob
   - Bash
-model: sonnet
+model: opus
 memory: project
 ---
 

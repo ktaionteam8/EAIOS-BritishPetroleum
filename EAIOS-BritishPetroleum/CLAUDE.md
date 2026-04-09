@@ -205,6 +205,22 @@ To activate pre-commit hook: `cp .claude/hooks/pre-commit.sh .git/hooks/pre-comm
 
 ---
 
+## Model Strategy
+
+| Mode | Model | Purpose |
+|---|---|---|
+| **Planning** | `claude-opus-4-6` | Plan mode, architecture, PR reviews, security audits, complex debugging |
+| **Execution** | `claude-sonnet-4-6` | All regular prompts, writing code, editing files, running commands |
+
+### Rules
+- **Default for every prompt**: Sonnet (`claude-sonnet-4-6`)
+- **Switch to Opus** when entering plan mode or invoking a planning-heavy agent
+- Agents on Opus: `code-reviewer`, `security-auditor`, `debugger`
+- Agents on Sonnet: `test-writer`, `refactorer`, `doc-writer`
+- Use `/model status` to check, `/model plan` or `/model execute` to set context
+
+---
+
 ## Workflow Orchestration
 
 ### 1. Plan Mode Default
