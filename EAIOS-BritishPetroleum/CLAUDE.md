@@ -205,6 +205,38 @@ To activate pre-commit hook: `cp .claude/hooks/pre-commit.sh .git/hooks/pre-comm
 
 ---
 
+## Superpowers Skills (obra/superpowers)
+
+Installed skills that enforce disciplined engineering practices. Use them as slash commands.
+
+| Skill | Command | When to use |
+|---|---|---|
+| Brainstorming | `/brainstorming` | Before designing any new feature — HARD GATE before code |
+| Writing Plans | `/writing-plans` | After design approved — break into 2–5 min tasks with TDD |
+| Executing Plans | `/executing-plans` | Run a written plan task by task with checkpoints |
+| TDD | `/tdd` | Enforce RED→GREEN→REFACTOR — delete code written without a test |
+| Systematic Debugging | `/systematic-debugging` | 4-phase root cause analysis before any fix |
+| Requesting Code Review | `/requesting-code-review` | After every task batch, before merging |
+| Verification Before Completion | `/verification-before-completion` | Prove it works with fresh evidence before saying done |
+| Dispatching Parallel Agents | `/dispatching-parallel-agents` | 3+ independent problems — solve concurrently |
+| Model | `/model` | Switch context: Opus for planning, Sonnet for execution |
+
+### Superpowers Workflow (the full cycle)
+```
+1. /brainstorming      → Clarify requirements, design approved
+2. /writing-plans      → Break into tasks, saved to docs/superpowers/plans/
+3. /executing-plans    → Execute task by task with commits
+4. /tdd                → Tests first on every task, no exceptions
+5. /requesting-code-review → Review after every batch of tasks
+6. /verification-before-completion → Fresh proof before saying done
+```
+
+### Output Folders
+- Design specs: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- Implementation plans: `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
+
+---
+
 ## Model Strategy
 
 | Mode | Model | Purpose |
