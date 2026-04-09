@@ -116,6 +116,16 @@ else
     "defuddle.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/defuddle/SKILL.md"
   )
 
+  # Rule source map: "local-filename.md|raw-github-url"
+  # These are fetched into .claude/rules/ and kept updated weekly.
+  RULES_DIR="$PROJECT_DIR/.claude/rules"
+  mkdir -p "$RULES_DIR"
+
+  declare -a RULE_SOURCES=(
+    # ── upstash/context7 ─────────────────────────────────────────────────────
+    "context7.md|https://raw.githubusercontent.com/upstash/context7/master/rules/context7-cli.md"
+  )
+
   # Agent source map: "local-filename.md|raw-github-url"
   # These are fetched into .claude/agents/ (upstream agents only)
   # NOTE: Local project agents (code-reviewer, debugger, etc.) are NOT overwritten.
@@ -159,10 +169,36 @@ else
 
   UPDATED=()
   ADDED=()
+  UPDATED_RULES=()
+  ADDED_RULES=()
   UPDATED_AGENTS=()
   ADDED_AGENTS=()
   UPDATED_CMDS=()
   ADDED_CMDS=()
+
+  # ── Fetch rules ───────────────────────────────────────────────────────────
+  for entry in "${RULE_SOURCES[@]}"; do
+    LOCAL_FILE="${entry%%|*}"
+    REMOTE_URL="${entry##*|}"
+    LOCAL_PATH="$RULES_DIR/$LOCAL_FILE"
+
+    HTTP_STATUS=$(curl -s -o /tmp/ss_skill_tmp.md -w "%{http_code}" --max-time 10 "$REMOTE_URL" 2>/dev/null || echo "000")
+
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+      log "  SKIP rules/$LOCAL_FILE (HTTP $HTTP_STATUS)"
+      continue
+    fi
+
+    if [[ ! -f "$LOCAL_PATH" ]]; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      ADDED_RULES+=("$LOCAL_FILE")
+      log "  ADDED rules/$LOCAL_FILE"
+    elif ! diff -q "$LOCAL_PATH" /tmp/ss_skill_tmp.md &>/dev/null; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      UPDATED_RULES+=("$LOCAL_FILE")
+      log "  UPDATED rules/$LOCAL_FILE"
+    fi
+  done
 
   # ── Fetch skills ──────────────────────────────────────────────────────────
   for entry in "${SKILL_SOURCES[@]}"; do
@@ -239,24 +275,29 @@ else
   rm -f /tmp/ss_skill_tmp.md
 
   # Commit if anything changed
-  TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_AGENTS[@]} + ${#ADDED_AGENTS[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
+  TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_RULES[@]} + ${#ADDED_RULES[@]} + ${#UPDATED_AGENTS[@]} + ${#ADDED_AGENTS[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
   if [[ "$TOTAL_CHANGES" -gt 0 ]]; then
     SKILL_PATHS=""
+    RULE_PATHS=""
     AGENT_PATHS=""
     CMD_PATHS=""
     [[ "${#UPDATED[@]}" -gt 0 || "${#ADDED[@]}" -gt 0 ]] && \
       SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${UPDATED[@]:-}" "${ADDED[@]:-}")
+    [[ "${#UPDATED_RULES[@]}" -gt 0 || "${#ADDED_RULES[@]}" -gt 0 ]] && \
+      RULE_PATHS=$(printf "$RULES_DIR/%s " "${UPDATED_RULES[@]:-}" "${ADDED_RULES[@]:-}")
     [[ "${#UPDATED_AGENTS[@]}" -gt 0 || "${#ADDED_AGENTS[@]}" -gt 0 ]] && \
       AGENT_PATHS=$(printf "$AGENTS_DIR/%s " "${UPDATED_AGENTS[@]:-}" "${ADDED_AGENTS[@]:-}")
     [[ "${#UPDATED_CMDS[@]}" -gt 0 || "${#ADDED_CMDS[@]}" -gt 0 ]] && \
       CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
 
     # shellcheck disable=SC2086
-    git add $SKILL_PATHS $AGENT_PATHS $CMD_PATHS 2>> "$LOG_FILE"
-    git commit -m "chore: auto-update skills, agents, and commands from upstream repos
+    git add $SKILL_PATHS $RULE_PATHS $AGENT_PATHS $CMD_PATHS 2>> "$LOG_FILE"
+    git commit -m "chore: auto-update skills, rules, agents, and commands from upstream repos
 
 $(printf 'Skills updated: %s\n' "${UPDATED[@]:-}")
 $(printf 'Skills added: %s\n' "${ADDED[@]:-}")
+$(printf 'Rules updated: %s\n' "${UPDATED_RULES[@]:-}")
+$(printf 'Rules added: %s\n' "${ADDED_RULES[@]:-}")
 $(printf 'Agents updated: %s\n' "${UPDATED_AGENTS[@]:-}")
 $(printf 'Agents added: %s\n' "${ADDED_AGENTS[@]:-}")
 $(printf 'Commands updated: %s\n' "${UPDATED_CMDS[@]:-}")
@@ -264,13 +305,14 @@ $(printf 'Commands added: %s\n' "${ADDED_CMDS[@]:-}")
 
 Sources: obra/superpowers, nextlevelbuilder/ui-ux-pro-max-skill,
   thedotmack/claude-mem, czlonkowski/n8n-skills,
-  kepano/obsidian-skills, gsd-build/get-shit-done" 2>> "$LOG_FILE" \
-      && log "Committed skill/agent/command updates" \
+  kepano/obsidian-skills, gsd-build/get-shit-done,
+  upstash/context7" 2>> "$LOG_FILE" \
+      && log "Committed skill/rule/agent/command updates" \
       || log "Commit skipped (nothing to commit)"
 
-    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill/agent/command updates" || log "Push failed (will retry next session)"
+    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill/rule/agent/command updates" || log "Push failed (will retry next session)"
   else
-    log "Skills, agents, and commands: all up to date"
+    log "Skills, rules, agents, and commands: all up to date"
   fi
 
   # Save timestamp regardless of whether updates were found
