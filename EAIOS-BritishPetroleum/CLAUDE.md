@@ -275,6 +275,7 @@ Full workflow defined in `.claude/commands/fetch-github-repo.md`. The command:
 | `gsd-build/get-shit-done` | https://github.com/gsd-build/get-shit-done | 2026-04-09 | 2026-04-09 | 4 agents, 13 commands |
 | `hesreallyhim/awesome-claude-code` | https://github.com/hesreallyhim/awesome-claude-code | 2026-04-09 | — | Curated index only — no extractable files |
 | `upstash/context7` | https://github.com/upstash/context7 | 2026-04-09 | 2026-04-09 | 1 rule (`context7.md`), 1 skill (`context7-docs.md`) |
+| `affaan-m/everything-claude-code` | https://github.com/affaan-m/everything-claude-code | 2026-04-09 | 2026-04-09 | 13 agents (`ecc-*`), 12 skills (`ecc-*`), 10 rules (`ecc-common/`, `ecc-python/`, `ecc-typescript/`) |
 
 ### Weekly Auto-Update Schedule
 All repos above are registered in `.claude/hooks/session-start.sh` → `SKILL_SOURCES`, `AGENT_SOURCES`, `COMMAND_SOURCES`. The hook runs on every session start and re-fetches everything if 7+ days have passed since the last update. No cron job or manual action required.

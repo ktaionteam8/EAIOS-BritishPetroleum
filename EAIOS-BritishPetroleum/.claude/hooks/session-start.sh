@@ -114,6 +114,20 @@ else
     "json-canvas.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/json-canvas/SKILL.md"
     "obsidian-cli.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-cli/SKILL.md"
     "defuddle.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/defuddle/SKILL.md"
+
+    # ── affaan-m/everything-claude-code (ECC) ────────────────────────────────
+    "ecc-python-patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/python-patterns/SKILL.md"
+    "ecc-search-first.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/search-first/SKILL.md"
+    "ecc-docker-patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/docker-patterns/SKILL.md"
+    "ecc-continuous-learning.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/continuous-learning-v2/SKILL.md"
+    "ecc-cost-aware-llm.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/cost-aware-llm-pipeline/SKILL.md"
+    "ecc-security-scan.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/security-scan/SKILL.md"
+    "ecc-mcp-server-patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/mcp-server-patterns/SKILL.md"
+    "ecc-documentation-lookup.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/documentation-lookup/SKILL.md"
+    "ecc-skill-stocktake.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/skill-stocktake/SKILL.md"
+    "ecc-frontend-slides.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/frontend-slides/SKILL.md"
+    "ecc-pytorch-patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/pytorch-patterns/SKILL.md"
+    "ecc-nestjs-patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/skills/nestjs-patterns/SKILL.md"
   )
 
   # Rule source map: "local-filename.md|raw-github-url"
@@ -121,9 +135,27 @@ else
   RULES_DIR="$PROJECT_DIR/.claude/rules"
   mkdir -p "$RULES_DIR"
 
+  # Rules are stored in subdirectories to preserve relative references
+  # ECC rules: .claude/rules/ecc-common/, .claude/rules/ecc-python/, .claude/rules/ecc-typescript/
+  mkdir -p "$RULES_DIR/ecc-common" "$RULES_DIR/ecc-python" "$RULES_DIR/ecc-typescript"
+
   declare -a RULE_SOURCES=(
     # ── upstash/context7 ─────────────────────────────────────────────────────
     "context7.md|https://raw.githubusercontent.com/upstash/context7/master/rules/context7-cli.md"
+
+    # ── affaan-m/everything-claude-code — common rules ────────────────────
+    "ecc-common/coding-style.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/coding-style.md"
+    "ecc-common/git-workflow.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/git-workflow.md"
+    "ecc-common/testing.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/testing.md"
+    "ecc-common/performance.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/performance.md"
+    "ecc-common/patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/patterns.md"
+    "ecc-common/hooks.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/hooks.md"
+    "ecc-common/agents.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/agents.md"
+    "ecc-common/security.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/common/security.md"
+
+    # ── affaan-m/everything-claude-code — python + typescript rules ────────
+    "ecc-python/patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/python/patterns.md"
+    "ecc-typescript/patterns.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/rules/typescript/patterns.md"
   )
 
   # Agent source map: "local-filename.md|raw-github-url"
@@ -143,6 +175,21 @@ else
     "gsd-verifier.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-verifier.md"
     "gsd-executor.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-executor.md"
     "gsd-planner.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-planner.md"
+
+    # ── affaan-m/everything-claude-code (ECC) ────────────────────────────────
+    "ecc-planner.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/planner.md"
+    "ecc-architect.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/architect.md"
+    "ecc-tdd-guide.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/tdd-guide.md"
+    "ecc-security-reviewer.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/security-reviewer.md"
+    "ecc-build-error-resolver.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/build-error-resolver.md"
+    "ecc-database-reviewer.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/database-reviewer.md"
+    "ecc-python-reviewer.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/python-reviewer.md"
+    "ecc-typescript-reviewer.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/typescript-reviewer.md"
+    "ecc-docs-lookup.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/docs-lookup.md"
+    "ecc-loop-operator.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/loop-operator.md"
+    "ecc-harness-optimizer.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/harness-optimizer.md"
+    "ecc-refactor-cleaner.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/refactor-cleaner.md"
+    "ecc-doc-updater.md|https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/agents/doc-updater.md"
   )
 
   # Command source map: "local-filename.md|raw-github-url"
