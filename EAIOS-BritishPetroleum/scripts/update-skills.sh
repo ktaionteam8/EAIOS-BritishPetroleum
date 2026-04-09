@@ -94,6 +94,29 @@ declare -a SKILL_SOURCES=(
   # "skill-name.md|https://raw.githubusercontent.com/owner/repo/main/path/to/SKILL.md"
 )
 
+# ── Agent source map ──────────────────────────────────────────────────────────
+# Upstream agents fetched into .claude/agents/
+# NOTE: obra/superpowers code-reviewer → sp-code-reviewer.md (avoids overwriting
+#   the project's local code-reviewer.md). GSD agents use gsd- prefix (no conflict).
+# Format: "local-filename.md|remote-raw-url"
+
+AGENTS_DIR=".claude/agents"
+mkdir -p "$AGENTS_DIR"
+
+declare -a AGENT_SOURCES=(
+  # ── obra/superpowers ──────────────────────────────────────────────────────────
+  "sp-code-reviewer.md|https://raw.githubusercontent.com/obra/superpowers/main/agents/code-reviewer.md"
+
+  # ── gsd-build/get-shit-done ──────────────────────────────────────────────────
+  "gsd-plan-checker.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-plan-checker.md"
+  "gsd-verifier.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-verifier.md"
+  "gsd-executor.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-executor.md"
+  "gsd-planner.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-planner.md"
+
+  # ── Add new agent sources here ────────────────────────────────────────────────
+  # "agent-name.md|https://raw.githubusercontent.com/owner/repo/main/agents/agent-name.md"
+)
+
 # ── GSD Command source map ─────────────────────────────────────────────────────
 # gsd-build/get-shit-done — stored in .claude/commands/gsd/ (not skills/)
 # Format: "local-filename.md|remote-raw-url"
@@ -142,6 +165,10 @@ UPDATED=()
 ADDED=()
 FAILED=()
 UNCHANGED=0
+UPDATED_AGENTS=()
+ADDED_AGENTS=()
+FAILED_AGENTS=()
+UNCHANGED_AGENTS=0
 UPDATED_CMDS=()
 ADDED_CMDS=()
 FAILED_CMDS=()
@@ -188,6 +215,44 @@ for entry in "${SKILL_SOURCES[@]}"; do
   fi
 done
 
+# ── Fetch and compare: agents ─────────────────────────────────────────────────
+
+echo -e "${BOLD}Checking upstream agents for updates...${NC}"
+
+for entry in "${AGENT_SOURCES[@]}"; do
+  LOCAL_FILE="${entry%%|*}"
+  REMOTE_URL="${entry##*|}"
+  LOCAL_PATH="$AGENTS_DIR/$LOCAL_FILE"
+
+  HTTP_STATUS=$(curl -s -o /tmp/skill_update_tmp.md -w "%{http_code}" "$REMOTE_URL")
+
+  if [[ "$HTTP_STATUS" != "200" ]]; then
+    warn "Could not fetch agents/$LOCAL_FILE (HTTP $HTTP_STATUS) — skipping"
+    FAILED_AGENTS+=("$LOCAL_FILE")
+    continue
+  fi
+
+  REMOTE_CONTENT=$(cat /tmp/skill_update_tmp.md)
+
+  if [[ ! -f "$LOCAL_PATH" ]]; then
+    added "agents/$LOCAL_FILE — NEW agent from upstream"
+    if [[ "$DRY_RUN" == "false" ]]; then
+      echo "$REMOTE_CONTENT" > "$LOCAL_PATH"
+    fi
+    ADDED_AGENTS+=("$LOCAL_FILE")
+
+  elif diff -q "$LOCAL_PATH" /tmp/skill_update_tmp.md &>/dev/null; then
+    (( UNCHANGED_AGENTS++ )) || true
+
+  else
+    changed "agents/$LOCAL_FILE — updated upstream"
+    if [[ "$DRY_RUN" == "false" ]]; then
+      cp /tmp/skill_update_tmp.md "$LOCAL_PATH"
+    fi
+    UPDATED_AGENTS+=("$LOCAL_FILE")
+  fi
+done
+
 # ── Fetch and compare: GSD commands ───────────────────────────────────────────
 
 echo -e "${BOLD}Checking upstream GSD commands for updates...${NC}"
@@ -230,7 +295,7 @@ rm -f /tmp/skill_update_tmp.md
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
-TOTAL_FAILED=$(( ${#FAILED[@]} + ${#FAILED_CMDS[@]} ))
+TOTAL_FAILED=$(( ${#FAILED[@]} + ${#FAILED_AGENTS[@]} + ${#FAILED_CMDS[@]} ))
 
 echo ""
 echo -e "${BOLD}── Skills Summary ───────────────────────────${NC}"
@@ -238,6 +303,12 @@ echo "  Unchanged : $UNCHANGED"
 echo "  Updated   : ${#UPDATED[@]}"
 echo "  Added     : ${#ADDED[@]}"
 echo "  Failed    : ${#FAILED[@]}"
+echo ""
+echo -e "${BOLD}── Agents Summary ───────────────────────────${NC}"
+echo "  Unchanged : $UNCHANGED_AGENTS"
+echo "  Updated   : ${#UPDATED_AGENTS[@]}"
+echo "  Added     : ${#ADDED_AGENTS[@]}"
+echo "  Failed    : ${#FAILED_AGENTS[@]}"
 echo ""
 echo -e "${BOLD}── Commands (GSD) Summary ───────────────────${NC}"
 echo "  Unchanged : $UNCHANGED_CMDS"
@@ -248,9 +319,10 @@ echo ""
 
 if [[ "$TOTAL_FAILED" -gt 0 ]]; then
   [[ "${#FAILED[@]}" -gt 0 ]] && warn "Failed skills: ${FAILED[*]}"
+  [[ "${#FAILED_AGENTS[@]}" -gt 0 ]] && warn "Failed agents: ${FAILED_AGENTS[*]}"
   [[ "${#FAILED_CMDS[@]}" -gt 0 ]] && warn "Failed commands: ${FAILED_CMDS[*]}"
   echo "  Check your internet connection or whether the upstream URLs have changed."
-  echo "  Update SKILL_SOURCES / COMMAND_SOURCES in scripts/update-skills.sh if a URL moved."
+  echo "  Update SKILL_SOURCES / AGENT_SOURCES / COMMAND_SOURCES in scripts/update-skills.sh if a URL moved."
   echo ""
 fi
 
@@ -259,10 +331,10 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
+TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_AGENTS[@]} + ${#ADDED_AGENTS[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
 
 if [[ "$TOTAL_CHANGES" -eq 0 ]]; then
-  success "All skills and commands are already up to date."
+  success "All skills, agents, and commands are already up to date."
   exit 0
 fi
 
@@ -276,23 +348,25 @@ else
 fi
 
 if [[ "${DO_COMMIT,,}" == "y" ]]; then
-  ALL_SKILL_CHANGED=("${UPDATED[@]:-}" "${ADDED[@]:-}")
-  ALL_CMD_CHANGED=("${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
-
   SKILL_PATHS=""
+  AGENT_PATHS=""
   CMD_PATHS=""
-  [[ "${#ALL_SKILL_CHANGED[@]}" -gt 0 ]] && \
-    SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${ALL_SKILL_CHANGED[@]}")
-  [[ "${#ALL_CMD_CHANGED[@]}" -gt 0 ]] && \
-    CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${ALL_CMD_CHANGED[@]}")
+  [[ "${#UPDATED[@]}" -gt 0 || "${#ADDED[@]}" -gt 0 ]] && \
+    SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${UPDATED[@]:-}" "${ADDED[@]:-}")
+  [[ "${#UPDATED_AGENTS[@]}" -gt 0 || "${#ADDED_AGENTS[@]}" -gt 0 ]] && \
+    AGENT_PATHS=$(printf "$AGENTS_DIR/%s " "${UPDATED_AGENTS[@]:-}" "${ADDED_AGENTS[@]:-}")
+  [[ "${#UPDATED_CMDS[@]}" -gt 0 || "${#ADDED_CMDS[@]}" -gt 0 ]] && \
+    CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
 
   # shellcheck disable=SC2086
-  git add $SKILL_PATHS $CMD_PATHS
+  git add $SKILL_PATHS $AGENT_PATHS $CMD_PATHS
 
-  COMMIT_MSG="chore: update skills and commands from upstream repos
+  COMMIT_MSG="chore: update skills, agents, and commands from upstream repos
 
 $(printf '%s\n' "${UPDATED[@]/#/Skills updated: }")
 $(printf '%s\n' "${ADDED[@]/#/Skills added: }")
+$(printf '%s\n' "${UPDATED_AGENTS[@]/#/Agents updated: }")
+$(printf '%s\n' "${ADDED_AGENTS[@]/#/Agents added: }")
 $(printf '%s\n' "${UPDATED_CMDS[@]/#/Commands updated: }")
 $(printf '%s\n' "${ADDED_CMDS[@]/#/Commands added: }")
 
@@ -303,7 +377,7 @@ Sources: obra/superpowers, nextlevelbuilder/ui-ux-pro-max-skill,
   git commit -m "$COMMIT_MSG"
   git push -u origin "$(git rev-parse --abbrev-ref HEAD)"
 
-  success "Committed and pushed skill and command updates."
+  success "Committed and pushed skill, agent, and command updates."
 else
-  info "Changes saved locally but not committed. Run 'git add .claude/skills/ .claude/commands/gsd/' to stage manually."
+  info "Changes saved locally but not committed. Run 'git add .claude/skills/ .claude/agents/ .claude/commands/gsd/' to stage manually."
 fi

@@ -116,6 +116,25 @@ else
     "defuddle.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/defuddle/SKILL.md"
   )
 
+  # Agent source map: "local-filename.md|raw-github-url"
+  # These are fetched into .claude/agents/ (upstream agents only)
+  # NOTE: Local project agents (code-reviewer, debugger, etc.) are NOT overwritten.
+  #   obra/superpowers code-reviewer → sp-code-reviewer.md (prefixed to avoid conflict)
+  #   gsd agents already have gsd- prefix, no conflict.
+  AGENTS_DIR="$PROJECT_DIR/.claude/agents"
+  mkdir -p "$AGENTS_DIR"
+
+  declare -a AGENT_SOURCES=(
+    # ── obra/superpowers ──────────────────────────────────────────────────────
+    "sp-code-reviewer.md|https://raw.githubusercontent.com/obra/superpowers/main/agents/code-reviewer.md"
+
+    # ── gsd-build/get-shit-done ───────────────────────────────────────────────
+    "gsd-plan-checker.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-plan-checker.md"
+    "gsd-verifier.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-verifier.md"
+    "gsd-executor.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-executor.md"
+    "gsd-planner.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/agents/gsd-planner.md"
+  )
+
   # Command source map: "local-filename.md|raw-github-url"
   # These are fetched into .claude/commands/gsd/ (not skills/)
   COMMANDS_DIR="$PROJECT_DIR/.claude/commands/gsd"
@@ -140,6 +159,8 @@ else
 
   UPDATED=()
   ADDED=()
+  UPDATED_AGENTS=()
+  ADDED_AGENTS=()
   UPDATED_CMDS=()
   ADDED_CMDS=()
 
@@ -164,6 +185,30 @@ else
       cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
       UPDATED+=("$LOCAL_FILE")
       log "  UPDATED $LOCAL_FILE"
+    fi
+  done
+
+  # ── Fetch agents ─────────────────────────────────────────────────────────
+  for entry in "${AGENT_SOURCES[@]}"; do
+    LOCAL_FILE="${entry%%|*}"
+    REMOTE_URL="${entry##*|}"
+    LOCAL_PATH="$AGENTS_DIR/$LOCAL_FILE"
+
+    HTTP_STATUS=$(curl -s -o /tmp/ss_skill_tmp.md -w "%{http_code}" --max-time 10 "$REMOTE_URL" 2>/dev/null || echo "000")
+
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+      log "  SKIP agents/$LOCAL_FILE (HTTP $HTTP_STATUS)"
+      continue
+    fi
+
+    if [[ ! -f "$LOCAL_PATH" ]]; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      ADDED_AGENTS+=("$LOCAL_FILE")
+      log "  ADDED agents/$LOCAL_FILE"
+    elif ! diff -q "$LOCAL_PATH" /tmp/ss_skill_tmp.md &>/dev/null; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      UPDATED_AGENTS+=("$LOCAL_FILE")
+      log "  UPDATED agents/$LOCAL_FILE"
     fi
   done
 
@@ -194,33 +239,38 @@ else
   rm -f /tmp/ss_skill_tmp.md
 
   # Commit if anything changed
-  TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
+  TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_AGENTS[@]} + ${#ADDED_AGENTS[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
   if [[ "$TOTAL_CHANGES" -gt 0 ]]; then
     SKILL_PATHS=""
+    AGENT_PATHS=""
     CMD_PATHS=""
     [[ "${#UPDATED[@]}" -gt 0 || "${#ADDED[@]}" -gt 0 ]] && \
       SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${UPDATED[@]:-}" "${ADDED[@]:-}")
+    [[ "${#UPDATED_AGENTS[@]}" -gt 0 || "${#ADDED_AGENTS[@]}" -gt 0 ]] && \
+      AGENT_PATHS=$(printf "$AGENTS_DIR/%s " "${UPDATED_AGENTS[@]:-}" "${ADDED_AGENTS[@]:-}")
     [[ "${#UPDATED_CMDS[@]}" -gt 0 || "${#ADDED_CMDS[@]}" -gt 0 ]] && \
       CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
 
     # shellcheck disable=SC2086
-    git add $SKILL_PATHS $CMD_PATHS 2>> "$LOG_FILE"
-    git commit -m "chore: auto-update skills and commands from upstream repos
+    git add $SKILL_PATHS $AGENT_PATHS $CMD_PATHS 2>> "$LOG_FILE"
+    git commit -m "chore: auto-update skills, agents, and commands from upstream repos
 
 $(printf 'Skills updated: %s\n' "${UPDATED[@]:-}")
 $(printf 'Skills added: %s\n' "${ADDED[@]:-}")
+$(printf 'Agents updated: %s\n' "${UPDATED_AGENTS[@]:-}")
+$(printf 'Agents added: %s\n' "${ADDED_AGENTS[@]:-}")
 $(printf 'Commands updated: %s\n' "${UPDATED_CMDS[@]:-}")
 $(printf 'Commands added: %s\n' "${ADDED_CMDS[@]:-}")
 
 Sources: obra/superpowers, nextlevelbuilder/ui-ux-pro-max-skill,
   thedotmack/claude-mem, czlonkowski/n8n-skills,
   kepano/obsidian-skills, gsd-build/get-shit-done" 2>> "$LOG_FILE" \
-      && log "Committed skill/command updates" \
+      && log "Committed skill/agent/command updates" \
       || log "Commit skipped (nothing to commit)"
 
-    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill/command updates" || log "Push failed (will retry next session)"
+    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill/agent/command updates" || log "Push failed (will retry next session)"
   else
-    log "Skills and commands: all up to date"
+    log "Skills, agents, and commands: all up to date"
   fi
 
   # Save timestamp regardless of whether updates were found
