@@ -74,8 +74,48 @@ declare -a SKILL_SOURCES=(
   "mem-timeline-report.md|https://raw.githubusercontent.com/thedotmack/claude-mem/main/plugin/skills/timeline-report/SKILL.md"
   "mem-version-bump.md|https://raw.githubusercontent.com/thedotmack/claude-mem/main/plugin/skills/version-bump/SKILL.md"
 
+  # ── czlonkowski/n8n-skills ──────────────────────────────────────────────────
+  "n8n-expression-syntax.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-expression-syntax/SKILL.md"
+  "n8n-mcp-tools.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-mcp-tools-expert/SKILL.md"
+  "n8n-workflow-patterns.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-workflow-patterns/SKILL.md"
+  "n8n-validation.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-validation-expert/SKILL.md"
+  "n8n-node-config.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-node-configuration/SKILL.md"
+  "n8n-code-js.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-code-javascript/SKILL.md"
+  "n8n-code-py.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-code-python/SKILL.md"
+
+  # ── kepano/obsidian-skills ──────────────────────────────────────────────────
+  "obsidian-markdown.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-markdown/SKILL.md"
+  "obsidian-bases.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-bases/SKILL.md"
+  "json-canvas.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/json-canvas/SKILL.md"
+  "obsidian-cli.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-cli/SKILL.md"
+  "defuddle.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/defuddle/SKILL.md"
+
   # ── Add new sources here ─────────────────────────────────────────────────────
   # "skill-name.md|https://raw.githubusercontent.com/owner/repo/main/path/to/SKILL.md"
+)
+
+# ── GSD Command source map ─────────────────────────────────────────────────────
+# gsd-build/get-shit-done — stored in .claude/commands/gsd/ (not skills/)
+# Format: "local-filename.md|remote-raw-url"
+
+COMMANDS_DIR=".claude/commands/gsd"
+mkdir -p "$COMMANDS_DIR"
+
+declare -a COMMAND_SOURCES=(
+  # ── gsd-build/get-shit-done ──────────────────────────────────────────────────
+  "new-project.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/new-project.md"
+  "map-codebase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/map-codebase.md"
+  "discuss-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/discuss-phase.md"
+  "plan-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/plan-phase.md"
+  "execute-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/execute-phase.md"
+  "verify-work.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/verify-work.md"
+  "ship.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/ship.md"
+  "complete-milestone.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/complete-milestone.md"
+  "new-milestone.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/new-milestone.md"
+  "next.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/next.md"
+  "quick.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/quick.md"
+  "help.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/help.md"
+  "settings.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/settings.md"
 )
 
 # ── Check dependencies ─────────────────────────────────────────────────────────
@@ -85,18 +125,27 @@ if ! command -v curl &>/dev/null; then
   exit 1
 fi
 
-# ── Fetch and compare ─────────────────────────────────────────────────────────
+# ── Fetch and compare: skills ──────────────────────────────────────────────────
 
 echo ""
 echo -e "${BOLD}Checking upstream skills for updates...${NC}"
 echo "Source repos:"
 echo "  • https://github.com/obra/superpowers"
+echo "  • https://github.com/nextlevelbuilder/ui-ux-pro-max-skill"
+echo "  • https://github.com/thedotmack/claude-mem"
+echo "  • https://github.com/czlonkowski/n8n-skills"
+echo "  • https://github.com/kepano/obsidian-skills"
+echo "  • https://github.com/gsd-build/get-shit-done  (commands)"
 echo ""
 
 UPDATED=()
 ADDED=()
 FAILED=()
 UNCHANGED=0
+UPDATED_CMDS=()
+ADDED_CMDS=()
+FAILED_CMDS=()
+UNCHANGED_CMDS=0
 
 for entry in "${SKILL_SOURCES[@]}"; do
   LOCAL_FILE="${entry%%|*}"
@@ -115,7 +164,6 @@ for entry in "${SKILL_SOURCES[@]}"; do
   REMOTE_CONTENT=$(cat /tmp/skill_update_tmp.md)
 
   if [[ ! -f "$LOCAL_PATH" ]]; then
-    # New skill — doesn't exist locally yet
     added "$LOCAL_FILE — NEW skill from upstream"
     if [[ "$DRY_RUN" == "false" ]]; then
       echo "$REMOTE_CONTENT" > "$LOCAL_PATH"
@@ -123,11 +171,9 @@ for entry in "${SKILL_SOURCES[@]}"; do
     ADDED+=("$LOCAL_FILE")
 
   elif diff -q "$LOCAL_PATH" /tmp/skill_update_tmp.md &>/dev/null; then
-    # No change
     (( UNCHANGED++ )) || true
 
   else
-    # Changed — show the diff
     changed "$LOCAL_FILE — updated upstream"
     echo ""
     echo -e "${BOLD}  Diff for $LOCAL_FILE:${NC}"
@@ -142,22 +188,69 @@ for entry in "${SKILL_SOURCES[@]}"; do
   fi
 done
 
+# ── Fetch and compare: GSD commands ───────────────────────────────────────────
+
+echo -e "${BOLD}Checking upstream GSD commands for updates...${NC}"
+
+for entry in "${COMMAND_SOURCES[@]}"; do
+  LOCAL_FILE="${entry%%|*}"
+  REMOTE_URL="${entry##*|}"
+  LOCAL_PATH="$COMMANDS_DIR/$LOCAL_FILE"
+
+  HTTP_STATUS=$(curl -s -o /tmp/skill_update_tmp.md -w "%{http_code}" "$REMOTE_URL")
+
+  if [[ "$HTTP_STATUS" != "200" ]]; then
+    warn "Could not fetch commands/gsd/$LOCAL_FILE (HTTP $HTTP_STATUS) — skipping"
+    FAILED_CMDS+=("$LOCAL_FILE")
+    continue
+  fi
+
+  REMOTE_CONTENT=$(cat /tmp/skill_update_tmp.md)
+
+  if [[ ! -f "$LOCAL_PATH" ]]; then
+    added "commands/gsd/$LOCAL_FILE — NEW command from upstream"
+    if [[ "$DRY_RUN" == "false" ]]; then
+      echo "$REMOTE_CONTENT" > "$LOCAL_PATH"
+    fi
+    ADDED_CMDS+=("$LOCAL_FILE")
+
+  elif diff -q "$LOCAL_PATH" /tmp/skill_update_tmp.md &>/dev/null; then
+    (( UNCHANGED_CMDS++ )) || true
+
+  else
+    changed "commands/gsd/$LOCAL_FILE — updated upstream"
+    if [[ "$DRY_RUN" == "false" ]]; then
+      cp /tmp/skill_update_tmp.md "$LOCAL_PATH"
+    fi
+    UPDATED_CMDS+=("$LOCAL_FILE")
+  fi
+done
+
 rm -f /tmp/skill_update_tmp.md
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
+TOTAL_FAILED=$(( ${#FAILED[@]} + ${#FAILED_CMDS[@]} ))
+
 echo ""
-echo -e "${BOLD}── Summary ──────────────────────────────────${NC}"
+echo -e "${BOLD}── Skills Summary ───────────────────────────${NC}"
 echo "  Unchanged : $UNCHANGED"
 echo "  Updated   : ${#UPDATED[@]}"
 echo "  Added     : ${#ADDED[@]}"
 echo "  Failed    : ${#FAILED[@]}"
 echo ""
+echo -e "${BOLD}── Commands (GSD) Summary ───────────────────${NC}"
+echo "  Unchanged : $UNCHANGED_CMDS"
+echo "  Updated   : ${#UPDATED_CMDS[@]}"
+echo "  Added     : ${#ADDED_CMDS[@]}"
+echo "  Failed    : ${#FAILED_CMDS[@]}"
+echo ""
 
-if [[ "${#FAILED[@]}" -gt 0 ]]; then
-  warn "Failed to fetch: ${FAILED[*]}"
+if [[ "$TOTAL_FAILED" -gt 0 ]]; then
+  [[ "${#FAILED[@]}" -gt 0 ]] && warn "Failed skills: ${FAILED[*]}"
+  [[ "${#FAILED_CMDS[@]}" -gt 0 ]] && warn "Failed commands: ${FAILED_CMDS[*]}"
   echo "  Check your internet connection or whether the upstream URLs have changed."
-  echo "  Update SKILL_SOURCES in scripts/update-skills.sh if a URL moved."
+  echo "  Update SKILL_SOURCES / COMMAND_SOURCES in scripts/update-skills.sh if a URL moved."
   echo ""
 fi
 
@@ -166,15 +259,14 @@ if [[ "$DRY_RUN" == "true" ]]; then
   exit 0
 fi
 
-if [[ "${#UPDATED[@]}" -eq 0 && "${#ADDED[@]}" -eq 0 ]]; then
-  success "All skills are already up to date."
+TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
+
+if [[ "$TOTAL_CHANGES" -eq 0 ]]; then
+  success "All skills and commands are already up to date."
   exit 0
 fi
 
 # ── Commit ────────────────────────────────────────────────────────────────────
-
-ALL_CHANGED=("${UPDATED[@]}" "${ADDED[@]}")
-FILES_LIST=$(printf "  - %s\n" "${ALL_CHANGED[@]}")
 
 if [[ "$AUTO_COMMIT" == "true" ]]; then
   DO_COMMIT="y"
@@ -184,21 +276,34 @@ else
 fi
 
 if [[ "${DO_COMMIT,,}" == "y" ]]; then
-  CHANGED_PATHS=$(printf "$SKILLS_DIR/%s " "${ALL_CHANGED[@]}")
+  ALL_SKILL_CHANGED=("${UPDATED[@]:-}" "${ADDED[@]:-}")
+  ALL_CMD_CHANGED=("${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
 
-  git add $CHANGED_PATHS
+  SKILL_PATHS=""
+  CMD_PATHS=""
+  [[ "${#ALL_SKILL_CHANGED[@]}" -gt 0 ]] && \
+    SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${ALL_SKILL_CHANGED[@]}")
+  [[ "${#ALL_CMD_CHANGED[@]}" -gt 0 ]] && \
+    CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${ALL_CMD_CHANGED[@]}")
 
-  COMMIT_MSG="chore: update skills from upstream repos
+  # shellcheck disable=SC2086
+  git add $SKILL_PATHS $CMD_PATHS
 
-$(printf '%s\n' "${UPDATED[@]/#/Updated: }")
-$(printf '%s\n' "${ADDED[@]/#/Added: }")
+  COMMIT_MSG="chore: update skills and commands from upstream repos
 
-Sources: obra/superpowers"
+$(printf '%s\n' "${UPDATED[@]/#/Skills updated: }")
+$(printf '%s\n' "${ADDED[@]/#/Skills added: }")
+$(printf '%s\n' "${UPDATED_CMDS[@]/#/Commands updated: }")
+$(printf '%s\n' "${ADDED_CMDS[@]/#/Commands added: }")
+
+Sources: obra/superpowers, nextlevelbuilder/ui-ux-pro-max-skill,
+  thedotmack/claude-mem, czlonkowski/n8n-skills,
+  kepano/obsidian-skills, gsd-build/get-shit-done"
 
   git commit -m "$COMMIT_MSG"
   git push -u origin "$(git rev-parse --abbrev-ref HEAD)"
 
-  success "Committed and pushed skill updates."
+  success "Committed and pushed skill and command updates."
 else
-  info "Changes saved locally but not committed. Run 'git add .claude/skills/' to stage manually."
+  info "Changes saved locally but not committed. Run 'git add .claude/skills/ .claude/commands/gsd/' to stage manually."
 fi

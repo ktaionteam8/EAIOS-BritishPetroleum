@@ -98,11 +98,52 @@ else
     "mem-smart-explore.md|https://raw.githubusercontent.com/thedotmack/claude-mem/main/plugin/skills/smart-explore/SKILL.md"
     "mem-timeline-report.md|https://raw.githubusercontent.com/thedotmack/claude-mem/main/plugin/skills/timeline-report/SKILL.md"
     "mem-version-bump.md|https://raw.githubusercontent.com/thedotmack/claude-mem/main/plugin/skills/version-bump/SKILL.md"
+
+    # ── czlonkowski/n8n-skills ────────────────────────────────────────────────
+    "n8n-expression-syntax.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-expression-syntax/SKILL.md"
+    "n8n-mcp-tools.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-mcp-tools-expert/SKILL.md"
+    "n8n-workflow-patterns.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-workflow-patterns/SKILL.md"
+    "n8n-validation.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-validation-expert/SKILL.md"
+    "n8n-node-config.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-node-configuration/SKILL.md"
+    "n8n-code-js.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-code-javascript/SKILL.md"
+    "n8n-code-py.md|https://raw.githubusercontent.com/czlonkowski/n8n-skills/main/skills/n8n-code-python/SKILL.md"
+
+    # ── kepano/obsidian-skills ────────────────────────────────────────────────
+    "obsidian-markdown.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-markdown/SKILL.md"
+    "obsidian-bases.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-bases/SKILL.md"
+    "json-canvas.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/json-canvas/SKILL.md"
+    "obsidian-cli.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/obsidian-cli/SKILL.md"
+    "defuddle.md|https://raw.githubusercontent.com/kepano/obsidian-skills/main/skills/defuddle/SKILL.md"
+  )
+
+  # Command source map: "local-filename.md|raw-github-url"
+  # These are fetched into .claude/commands/gsd/ (not skills/)
+  COMMANDS_DIR="$PROJECT_DIR/.claude/commands/gsd"
+  mkdir -p "$COMMANDS_DIR"
+
+  declare -a COMMAND_SOURCES=(
+    # ── gsd-build/get-shit-done ───────────────────────────────────────────────
+    "new-project.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/new-project.md"
+    "map-codebase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/map-codebase.md"
+    "discuss-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/discuss-phase.md"
+    "plan-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/plan-phase.md"
+    "execute-phase.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/execute-phase.md"
+    "verify-work.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/verify-work.md"
+    "ship.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/ship.md"
+    "complete-milestone.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/complete-milestone.md"
+    "new-milestone.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/new-milestone.md"
+    "next.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/next.md"
+    "quick.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/quick.md"
+    "help.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/help.md"
+    "settings.md|https://raw.githubusercontent.com/gsd-build/get-shit-done/main/commands/gsd/settings.md"
   )
 
   UPDATED=()
   ADDED=()
+  UPDATED_CMDS=()
+  ADDED_CMDS=()
 
+  # ── Fetch skills ──────────────────────────────────────────────────────────
   for entry in "${SKILL_SOURCES[@]}"; do
     LOCAL_FILE="${entry%%|*}"
     REMOTE_URL="${entry##*|}"
@@ -126,24 +167,60 @@ else
     fi
   done
 
+  # ── Fetch commands (gsd-build/get-shit-done) ──────────────────────────────
+  for entry in "${COMMAND_SOURCES[@]}"; do
+    LOCAL_FILE="${entry%%|*}"
+    REMOTE_URL="${entry##*|}"
+    LOCAL_PATH="$COMMANDS_DIR/$LOCAL_FILE"
+
+    HTTP_STATUS=$(curl -s -o /tmp/ss_skill_tmp.md -w "%{http_code}" --max-time 10 "$REMOTE_URL" 2>/dev/null || echo "000")
+
+    if [[ "$HTTP_STATUS" != "200" ]]; then
+      log "  SKIP commands/gsd/$LOCAL_FILE (HTTP $HTTP_STATUS)"
+      continue
+    fi
+
+    if [[ ! -f "$LOCAL_PATH" ]]; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      ADDED_CMDS+=("$LOCAL_FILE")
+      log "  ADDED commands/gsd/$LOCAL_FILE"
+    elif ! diff -q "$LOCAL_PATH" /tmp/ss_skill_tmp.md &>/dev/null; then
+      cp /tmp/ss_skill_tmp.md "$LOCAL_PATH"
+      UPDATED_CMDS+=("$LOCAL_FILE")
+      log "  UPDATED commands/gsd/$LOCAL_FILE"
+    fi
+  done
+
   rm -f /tmp/ss_skill_tmp.md
 
   # Commit if anything changed
-  if [[ "${#UPDATED[@]}" -gt 0 || "${#ADDED[@]}" -gt 0 ]]; then
-    ALL=("${UPDATED[@]:-}" "${ADDED[@]:-}")
-    PATHS=$(printf "$SKILLS_DIR/%s " "${ALL[@]}")
+  TOTAL_CHANGES=$(( ${#UPDATED[@]} + ${#ADDED[@]} + ${#UPDATED_CMDS[@]} + ${#ADDED_CMDS[@]} ))
+  if [[ "$TOTAL_CHANGES" -gt 0 ]]; then
+    SKILL_PATHS=""
+    CMD_PATHS=""
+    [[ "${#UPDATED[@]}" -gt 0 || "${#ADDED[@]}" -gt 0 ]] && \
+      SKILL_PATHS=$(printf "$SKILLS_DIR/%s " "${UPDATED[@]:-}" "${ADDED[@]:-}")
+    [[ "${#UPDATED_CMDS[@]}" -gt 0 || "${#ADDED_CMDS[@]}" -gt 0 ]] && \
+      CMD_PATHS=$(printf "$COMMANDS_DIR/%s " "${UPDATED_CMDS[@]:-}" "${ADDED_CMDS[@]:-}")
 
-    git add $PATHS 2>> "$LOG_FILE"
-    git commit -m "chore: auto-update skills from upstream repos
+    # shellcheck disable=SC2086
+    git add $SKILL_PATHS $CMD_PATHS 2>> "$LOG_FILE"
+    git commit -m "chore: auto-update skills and commands from upstream repos
 
-$(printf 'Updated: %s\n' "${UPDATED[@]:-none}")
-$(printf 'Added: %s\n' "${ADDED[@]:-none}")
+$(printf 'Skills updated: %s\n' "${UPDATED[@]:-}")
+$(printf 'Skills added: %s\n' "${ADDED[@]:-}")
+$(printf 'Commands updated: %s\n' "${UPDATED_CMDS[@]:-}")
+$(printf 'Commands added: %s\n' "${ADDED_CMDS[@]:-}")
 
-Source: obra/superpowers" 2>> "$LOG_FILE" && log "Committed skill updates" || log "Commit skipped (nothing to commit)"
+Sources: obra/superpowers, nextlevelbuilder/ui-ux-pro-max-skill,
+  thedotmack/claude-mem, czlonkowski/n8n-skills,
+  kepano/obsidian-skills, gsd-build/get-shit-done" 2>> "$LOG_FILE" \
+      && log "Committed skill/command updates" \
+      || log "Commit skipped (nothing to commit)"
 
-    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill updates" || log "Push failed (will retry next session)"
+    git push -u origin "$(git rev-parse --abbrev-ref HEAD)" 2>> "$LOG_FILE" && log "Pushed skill/command updates" || log "Push failed (will retry next session)"
   else
-    log "Skills: all up to date"
+    log "Skills and commands: all up to date"
   fi
 
   # Save timestamp regardless of whether updates were found
