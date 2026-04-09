@@ -1,101 +1,152 @@
+---
+name: writing-plans
+description: Use when you have a spec or requirements for a multi-step task, before touching code
+---
+
 # Writing Plans
 
-Create comprehensive, step-by-step implementation plans before writing any code.
+## Overview
 
-## Core Principle
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
 
-Write plans assuming the engineer executing them has **zero context**. Every step must be self-contained, concrete, and verifiable.
+Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
-## Plan Structure
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-Save plans to:
-```
-docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md
-```
+**Context:** This should be run in a dedicated worktree (created by brainstorming skill).
 
-### Header (required)
+**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+- (User preferences for plan location override this default)
+
+## Scope Check
+
+If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
+
+## File Structure
+
+Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
+
+- Design units with clear boundaries and well-defined interfaces. Each file should have one clear responsibility.
+- You reason best about code you can hold in context at once, and your edits are more reliable when files are focused. Prefer smaller, focused files over large ones that do too much.
+- Files that change together should live together. Split by responsibility, not by technical layer.
+- In existing codebases, follow established patterns. If the codebase uses large files, don't unilaterally restructure - but if a file you're modifying has grown unwieldy, including a split in the plan is reasonable.
+
+This structure informs the task decomposition. Each task should produce self-contained changes that make sense independently.
+
+## Bite-Sized Task Granularity
+
+**Each step is one action (2-5 minutes):**
+- "Write the failing test" - step
+- "Run it to make sure it fails" - step
+- "Implement the minimal code to make the test pass" - step
+- "Run the tests and make sure they pass" - step
+- "Commit" - step
+
+## Plan Document Header
+
+**Every plan MUST start with this header:**
+
 ```markdown
-# Plan: <Feature Name>
-**Date**: YYYY-MM-DD
-**Goal**: One sentence describing what this plan achieves
-**Architecture**: Which layers are touched (frontend / backend / DB / Airflow)
-**Tech stack**: Relevant technologies for this plan
-**Estimated tasks**: N tasks, each 2–5 minutes
+# [Feature Name] Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** [One sentence describing what this builds]
+
+**Architecture:** [2-3 sentences about approach]
+
+**Tech Stack:** [Key technologies/libraries]
+
+---
 ```
 
-### Task Format (required for every task)
-```markdown
-## Task N: <Task Title>
+## Task Structure
 
-**Goal**: What this task achieves in one sentence.
+````markdown
+### Task N: [Component Name]
 
-**Files**:
-- `path/to/file.py` — what changes
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123-145`
+- Test: `tests/exact/path/to/test.py`
 
-**Steps**:
-1. [Exact step with complete code block]
-2. [Exact step with complete code block]
+- [ ] **Step 1: Write the failing test**
 
-**Verification**:
+```python
+def test_specific_behavior():
+    result = function(input)
+    assert result == expected
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
+
+- [ ] **Step 3: Write minimal implementation**
+
+```python
+def function(input):
+    return expected
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
 ```bash
-# Exact command to verify this task is complete
-pytest tests/test_foo.py::test_bar -v
+git add tests/path/test.py src/path/file.py
+git commit -m "feat: add specific feature"
 ```
+````
 
-**Commit**:
-```bash
-git add path/to/file.py
-git commit -m "feat: description of what this task did"
-```
-```
+## No Placeholders
 
-## No Placeholder Rule
+Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+- "TBD", "TODO", "implement later", "fill in details"
+- "Add appropriate error handling" / "add validation" / "handle edge cases"
+- "Write tests for the above" (without actual test code)
+- "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
+- Steps that describe what to do without showing how (code blocks required for code steps)
+- References to types, functions, or methods not defined in any task
 
-Plans must NEVER contain:
-- "Add appropriate error handling"
-- "Implement similar to Task N"
-- "TBD"
-- "Handle edge cases"
-- Vague instructions without exact code
+## Remember
+- Exact file paths always
+- Complete code in every step — if a step changes code, show the code
+- Exact commands with expected output
+- DRY, YAGNI, TDD, frequent commits
 
-Every step must have the **actual code** to write, the **actual command** to run, and the **actual output** to expect.
+## Self-Review
 
-## Task Sizing
+After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
 
-- Each task: 2–5 minutes of work
-- If a task takes longer, split it
-- Each task must be independently committable
-- Follow TDD: test task → implementation task → refactor task
+**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
 
-## TDD Task Pattern
+**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
-For every feature, tasks follow this pattern:
-```
-Task 1: Write failing test for <feature>
-Task 2: Implement <feature> to pass the test
-Task 3: Refactor <feature> (optional, if needed)
-Task 4: Commit
-```
+**3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
-## Self-Review Checklist
+If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-Before presenting the plan:
-- [ ] Every task has exact file paths (no "create a file somewhere")
-- [ ] Every task has complete code blocks (no "something like this")
-- [ ] Every task has a verification command
-- [ ] Every task ends with a commit
-- [ ] No placeholder language anywhere
-- [ ] Tasks follow TDD order (test before implementation)
-- [ ] Types are consistent across tasks
+## Execution Handoff
 
-## Execution Options
+After saving the plan, offer execution choice:
 
-After plan is written, offer two paths:
+**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
 
-**Option A — Subagent-driven** (recommended for complex plans)
-Each task runs in a fresh subagent with code review between tasks. Higher quality, slightly slower.
+**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
-**Option B — Inline execution**
-Execute tasks in this session using the `executing-plans` skill with checkpoint reviews.
+**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
 
-Ask the user which they prefer before starting.
+**Which approach?"**
+
+**If Subagent-Driven chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
+- Fresh subagent per task + two-stage review
+
+**If Inline Execution chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
+- Batch execution with checkpoints for review
