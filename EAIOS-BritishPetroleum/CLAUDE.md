@@ -236,14 +236,56 @@ Installed skills that enforce disciplined engineering practices. Use them as sla
 - Implementation plans: `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
 
 ### Keeping Skills Up to Date
-Skills are fetched from upstream GitHub repos. Run `/update-skills` monthly to pull improvements:
+Skills, agents, and commands are fetched from upstream GitHub repos. The session-start hook auto-updates all registered repos weekly (7-day threshold). To manually trigger:
 ```bash
 ./scripts/update-skills.sh           # interactive
 ./scripts/update-skills.sh --yes     # auto-commit
 ./scripts/update-skills.sh --dry-run # preview only
 ```
-All upstream URLs are configured in `scripts/update-skills.sh` → `SKILL_SOURCES`.
-To add a new skill source, add one line to that array and run the script.
+To add a new GitHub repo, run `/fetch-github-repo <url>` or paste the URL in any prompt.
+
+---
+
+## /fetch-github-repo — Registered External Repositories
+
+### Auto-Trigger Rule
+**When a GitHub URL (`https://github.com/<owner>/<repo>`) appears in any prompt, automatically run the `/fetch-github-repo` workflow.** No need to invoke the command manually — detection and execution are automatic.
+
+### Command
+```
+/fetch-github-repo <https://github.com/owner/repo.git>
+```
+Full workflow defined in `.claude/commands/fetch-github-repo.md`. The command:
+1. Explores the repo for skills, agents, commands, and hooks
+2. Downloads and integrates all found components
+3. Adds URLs to `SKILL_SOURCES` / `AGENT_SOURCES` / `COMMAND_SOURCES` in `session-start.sh` and `scripts/update-skills.sh`
+4. Updates this table with the new entry
+5. Commits: `"feat: integrated external repo: <owner>/<repo> on <DATE>"`
+6. Weekly auto-update is handled by the session-start hook (no extra scheduling needed)
+
+### Registered Repositories
+
+| Repository | URL | Date Added | Last Fetched | Components |
+|---|---|---|---|---|
+| `obra/superpowers` | https://github.com/obra/superpowers | 2026-04-09 | 2026-04-09 | 8 skills, 1 agent (`sp-code-reviewer`) |
+| `nextlevelbuilder/ui-ux-pro-max-skill` | https://github.com/nextlevelbuilder/ui-ux-pro-max-skill | 2026-04-09 | 2026-04-09 | 7 skills |
+| `thedotmack/claude-mem` | https://github.com/thedotmack/claude-mem | 2026-04-09 | 2026-04-09 | 7 skills |
+| `czlonkowski/n8n-skills` | https://github.com/czlonkowski/n8n-skills | 2026-04-09 | 2026-04-09 | 7 skills |
+| `kepano/obsidian-skills` | https://github.com/kepano/obsidian-skills | 2026-04-09 | 2026-04-09 | 5 skills |
+| `gsd-build/get-shit-done` | https://github.com/gsd-build/get-shit-done | 2026-04-09 | 2026-04-09 | 4 agents, 13 commands |
+| `hesreallyhim/awesome-claude-code` | https://github.com/hesreallyhim/awesome-claude-code | 2026-04-09 | — | Curated index only — no extractable files |
+
+### Weekly Auto-Update Schedule
+All repos above are registered in `.claude/hooks/session-start.sh` → `SKILL_SOURCES`, `AGENT_SOURCES`, `COMMAND_SOURCES`. The hook runs on every session start and re-fetches everything if 7+ days have passed since the last update. No cron job or manual action required.
+
+### Component Locations After Integration
+
+| Component Type | Upstream Source | Local Path |
+|---|---|---|
+| Skills | `*/SKILL.md` | `.claude/skills/<name>.md` |
+| Agents | `agents/*.md` | `.claude/agents/<name>.md` |
+| GSD Commands | `commands/gsd/*.md` | `.claude/commands/gsd/<name>.md` |
+| Backend utilities | `src/**/*.py` | `backend/src/skills\|agents\|commands/` |
 
 ---
 
