@@ -235,6 +235,16 @@ Installed skills that enforce disciplined engineering practices. Use them as sla
 - Design specs: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
 - Implementation plans: `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`
 
+### Keeping Skills Up to Date
+Skills are fetched from upstream GitHub repos. Run `/update-skills` monthly to pull improvements:
+```bash
+./scripts/update-skills.sh           # interactive
+./scripts/update-skills.sh --yes     # auto-commit
+./scripts/update-skills.sh --dry-run # preview only
+```
+All upstream URLs are configured in `scripts/update-skills.sh` → `SKILL_SOURCES`.
+To add a new skill source, add one line to that array and run the script.
+
 ---
 
 ## Model Strategy
