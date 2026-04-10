@@ -60,3 +60,17 @@ feature/* → 05-manufacturing-predictive-maintenance → develop → main
 
 **Port**: 8001
 **Communication**: Via API Gateway only (port 8000). No direct cross-service imports.
+
+## Architecture Role
+
+This application is part of the Manufacturing Domain in EAIOS.
+
+- Type: Microservice (Branch-Isolated)
+- Communication: API Gateway only
+- Owned Data: Yes
+- Deployment: Independent container
+
+## AI Component
+
+- Worker Agent: Handles domain-specific decisions
+- Integrated with Master Agent for orchestration
