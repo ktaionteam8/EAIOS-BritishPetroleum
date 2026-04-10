@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python backend/src/agents/maintenance_agent.py)",
+      "Bash(pip install:*)",
+      "Bash(python backend/src/agents/master_agent.py)",
+      "Bash(python -c \"import anthropic; c = anthropic.Anthropic\\(\\); r = c.messages.create\\(model='claude-sonnet-4-6', max_tokens=10, messages=[{'role':'user','content':'hi'}]\\); print\\('API OK'\\)\")",
+      "Bash(python -m py_compile backend/src/agents/maintenance_agent.py)",
+      "Bash(python -m py_compile backend/src/agents/master_agent.py)",
+      "Bash(python -m py_compile backend/src/data/sample_data.py)",
+      "Bash(python -c \"import json; d = json.load\\(open\\('d:/ALM/EAIOS-BritishPetroleum/EAIOS-BritishPetroleum/maintenance_output.json'\\)\\); print\\(f'{len\\(d\\)} machines, keys: {list\\(d[0].keys\\(\\)\\)}'\\)\")",
+      "Bash(python backend/src/agents/master_agent.py --mock)",
+      "Bash(python -m py_compile backend/src/agents/production_agent.py)",
+      "Bash(python -m py_compile backend/src/data/production_sample_data.py)",
+      "Bash(python backend/src/agents/production_agent.py)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(bash setup_branches.sh)"
+    ]
+  }
+}

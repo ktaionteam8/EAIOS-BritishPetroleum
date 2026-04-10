@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile backend/src/agents/logistics_agent.py)",
+      "Bash(python -m py_compile backend/src/data/logistics_sample_data.py)"
+    ]
+  }
+}

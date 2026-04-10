@@ -1,0 +1,412 @@
+[
+  {
+    "machine_id": "M001",
+    "machine_type": "Compressor",
+    "plant": "P001",
+    "machine_age_days": 2984,
+    "failure_probability": 0.5376,
+    "anomaly_score": 0.3503,
+    "status": "MEDIUM_RISK",
+    "reason": "Vibration spike +5.6 in last 24 h; Temperature spike +22.4 in last 24 h; Pressure spike +13.1 in last 24 h; 1 failure(s) in last 90 days; Machine age 2984 days (high-risk threshold: 1825)",
+    "sensor_summary": {
+      "pressure": {
+        "current": 138.324,
+        "avg_7d": 142.109,
+        "spike_24h": 13.134,
+        "z_score": 0.972,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 96.498,
+        "avg_7d": 78.633,
+        "spike_24h": 22.45,
+        "z_score": 3.558,
+        "above_warning": true,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.929,
+        "avg_7d": 3.122,
+        "spike_24h": 5.635,
+        "z_score": 0.205,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 1,
+    "total_failure_count": 4,
+    "last_failure_date": "2026-01-27",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.209395Z"
+  },
+  {
+    "machine_id": "M002",
+    "machine_type": "Turbine",
+    "plant": "P001",
+    "machine_age_days": 3402,
+    "failure_probability": 0.4819,
+    "anomaly_score": 0.182,
+    "status": "MEDIUM_RISK",
+    "reason": "Vibration spike +4.5 in last 24 h; Temperature spike +27.8 in last 24 h; 1 failure(s) in last 90 days; Machine age 3402 days (high-risk threshold: 1825)",
+    "sensor_summary": {
+      "pressure": {
+        "current": 141.844,
+        "avg_7d": 141.541,
+        "spike_24h": 9.534,
+        "z_score": 0.084,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 77.405,
+        "avg_7d": 78.32,
+        "spike_24h": 27.797,
+        "z_score": 0.187,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.065,
+        "avg_7d": 3.161,
+        "spike_24h": 4.539,
+        "z_score": 1.372,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 1,
+    "total_failure_count": 3,
+    "last_failure_date": "2026-02-20",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.210122Z"
+  },
+  {
+    "machine_id": "M007",
+    "machine_type": "Heat Exchanger",
+    "plant": "P003",
+    "machine_age_days": 1317,
+    "failure_probability": 0.3294,
+    "anomaly_score": 0.1987,
+    "status": "LOW_RISK",
+    "reason": "Vibration spike +2.8 in last 24 h; Temperature spike +18.4 in last 24 h; Pressure spike +14.8 in last 24 h; 1 failure(s) in last 90 days",
+    "sensor_summary": {
+      "pressure": {
+        "current": 141.894,
+        "avg_7d": 141.741,
+        "spike_24h": 14.779,
+        "z_score": 0.032,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 76.507,
+        "avg_7d": 78.089,
+        "spike_24h": 18.367,
+        "z_score": 0.34,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.528,
+        "avg_7d": 2.986,
+        "spike_24h": 2.804,
+        "z_score": 0.838,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 1,
+    "total_failure_count": 1,
+    "last_failure_date": "2026-01-17",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.213354Z"
+  },
+  {
+    "machine_id": "M005",
+    "machine_type": "Motor",
+    "plant": "P001",
+    "machine_age_days": 2783,
+    "failure_probability": 0.3017,
+    "anomaly_score": 0.226,
+    "status": "LOW_RISK",
+    "reason": "Vibration spike +2.0 in last 24 h; Temperature spike +12.5 in last 24 h; Pressure spike +13.3 in last 24 h; Machine age 2783 days (high-risk threshold: 1825)",
+    "sensor_summary": {
+      "pressure": {
+        "current": 141.025,
+        "avg_7d": 142.363,
+        "spike_24h": 13.254,
+        "z_score": 0.332,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 87.042,
+        "avg_7d": 78.114,
+        "spike_24h": 12.516,
+        "z_score": 1.848,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 3.085,
+        "avg_7d": 2.94,
+        "spike_24h": 2.022,
+        "z_score": 0.272,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 0,
+    "last_failure_date": null,
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.212097Z"
+  },
+  {
+    "machine_id": "M009",
+    "machine_type": "Heat Exchanger",
+    "plant": "P002",
+    "machine_age_days": 3297,
+    "failure_probability": 0.2979,
+    "anomaly_score": 0.1287,
+    "status": "LOW_RISK",
+    "reason": "Pressure spike +10.9 in last 24 h; Machine age 3297 days (high-risk threshold: 1825)",
+    "sensor_summary": {
+      "pressure": {
+        "current": 149.458,
+        "avg_7d": 141.946,
+        "spike_24h": 10.908,
+        "z_score": 2.031,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 77.392,
+        "avg_7d": 77.557,
+        "spike_24h": 9.273,
+        "z_score": 0.04,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.514,
+        "avg_7d": 2.984,
+        "spike_24h": 1.462,
+        "z_score": 0.872,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 2,
+    "last_failure_date": "2025-12-19",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.214593Z"
+  },
+  {
+    "machine_id": "M003",
+    "machine_type": "Pump",
+    "plant": "P003",
+    "machine_age_days": 1279,
+    "failure_probability": 0.2693,
+    "anomaly_score": 0.1984,
+    "status": "LOW_RISK",
+    "reason": "Vibration spike +5.7 in last 24 h; Temperature spike +29.1 in last 24 h; Pressure spike +17.3 in last 24 h",
+    "sensor_summary": {
+      "pressure": {
+        "current": 139.424,
+        "avg_7d": 141.813,
+        "spike_24h": 17.296,
+        "z_score": 0.631,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 74.459,
+        "avg_7d": 78.463,
+        "spike_24h": 29.062,
+        "z_score": 0.736,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.914,
+        "avg_7d": 3.103,
+        "spike_24h": 5.712,
+        "z_score": 0.234,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 2,
+    "last_failure_date": "2025-07-24",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.210776Z"
+  },
+  {
+    "machine_id": "M006",
+    "machine_type": "Compressor",
+    "plant": "P001",
+    "machine_age_days": 487,
+    "failure_probability": 0.261,
+    "anomaly_score": 0.18,
+    "status": "LOW_RISK",
+    "reason": "Temperature spike +13.2 in last 24 h; Pressure spike +13.6 in last 24 h; 1 failure(s) in last 90 days",
+    "sensor_summary": {
+      "pressure": {
+        "current": 141.81,
+        "avg_7d": 142.397,
+        "spike_24h": 13.607,
+        "z_score": 0.157,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 77.398,
+        "avg_7d": 78.204,
+        "spike_24h": 13.173,
+        "z_score": 0.181,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 3.953,
+        "avg_7d": 2.964,
+        "spike_24h": 1.696,
+        "z_score": 1.958,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 1,
+    "total_failure_count": 3,
+    "last_failure_date": "2026-04-05",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.212699Z"
+  },
+  {
+    "machine_id": "M010",
+    "machine_type": "Motor",
+    "plant": "P003",
+    "machine_age_days": 1267,
+    "failure_probability": 0.1998,
+    "anomaly_score": 0.1329,
+    "status": "LOW_RISK",
+    "reason": "Vibration spike +2.9 in last 24 h",
+    "sensor_summary": {
+      "pressure": {
+        "current": 146.348,
+        "avg_7d": 142.072,
+        "spike_24h": 8.964,
+        "z_score": 1.026,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 79.898,
+        "avg_7d": 78.547,
+        "spike_24h": 9.682,
+        "z_score": 0.278,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.672,
+        "avg_7d": 3.066,
+        "spike_24h": 2.885,
+        "z_score": 0.698,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 1,
+    "last_failure_date": "2025-10-18",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.215217Z"
+  },
+  {
+    "machine_id": "M004",
+    "machine_type": "Heat Exchanger",
+    "plant": "P001",
+    "machine_age_days": 784,
+    "failure_probability": 0.0837,
+    "anomaly_score": 0.186,
+    "status": "LOW_RISK",
+    "reason": "Temperature spike +12.1 in last 24 h",
+    "sensor_summary": {
+      "pressure": {
+        "current": 138.992,
+        "avg_7d": 142.29,
+        "spike_24h": 8.326,
+        "z_score": 0.946,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 83.719,
+        "avg_7d": 78.185,
+        "spike_24h": 12.122,
+        "z_score": 1.2,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 3.935,
+        "avg_7d": 2.967,
+        "spike_24h": 1.469,
+        "z_score": 1.807,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 1,
+    "last_failure_date": "2025-05-11",
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.211433Z"
+  },
+  {
+    "machine_id": "M008",
+    "machine_type": "Heat Exchanger",
+    "plant": "P001",
+    "machine_age_days": 473,
+    "failure_probability": 0.0741,
+    "anomaly_score": 0.1646,
+    "status": "LOW_RISK",
+    "reason": "Temperature spike +20.7 in last 24 h; Pressure spike +19.9 in last 24 h",
+    "sensor_summary": {
+      "pressure": {
+        "current": 146.615,
+        "avg_7d": 142.177,
+        "spike_24h": 19.908,
+        "z_score": 1.058,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "temperature": {
+        "current": 80.241,
+        "avg_7d": 77.767,
+        "spike_24h": 20.744,
+        "z_score": 0.574,
+        "above_warning": false,
+        "above_critical": false
+      },
+      "vibration": {
+        "current": 2.648,
+        "avg_7d": 3.09,
+        "spike_24h": 1.353,
+        "z_score": 0.855,
+        "above_warning": false,
+        "above_critical": false
+      }
+    },
+    "recent_failure_count": 0,
+    "total_failure_count": 0,
+    "last_failure_date": null,
+    "agent": "MaintenanceAgent",
+    "timestamp": "2026-04-09T10:04:27.213924Z"
+  }
+]

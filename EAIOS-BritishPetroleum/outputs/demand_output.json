@@ -1,0 +1,950 @@
+[
+  {
+    "entity_id": "P1001",
+    "entity_type": "product",
+    "product_name": "Lubricant-P1001",
+    "product_type": "Lubricant",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +257.3% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 257.33,
+    "total_actual": 10755,
+    "total_forecast": 2994,
+    "avg_monthly_actual": 1792.5,
+    "avg_monthly_forecast": 499.0,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.4878,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 472,
+        "actual_qty": 1860,
+        "demand_variance": 1388,
+        "variance_pct": 294.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 472,
+        "actual_qty": 757,
+        "demand_variance": 285,
+        "variance_pct": 60.4,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 518,
+        "actual_qty": 2492,
+        "demand_variance": 1974,
+        "variance_pct": 381.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 507,
+        "actual_qty": 2492,
+        "demand_variance": 1985,
+        "variance_pct": 391.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 536,
+        "actual_qty": 1564,
+        "demand_variance": 1028,
+        "variance_pct": 191.8,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 489,
+        "actual_qty": 1590,
+        "demand_variance": 1101,
+        "variance_pct": 225.2,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1002",
+    "entity_type": "product",
+    "product_name": "Lubricant-P1002",
+    "product_type": "Lubricant",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +281.3% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 281.35,
+    "total_actual": 7353,
+    "total_forecast": 1929,
+    "avg_monthly_actual": 1225.5,
+    "avg_monthly_forecast": 321.5,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.5686,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 344,
+        "actual_qty": 619,
+        "demand_variance": 275,
+        "variance_pct": 79.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 295,
+        "actual_qty": 766,
+        "demand_variance": 471,
+        "variance_pct": 159.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 325,
+        "actual_qty": 1857,
+        "demand_variance": 1532,
+        "variance_pct": 471.4,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 330,
+        "actual_qty": 1857,
+        "demand_variance": 1527,
+        "variance_pct": 462.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 338,
+        "actual_qty": 1090,
+        "demand_variance": 752,
+        "variance_pct": 222.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 297,
+        "actual_qty": 1164,
+        "demand_variance": 867,
+        "variance_pct": 291.9,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1003",
+    "entity_type": "product",
+    "product_name": "Chemical-P1003",
+    "product_type": "Chemical",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +232.2% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 232.16,
+    "total_actual": 7948,
+    "total_forecast": 2408,
+    "avg_monthly_actual": 1324.7,
+    "avg_monthly_forecast": 401.3,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.4974,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 411,
+        "actual_qty": 1326,
+        "demand_variance": 915,
+        "variance_pct": 222.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 397,
+        "actual_qty": 1226,
+        "demand_variance": 829,
+        "variance_pct": 208.8,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 389,
+        "actual_qty": 1821,
+        "demand_variance": 1432,
+        "variance_pct": 368.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 389,
+        "actual_qty": 1821,
+        "demand_variance": 1432,
+        "variance_pct": 368.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 391,
+        "actual_qty": 770,
+        "demand_variance": 379,
+        "variance_pct": 96.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 431,
+        "actual_qty": 984,
+        "demand_variance": 553,
+        "variance_pct": 128.3,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1006",
+    "entity_type": "product",
+    "product_name": "Fuel-P1006",
+    "product_type": "Fuel",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +135.0% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 135.04,
+    "total_actual": 2123,
+    "total_forecast": 911,
+    "avg_monthly_actual": 353.8,
+    "avg_monthly_forecast": 151.8,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.7225,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 157,
+        "actual_qty": 235,
+        "demand_variance": 78,
+        "variance_pct": 49.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 161,
+        "actual_qty": 227,
+        "demand_variance": 66,
+        "variance_pct": 41.0,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 139,
+        "actual_qty": 523,
+        "demand_variance": 384,
+        "variance_pct": 276.3,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 160,
+        "actual_qty": 523,
+        "demand_variance": 363,
+        "variance_pct": 226.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 142,
+        "actual_qty": 255,
+        "demand_variance": 113,
+        "variance_pct": 79.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 152,
+        "actual_qty": 360,
+        "demand_variance": 208,
+        "variance_pct": 136.8,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1008",
+    "entity_type": "product",
+    "product_name": "Additive-P1008",
+    "product_type": "Additive",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +141.0% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 141.04,
+    "total_actual": 6711,
+    "total_forecast": 2793,
+    "avg_monthly_actual": 1118.5,
+    "avg_monthly_forecast": 465.5,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.8435,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 471,
+        "actual_qty": 774,
+        "demand_variance": 303,
+        "variance_pct": 64.3,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 455,
+        "actual_qty": 874,
+        "demand_variance": 419,
+        "variance_pct": 92.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 451,
+        "actual_qty": 1824,
+        "demand_variance": 1373,
+        "variance_pct": 304.4,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 482,
+        "actual_qty": 1824,
+        "demand_variance": 1342,
+        "variance_pct": 278.4,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 500,
+        "actual_qty": 626,
+        "demand_variance": 126,
+        "variance_pct": 25.2,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 434,
+        "actual_qty": 789,
+        "demand_variance": 355,
+        "variance_pct": 81.8,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1012",
+    "entity_type": "product",
+    "product_name": "Lubricant-P1012",
+    "product_type": "Lubricant",
+    "status": "HIGH_RISK",
+    "risk_score": 1.0,
+    "reason": "Demand exceeded forecast by avg +86.7% (6/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 86.71,
+    "total_actual": 2121,
+    "total_forecast": 1137,
+    "avg_monthly_actual": 353.5,
+    "avg_monthly_forecast": 189.5,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.5063,
+    "spike_periods": 6,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 180,
+        "actual_qty": 304,
+        "demand_variance": 124,
+        "variance_pct": 68.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 198,
+        "actual_qty": 273,
+        "demand_variance": 75,
+        "variance_pct": 37.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 177,
+        "actual_qty": 449,
+        "demand_variance": 272,
+        "variance_pct": 153.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 204,
+        "actual_qty": 449,
+        "demand_variance": 245,
+        "variance_pct": 120.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 199,
+        "actual_qty": 377,
+        "demand_variance": 178,
+        "variance_pct": 89.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 179,
+        "actual_qty": 269,
+        "demand_variance": 90,
+        "variance_pct": 50.3,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1007",
+    "entity_type": "product",
+    "product_name": "Lubricant-P1007",
+    "product_type": "Lubricant",
+    "status": "HIGH_RISK",
+    "risk_score": 0.95,
+    "reason": "Demand exceeded forecast by avg +125.8% (5/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 125.81,
+    "total_actual": 5060,
+    "total_forecast": 2226,
+    "avg_monthly_actual": 843.3,
+    "avg_monthly_forecast": 371.0,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.5099,
+    "spike_periods": 5,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 379,
+        "actual_qty": 893,
+        "demand_variance": 514,
+        "variance_pct": 135.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 357,
+        "actual_qty": 802,
+        "demand_variance": 445,
+        "variance_pct": 124.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 391,
+        "actual_qty": 1085,
+        "demand_variance": 694,
+        "variance_pct": 177.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 376,
+        "actual_qty": 1085,
+        "demand_variance": 709,
+        "variance_pct": 188.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 355,
+        "actual_qty": 384,
+        "demand_variance": 29,
+        "variance_pct": 8.2,
+        "spike": false,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 368,
+        "actual_qty": 811,
+        "demand_variance": 443,
+        "variance_pct": 120.4,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1009",
+    "entity_type": "product",
+    "product_name": "Lubricant-P1009",
+    "product_type": "Lubricant",
+    "status": "HIGH_RISK",
+    "risk_score": 0.95,
+    "reason": "Demand exceeded forecast by avg +112.5% (5/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 112.45,
+    "total_actual": 3043,
+    "total_forecast": 1426,
+    "avg_monthly_actual": 507.2,
+    "avg_monthly_forecast": 237.7,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.8694,
+    "spike_periods": 5,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 244,
+        "actual_qty": 388,
+        "demand_variance": 144,
+        "variance_pct": 59.0,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 246,
+        "actual_qty": 261,
+        "demand_variance": 15,
+        "variance_pct": 6.1,
+        "spike": false,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 247,
+        "actual_qty": 815,
+        "demand_variance": 568,
+        "variance_pct": 230.0,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 240,
+        "actual_qty": 815,
+        "demand_variance": 575,
+        "variance_pct": 239.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 218,
+        "actual_qty": 360,
+        "demand_variance": 142,
+        "variance_pct": 65.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 231,
+        "actual_qty": 404,
+        "demand_variance": 173,
+        "variance_pct": 74.9,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1010",
+    "entity_type": "product",
+    "product_name": "Additive-P1010",
+    "product_type": "Additive",
+    "status": "HIGH_RISK",
+    "risk_score": 0.95,
+    "reason": "Demand exceeded forecast by avg +121.2% (5/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 121.25,
+    "total_actual": 3955,
+    "total_forecast": 1815,
+    "avg_monthly_actual": 659.2,
+    "avg_monthly_forecast": 302.5,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 1.0105,
+    "spike_periods": 5,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 301,
+        "actual_qty": 547,
+        "demand_variance": 246,
+        "variance_pct": 81.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 287,
+        "actual_qty": 401,
+        "demand_variance": 114,
+        "variance_pct": 39.7,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 289,
+        "actual_qty": 1098,
+        "demand_variance": 809,
+        "variance_pct": 279.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 294,
+        "actual_qty": 1098,
+        "demand_variance": 804,
+        "variance_pct": 273.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 330,
+        "actual_qty": 366,
+        "demand_variance": 36,
+        "variance_pct": 10.9,
+        "spike": false,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 314,
+        "actual_qty": 445,
+        "demand_variance": 131,
+        "variance_pct": 41.7,
+        "spike": true,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1011",
+    "entity_type": "product",
+    "product_name": "Polymer-P1011",
+    "product_type": "Polymer",
+    "status": "HIGH_RISK",
+    "risk_score": 0.95,
+    "reason": "Demand exceeded forecast by avg +149.3% (5/6 periods above threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 149.35,
+    "total_actual": 8056,
+    "total_forecast": 3209,
+    "avg_monthly_actual": 1342.7,
+    "avg_monthly_forecast": 534.8,
+    "spike_detected": true,
+    "drop_detected": false,
+    "volatile": true,
+    "volatility_cv": 0.8315,
+    "spike_periods": 5,
+    "drop_periods": 0,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 543,
+        "actual_qty": 1256,
+        "demand_variance": 713,
+        "variance_pct": 131.3,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 521,
+        "actual_qty": 1224,
+        "demand_variance": 703,
+        "variance_pct": 134.9,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 568,
+        "actual_qty": 2156,
+        "demand_variance": 1588,
+        "variance_pct": 279.6,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 527,
+        "actual_qty": 2156,
+        "demand_variance": 1629,
+        "variance_pct": 309.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 520,
+        "actual_qty": 740,
+        "demand_variance": 220,
+        "variance_pct": 42.3,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 530,
+        "actual_qty": 524,
+        "demand_variance": -6,
+        "variance_pct": -1.1,
+        "spike": false,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1004",
+    "entity_type": "product",
+    "product_name": "Fuel-P1004",
+    "product_type": "Fuel",
+    "status": "AT_RISK",
+    "risk_score": 0.5284,
+    "reason": "Demand exceeded forecast by avg +2.3% (2/6 periods above threshold); Demand fell below forecast by avg +2.3% (4/6 periods below threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 2.27,
+    "total_actual": 1677,
+    "total_forecast": 1638,
+    "avg_monthly_actual": 279.5,
+    "avg_monthly_forecast": 273.0,
+    "spike_detected": true,
+    "drop_detected": true,
+    "volatile": true,
+    "volatility_cv": 33.7857,
+    "spike_periods": 2,
+    "drop_periods": 4,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 274,
+        "actual_qty": 142,
+        "demand_variance": -132,
+        "variance_pct": -48.2,
+        "spike": false,
+        "drop": true
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 270,
+        "actual_qty": 129,
+        "demand_variance": -141,
+        "variance_pct": -52.2,
+        "spike": false,
+        "drop": true
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 285,
+        "actual_qty": 550,
+        "demand_variance": 265,
+        "variance_pct": 93.0,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 263,
+        "actual_qty": 550,
+        "demand_variance": 287,
+        "variance_pct": 109.1,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 270,
+        "actual_qty": 133,
+        "demand_variance": -137,
+        "variance_pct": -50.7,
+        "spike": false,
+        "drop": true
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 276,
+        "actual_qty": 173,
+        "demand_variance": -103,
+        "variance_pct": -37.3,
+        "spike": false,
+        "drop": true
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  },
+  {
+    "entity_id": "P1005",
+    "entity_type": "product",
+    "product_name": "Fuel-P1005",
+    "product_type": "Fuel",
+    "status": "AT_RISK",
+    "risk_score": 0.486,
+    "reason": "Demand exceeded forecast by avg +10.9% (2/6 periods above threshold); Demand fell below forecast by avg +10.9% (1/6 periods below threshold); High demand volatility \u2014 inconsistent order patterns across periods",
+    "demand_variance_pct": 10.88,
+    "total_actual": 3943,
+    "total_forecast": 3558,
+    "avg_monthly_actual": 657.2,
+    "avg_monthly_forecast": 593.0,
+    "spike_detected": true,
+    "drop_detected": true,
+    "volatile": true,
+    "volatility_cv": 4.533,
+    "spike_periods": 2,
+    "drop_periods": 1,
+    "periods_analyzed": 6,
+    "period_breakdown": [
+      {
+        "period": "2025-11-01",
+        "forecast_qty": 556,
+        "actual_qty": 310,
+        "demand_variance": -246,
+        "variance_pct": -44.2,
+        "spike": false,
+        "drop": true
+      },
+      {
+        "period": "2025-12-01",
+        "forecast_qty": 608,
+        "actual_qty": 492,
+        "demand_variance": -116,
+        "variance_pct": -19.1,
+        "spike": false,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 571,
+        "actual_qty": 1007,
+        "demand_variance": 436,
+        "variance_pct": 76.4,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-01-01",
+        "forecast_qty": 601,
+        "actual_qty": 1007,
+        "demand_variance": 406,
+        "variance_pct": 67.5,
+        "spike": true,
+        "drop": false
+      },
+      {
+        "period": "2026-03-01",
+        "forecast_qty": 627,
+        "actual_qty": 551,
+        "demand_variance": -76,
+        "variance_pct": -12.1,
+        "spike": false,
+        "drop": false
+      },
+      {
+        "period": "2026-04-01",
+        "forecast_qty": 595,
+        "actual_qty": 576,
+        "demand_variance": -19,
+        "variance_pct": -3.2,
+        "spike": false,
+        "drop": false
+      }
+    ],
+    "agent": "DemandAgent",
+    "timestamp": "2026-04-09T10:04:27.370404+00:00"
+  }
+]

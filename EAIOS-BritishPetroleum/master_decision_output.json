@@ -1,0 +1,466 @@
+{
+  "critical_entities": {
+    "machines": [],
+    "orders": [
+      "O1003",
+      "O1002",
+      "O1001"
+    ],
+    "lots": [
+      "L1002",
+      "L1003",
+      "L1001",
+      "L1004",
+      "L1005"
+    ],
+    "others": [
+      "P1001",
+      "P1002",
+      "P1003",
+      "P1006",
+      "P1008",
+      "P1012",
+      "P1007",
+      "P1009",
+      "P1010",
+      "P1011",
+      "P1001",
+      "P1002",
+      "P1003",
+      "P1006",
+      "S1001",
+      "S1002",
+      "S1004",
+      "S1003",
+      "S1005"
+    ]
+  },
+  "causal_chains": [
+    {
+      "chain_id": "C002",
+      "chain_type": "Production -> Quality",
+      "severity": "HIGH_RISK",
+      "entities": [
+        "O1003",
+        "L1001"
+      ],
+      "root_chain": [
+        "Production order O1003 [HIGH_RISK] \u2014 risk score 0.830. Operation OP20 (Quality Check) ran at 2.5x planned time, contributing +9.3h over...",
+        "Led to quality deviation on lot L1001 \u2014 defect probability 0.452, defect rate 3.6%. Root cause: Co-occurring thermal and fluid parameter failures suggest a ...."
+      ],
+      "plant": "P003",
+      "affected_domains": [
+        "production",
+        "quality"
+      ]
+    },
+    {
+      "chain_id": "C003",
+      "chain_type": "Quality -> Logistics",
+      "severity": "HIGH_RISK",
+      "entities": [
+        "L1002",
+        "S1001"
+      ],
+      "root_chain": [
+        "Quality hold on lot L1002 [CRITICAL] \u2014 defect probability 0.677. Lot-level inspection result: FAIL; Defect rate 29.3% exceeds acceptable threshol...",
+        "Blocking release of shipment S1001 on route R107 (Lagos -> London) \u2014 delay 12 day(s), value USD 78,374."
+      ],
+      "affected_domains": [
+        "quality",
+        "logistics"
+      ]
+    }
+  ],
+  "summary": "41 entities across 5 operational domain(s) require immediate attention. Dominant signals: demand, periods, threshold, high, forecast. 2 structured causal chain(s) identified.",
+  "root_cause_analysis": "Structured causal analysis identified 2 cross-domain chain(s): [C002] Production -> Quality: Production order O1003 [HIGH_RISK] \u2014 risk score 0.830. Opera... -> Led to quality deviation on lot L1001 \u2014 defect probability 0... | [C003] Quality -> Logistics: Quality hold on lot L1002 [CRITICAL] \u2014 defect probability 0.... -> Blocking release of shipment S1001 on route R107 (Lagos -> L.... Correlated signals (demand, periods, threshold, high, forecast) confirm shared root causes. Equipment failures are likely contributing to production order delays (machine -> order cascade detected)",
+  "recommendation": "Initiate cross-functional incident response for all 41 flagged entities within 24 hours. Prioritize CRITICAL and HIGH_RISK items first. Engage plant operations, quality assurance, and supply chain teams simultaneously. Use causal chain C001\u2013C005 to sequence interventions.",
+  "priority_actions": [
+    {
+      "entity_id": "P1001",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1001 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1001 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +257.3% (6/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1002",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1002 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1002 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +281.3% (6/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1003",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1003 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1003 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +232.2% (6/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1006",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1006 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1006 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +135.0% (6/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1008",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1008 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1008 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +141.0% (6/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1012",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1012 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1012 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +86.7% (6/6 periods above threshold); High deman..."
+      ]
+    },
+    {
+      "entity_id": "P1001",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1001 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1001 [CRITICAL] \u2014 Stock (38) cannot meet requirement (413); gap of 375 units; Material priority: H..."
+      ]
+    },
+    {
+      "entity_id": "P1002",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1002 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1002 [CRITICAL] \u2014 Stock (79) cannot meet requirement (278); gap of 199 units; Material priority: H..."
+      ]
+    },
+    {
+      "entity_id": "P1003",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1003 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1003 [CRITICAL] \u2014 Stock (121) cannot meet requirement (256); gap of 135 units; Material priority: ..."
+      ]
+    },
+    {
+      "entity_id": "P1006",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1006 \u2014 risk score 1.000",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1006 [CRITICAL] \u2014 Stock (8) cannot meet requirement (462); gap of 454 units; Material priority: CR..."
+      ]
+    },
+    {
+      "entity_id": "P1007",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1007 \u2014 risk score 0.950",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1007 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +125.8% (5/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1009",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1009 \u2014 risk score 0.950",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1009 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +112.5% (5/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1010",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1010 \u2014 risk score 0.950",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1010 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +121.2% (5/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "P1011",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1011 \u2014 risk score 0.950",
+      "priority": "HIGH",
+      "root_chain": [
+        "P1011 [HIGH_RISK] \u2014 Demand exceeded forecast by avg +149.3% (5/6 periods above threshold); High dema..."
+      ]
+    },
+    {
+      "entity_id": "S1001",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1001 (Lagos -> London); notify logistics team",
+      "priority": "HIGH",
+      "root_chain": [
+        "Quality hold on lot L1002 [CRITICAL] \u2014 defect probability 0.677. Lot-level inspection result: FAIL; Defect rate 29.3% exceeds acceptable threshol...",
+        "Blocking release of shipment S1001 on route R107 (Lagos -> London) \u2014 delay 12 day(s), value USD 78,374."
+      ]
+    },
+    {
+      "entity_id": "O1003",
+      "entity_type": "order",
+      "action": "Escalate production order O1003 to plant supervisor; resolve bottleneck at Quality Check",
+      "priority": "HIGH",
+      "root_chain": [
+        "Production order O1003 [HIGH_RISK] \u2014 risk score 0.830. Operation OP20 (Quality Check) ran at 2.5x planned time, contributing +9.3h over...",
+        "Led to quality deviation on lot L1001 \u2014 defect probability 0.452, defect rate 3.6%. Root cause: Co-occurring thermal and fluid parameter failures suggest a ...."
+      ]
+    },
+    {
+      "entity_id": "S1002",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1002 (Lagos -> London); notify logistics team",
+      "priority": "HIGH",
+      "root_chain": [
+        "S1002 [CRITICAL] \u2014 Delivery delayed by 9 day(s); Route Lagos -> London rated CRITICAL risk (5,200 k..."
+      ]
+    },
+    {
+      "entity_id": "L1002",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1002; initiate RCA \u2014 suspected: High defect rate (29.3%) without specific paramete...",
+      "priority": "HIGH",
+      "root_chain": [
+        "Quality hold on lot L1002 [CRITICAL] \u2014 defect probability 0.677. Lot-level inspection result: FAIL; Defect rate 29.3% exceeds acceptable threshol...",
+        "Blocking release of shipment S1001 on route R107 (Lagos -> London) \u2014 delay 12 day(s), value USD 78,374."
+      ]
+    },
+    {
+      "entity_id": "O1002",
+      "entity_type": "order",
+      "action": "Escalate production order O1002 to plant supervisor; resolve bottleneck at Cutting",
+      "priority": "HIGH",
+      "root_chain": [
+        "O1002 [HIGH_RISK] \u2014 Operation OP20 (Cutting) ran at 2.0x planned time, contributing +5.5h overrun; H..."
+      ]
+    },
+    {
+      "entity_id": "O1001",
+      "entity_type": "order",
+      "action": "Escalate production order O1001 to plant supervisor; resolve bottleneck at Quality Check",
+      "priority": "HIGH",
+      "root_chain": [
+        "O1001 [HIGH_RISK] \u2014 Operation OP20 (Quality Check) ran at 1.9x planned time, contributing +8.8h over..."
+      ]
+    },
+    {
+      "entity_id": "S1004",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1004 (Aberdeen -> Houston); notify logistics team",
+      "priority": "HIGH",
+      "root_chain": [
+        "S1004 [HIGH_RISK] \u2014 Delivery delayed by 6 day(s); Route Aberdeen -> Houston rated HIGH risk (3,100 k..."
+      ]
+    },
+    {
+      "entity_id": "M001",
+      "entity_type": "machine",
+      "action": "Schedule predictive maintenance inspection on M001; review sensor thresholds at plant P001",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "M001 [AT_RISK] \u2014 Vibration spike +5.6 in last 24 h; Temperature spike +22.4 in last 24 h; Pressur..."
+      ]
+    },
+    {
+      "entity_id": "P1004",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1004 \u2014 risk score 0.528",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "P1004 [AT_RISK] \u2014 Demand exceeded forecast by avg +2.3% (2/6 periods above threshold); Demand fell..."
+      ]
+    },
+    {
+      "entity_id": "S1003",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1003 (London -> Mumbai); notify logistics team",
+      "priority": "HIGH",
+      "root_chain": [
+        "S1003 [HIGH_RISK] \u2014 Delivery delayed by 4 day(s); Route London -> Mumbai rated HIGH risk (2,400 km v..."
+      ]
+    },
+    {
+      "entity_id": "S1015",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1015 (Lagos -> London); notify logistics team",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "S1015 [AT_RISK] \u2014 On-time delivery; Route Lagos -> London rated CRITICAL risk (5,200 km via Air); ..."
+      ]
+    },
+    {
+      "entity_id": "S1005",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1005 (London -> Mumbai); notify logistics team",
+      "priority": "HIGH",
+      "root_chain": [
+        "S1005 [HIGH_RISK] \u2014 Delivery delayed by 6 day(s); Route London -> Mumbai rated HIGH risk (2,400 km v..."
+      ]
+    },
+    {
+      "entity_id": "P1005",
+      "entity_type": "product",
+      "action": "Investigate and remediate P1005 \u2014 risk score 0.486",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "P1005 [AT_RISK] \u2014 Demand exceeded forecast by avg +10.9% (2/6 periods above threshold); Demand fel..."
+      ]
+    },
+    {
+      "entity_id": "M002",
+      "entity_type": "machine",
+      "action": "Schedule predictive maintenance inspection on M002; review sensor thresholds at plant P001",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "M002 [AT_RISK] \u2014 Vibration spike +4.5 in last 24 h; Temperature spike +27.8 in last 24 h; 1 failu..."
+      ]
+    },
+    {
+      "entity_id": "L1003",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1003; initiate RCA \u2014 suspected: pH out of specification \u2014 chemical dosing imbalanc...",
+      "priority": "HIGH",
+      "root_chain": [
+        "L1003 [CRITICAL] \u2014 Lot-level inspection result: FAIL; Parameters outside specification: ph_level; D..."
+      ]
+    },
+    {
+      "entity_id": "L1001",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1001; initiate RCA \u2014 suspected: Co-occurring thermal and fluid parameter failures ...",
+      "priority": "HIGH",
+      "root_chain": [
+        "Production order O1003 [HIGH_RISK] \u2014 risk score 0.830. Operation OP20 (Quality Check) ran at 2.5x planned time, contributing +9.3h over...",
+        "Led to quality deviation on lot L1001 \u2014 defect probability 0.452, defect rate 3.6%. Root cause: Co-occurring thermal and fluid parameter failures suggest a ...."
+      ]
+    },
+    {
+      "entity_id": "L1004",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1004; initiate RCA \u2014 suspected: High defect rate (24.0%) without specific paramete...",
+      "priority": "HIGH",
+      "root_chain": [
+        "L1004 [CRITICAL] \u2014 Defect rate 24.0% exceeds acceptable threshold"
+      ]
+    },
+    {
+      "entity_id": "L1005",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1005; initiate RCA \u2014 suspected: High defect rate (17.3%) without specific paramete...",
+      "priority": "HIGH",
+      "root_chain": [
+        "L1005 [CRITICAL] \u2014 Defect rate 17.3% exceeds acceptable threshold"
+      ]
+    },
+    {
+      "entity_id": "S1011",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1011 (Houston -> Lagos); notify logistics team",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "S1011 [AT_RISK] \u2014 On-time delivery; Route Houston -> Lagos rated CRITICAL risk (7,800 km via Truck..."
+      ]
+    },
+    {
+      "entity_id": "S1017",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1017 (Houston -> Lagos); notify logistics team",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "S1017 [AT_RISK] \u2014 On-time delivery; Route Houston -> Lagos rated CRITICAL risk (7,800 km via Truck..."
+      ]
+    },
+    {
+      "entity_id": "O1005",
+      "entity_type": "order",
+      "action": "Escalate production order O1005 to plant supervisor; resolve bottleneck at Quality Check",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "O1005 [AT_RISK] \u2014 High scrap rate: 29.2% of output rejected (efficiency 70.8%)"
+      ]
+    },
+    {
+      "entity_id": "O1004",
+      "entity_type": "order",
+      "action": "Escalate production order O1004 to plant supervisor; resolve bottleneck at Quality Check",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "O1004 [AT_RISK] \u2014 Operation OP30 (Quality Check) ran at 1.1x planned time, contributing +1.1h over..."
+      ]
+    },
+    {
+      "entity_id": "S1012",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1012 (Lagos -> Aberdeen); notify logistics team",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "S1012 [AT_RISK] \u2014 Delivery delayed by 1 day(s); Route risk: MEDIUM (950 km via Truck); Carrier: BP..."
+      ]
+    },
+    {
+      "entity_id": "S1020",
+      "entity_type": "shipment",
+      "action": "Re-route or expedite shipment S1020 (Dubai -> London); notify logistics team",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "S1020 [AT_RISK] \u2014 Delivery delayed by 1 day(s); Route risk: LOW (580 km via Rail); Carrier: FastFr..."
+      ]
+    },
+    {
+      "entity_id": "L1006",
+      "entity_type": "lot",
+      "action": "Place quality hold on lot L1006; initiate RCA \u2014 suspected: Dual parameter failure (particle_size, pressure) i...",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "L1006 [AT_RISK] \u2014 Parameters outside specification: particle_size, pressure"
+      ]
+    },
+    {
+      "entity_id": "O1006",
+      "entity_type": "order",
+      "action": "Escalate production order O1006 to plant supervisor; resolve bottleneck at Cutting",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "O1006 [AT_RISK] \u2014 Operation OP30 (Cutting) ran at 1.1x planned time, contributing +1.4h overrun"
+      ]
+    },
+    {
+      "entity_id": "O1014",
+      "entity_type": "order",
+      "action": "Escalate production order O1014 to plant supervisor; resolve bottleneck at Quality Check",
+      "priority": "MEDIUM",
+      "root_chain": [
+        "O1014 [AT_RISK] \u2014 Operation OP10 (Quality Check) ran at 1.1x planned time, contributing +0.8h over..."
+      ]
+    }
+  ],
+  "business_impact": "Unresolved issues across 5 domain(s) risk cumulative losses of $5M-$15M per week. Primary exposure: equipment downtime ($2M-$4M/day), production delays ($100K-$500K/order), quality rejects ($50K-$200K/lot), logistics disruption. Full supply chain cascade (chains C001-C005) could exceed $20M/week.",
+  "model": "claude-sonnet-4-6 (MOCK)",
+  "agent": "MasterDecisionAgent",
+  "sources_loaded": [
+    "demand_output.json",
+    "inventory_output.json",
+    "logistics_output.json",
+    "maintenance_output.json",
+    "production_output.json",
+    "quality_output.json"
+  ],
+  "total_entities": 92,
+  "timestamp": "2026-04-09T10:04:28.573037+00:00"
+}

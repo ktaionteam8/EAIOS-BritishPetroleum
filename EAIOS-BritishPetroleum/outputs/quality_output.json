@@ -1,0 +1,1492 @@
+[
+  {
+    "inspection_lot_id": "L1002",
+    "material_id": "MAT-B",
+    "plant_id": "P001",
+    "lot_size": 481,
+    "inspection_date": "2026-02-01",
+    "defect_count": 141,
+    "defect_rate": 0.2931,
+    "quality_score": 0.35,
+    "defect_probability": 0.6775,
+    "overall_result": "FAIL",
+    "status": "CRITICAL",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.472,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 13.67,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.05,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 141.624,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 70.1,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 47.384,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "High defect rate (29.3%) without specific parameter failure \u2014 likely upstream process variance or incoming material quality issue.",
+    "reason": "Lot-level inspection result: FAIL; Defect rate 29.3% exceeds acceptable threshold; Quality score 0.35 below minimum threshold (0.6)",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1003",
+    "material_id": "MAT-E",
+    "plant_id": "P001",
+    "lot_size": 954,
+    "inspection_date": "2026-01-14",
+    "defect_count": 58,
+    "defect_rate": 0.0608,
+    "quality_score": 0.5295,
+    "defect_probability": 0.4696,
+    "overall_result": "FAIL",
+    "status": "CRITICAL",
+    "failed_parameters": [
+      "ph_level"
+    ],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 3.196,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 13.382,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 8.084,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 21.85,
+        "result": "FAIL"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 137.461,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 80.483,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 41.134,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "pH out of specification \u2014 chemical dosing imbalance or reagent concentration variance. Check titration and buffer feed.",
+    "reason": "Lot-level inspection result: FAIL; Parameters outside specification: ph_level; Defect rate 6.1% exceeds acceptable threshold; Quality score 0.53 below minimum threshold (0.6)",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1001",
+    "material_id": "MAT-A",
+    "plant_id": "P003",
+    "lot_size": 854,
+    "inspection_date": "2026-01-15",
+    "defect_count": 31,
+    "defect_rate": 0.0363,
+    "quality_score": 0.5365,
+    "defect_probability": 0.4515,
+    "overall_result": "FAIL",
+    "status": "CRITICAL",
+    "failed_parameters": [
+      "temperature",
+      "viscosity"
+    ],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.32,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 11.818,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.533,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 137.842,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 89.264,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 28.43,
+        "result": "FAIL"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 53.158,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 31.58,
+        "result": "FAIL"
+      }
+    ],
+    "root_cause": "Co-occurring thermal and fluid parameter failures suggest a heat-exchanger or cooling loop fault upstream of the process.",
+    "reason": "Lot-level inspection result: FAIL; Parameters outside specification: temperature, viscosity; Defect rate 3.6% exceeds acceptable threshold; Quality score 0.54 below minimum threshold (0.6)",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1004",
+    "material_id": "MAT-A",
+    "plant_id": "P001",
+    "lot_size": 804,
+    "inspection_date": "2026-02-24",
+    "defect_count": 193,
+    "defect_rate": 0.24,
+    "quality_score": 0.6,
+    "defect_probability": 0.44,
+    "overall_result": "PASS",
+    "status": "CRITICAL",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 3.179,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.319,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.479,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 130.435,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 74.785,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 42.054,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "High defect rate (24.0%) without specific parameter failure \u2014 likely upstream process variance or incoming material quality issue.",
+    "reason": "Defect rate 24.0% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1005",
+    "material_id": "MAT-B",
+    "plant_id": "P003",
+    "lot_size": 295,
+    "inspection_date": "2026-01-28",
+    "defect_count": 51,
+    "defect_rate": 0.1729,
+    "quality_score": 0.6,
+    "defect_probability": 0.44,
+    "overall_result": "PASS",
+    "status": "CRITICAL",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.643,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 13.498,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.086,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 135.329,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 80.459,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 47.898,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "High defect rate (17.3%) without specific parameter failure \u2014 likely upstream process variance or incoming material quality issue.",
+    "reason": "Defect rate 17.3% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1012",
+    "material_id": "MAT-E",
+    "plant_id": "P002",
+    "lot_size": 567,
+    "inspection_date": "2026-02-14",
+    "defect_count": 44,
+    "defect_rate": 0.0776,
+    "quality_score": 0.7931,
+    "defect_probability": 0.2276,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.791,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.097,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 6.881,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 133.643,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 76.876,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.156,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 7.8% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1008",
+    "material_id": "MAT-E",
+    "plant_id": "P002",
+    "lot_size": 425,
+    "inspection_date": "2026-02-27",
+    "defect_count": 30,
+    "defect_rate": 0.0706,
+    "quality_score": 0.8117,
+    "defect_probability": 0.2071,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.542,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.578,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.561,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 136.215,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 77.039,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 43.358,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 7.1% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1013",
+    "material_id": "MAT-E",
+    "plant_id": "P001",
+    "lot_size": 244,
+    "inspection_date": "2026-02-28",
+    "defect_count": 17,
+    "defect_rate": 0.0697,
+    "quality_score": 0.8141,
+    "defect_probability": 0.2045,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.771,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 10.571,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.128,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 136.737,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 76.905,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 42.977,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 7.0% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1010",
+    "material_id": "MAT-B",
+    "plant_id": "P002",
+    "lot_size": 484,
+    "inspection_date": "2026-01-20",
+    "defect_count": 29,
+    "defect_rate": 0.0599,
+    "quality_score": 0.8403,
+    "defect_probability": 0.1757,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.519,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.384,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.194,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 147.708,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 77.425,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 44.078,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 6.0% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1006",
+    "material_id": "MAT-E",
+    "plant_id": "P001",
+    "lot_size": 816,
+    "inspection_date": "2026-01-04",
+    "defect_count": 17,
+    "defect_rate": 0.0208,
+    "quality_score": 0.8279,
+    "defect_probability": 0.1685,
+    "overall_result": "PASS",
+    "status": "AT_RISK",
+    "failed_parameters": [
+      "particle_size",
+      "pressure"
+    ],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.4,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 18.08,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 26.0,
+        "result": "FAIL"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 6.859,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 160.981,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 19.94,
+        "result": "FAIL"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 77.238,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 46.81,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "Dual parameter failure (particle_size, pressure) indicates a correlated process deviation \u2014 inspect shared upstream equipment.",
+    "reason": "Parameters outside specification: particle_size, pressure",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1009",
+    "material_id": "MAT-D",
+    "plant_id": "P002",
+    "lot_size": 206,
+    "inspection_date": "2026-01-21",
+    "defect_count": 11,
+    "defect_rate": 0.0534,
+    "quality_score": 0.8576,
+    "defect_probability": 0.1566,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.699,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 10.624,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.21,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 139.769,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 80.848,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 43.698,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 5.3% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1018",
+    "material_id": "MAT-D",
+    "plant_id": "P002",
+    "lot_size": 438,
+    "inspection_date": "2026-01-13",
+    "defect_count": 20,
+    "defect_rate": 0.0457,
+    "quality_score": 0.8781,
+    "defect_probability": 0.1341,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.787,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 11.674,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.11,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 132.949,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 79.444,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 46.2,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 4.6% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1019",
+    "material_id": "MAT-C",
+    "plant_id": "P001",
+    "lot_size": 664,
+    "inspection_date": "2026-03-23",
+    "defect_count": 27,
+    "defect_rate": 0.0407,
+    "quality_score": 0.8915,
+    "defect_probability": 0.1194,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.483,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 9.113,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.003,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 142.56,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 77.897,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 44.678,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 4.1% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1007",
+    "material_id": "MAT-E",
+    "plant_id": "P002",
+    "lot_size": 933,
+    "inspection_date": "2026-03-25",
+    "defect_count": 13,
+    "defect_rate": 0.0139,
+    "quality_score": 0.9046,
+    "defect_probability": 0.0945,
+    "overall_result": "PASS",
+    "status": "PASS",
+    "failed_parameters": [
+      "moisture"
+    ],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 4.652,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 21.73,
+        "result": "FAIL"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 11.02,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.268,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 146.415,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 77.058,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.69,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "Elevated moisture content \u2014 inspect storage conditions, dryer performance, or raw material handling.",
+    "reason": "Parameters outside specification: moisture",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1020",
+    "material_id": "MAT-B",
+    "plant_id": "P003",
+    "lot_size": 579,
+    "inspection_date": "2026-02-15",
+    "defect_count": 18,
+    "defect_rate": 0.0311,
+    "quality_score": 0.9171,
+    "defect_probability": 0.0912,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.726,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 11.667,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.343,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 140.64,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 75.681,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.116,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 3.1% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1017",
+    "material_id": "MAT-C",
+    "plant_id": "P001",
+    "lot_size": 877,
+    "inspection_date": "2026-01-30",
+    "defect_count": 27,
+    "defect_rate": 0.0308,
+    "quality_score": 0.9179,
+    "defect_probability": 0.0903,
+    "overall_result": "PASS",
+    "status": "MONITOR",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.038,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.892,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.462,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 139.161,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 78.687,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.005,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "Defect rate 3.1% exceeds acceptable threshold",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1014",
+    "material_id": "MAT-E",
+    "plant_id": "P002",
+    "lot_size": 587,
+    "inspection_date": "2026-01-11",
+    "defect_count": 15,
+    "defect_rate": 0.0256,
+    "quality_score": 0.9317,
+    "defect_probability": 0.0751,
+    "overall_result": "PASS",
+    "status": "PASS",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 3.218,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 13.106,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 6.983,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 147.763,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 79.503,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 42.669,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "All characteristics within limits; quality score 0.93",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1016",
+    "material_id": "MAT-A",
+    "plant_id": "P001",
+    "lot_size": 396,
+    "inspection_date": "2026-04-01",
+    "defect_count": 9,
+    "defect_rate": 0.0227,
+    "quality_score": 0.9395,
+    "defect_probability": 0.0666,
+    "overall_result": "PASS",
+    "status": "PASS",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.59,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 12.858,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 6.6,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 148.703,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 80.764,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 49.443,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "All characteristics within limits; quality score 0.94",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1015",
+    "material_id": "MAT-C",
+    "plant_id": "P003",
+    "lot_size": 843,
+    "inspection_date": "2026-03-21",
+    "defect_count": 19,
+    "defect_rate": 0.0225,
+    "quality_score": 0.94,
+    "defect_probability": 0.066,
+    "overall_result": "PASS",
+    "status": "PASS",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.148,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 10.095,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 7.38,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 141.702,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 81.862,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.9,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "All characteristics within limits; quality score 0.94",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  },
+  {
+    "inspection_lot_id": "L1011",
+    "material_id": "MAT-D",
+    "plant_id": "P001",
+    "lot_size": 304,
+    "inspection_date": "2026-01-12",
+    "defect_count": 3,
+    "defect_rate": 0.0099,
+    "quality_score": 0.9736,
+    "defect_probability": 0.029,
+    "overall_result": "PASS",
+    "status": "PASS",
+    "failed_parameters": [],
+    "parameter_details": [
+      {
+        "characteristic": "moisture",
+        "measured_value": 2.559,
+        "lower_limit": 1.0,
+        "upper_limit": 4.0,
+        "unit": "%",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "particle_size",
+        "measured_value": 14.873,
+        "lower_limit": 8.0,
+        "upper_limit": 16.0,
+        "unit": "um",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "ph_level",
+        "measured_value": 6.997,
+        "lower_limit": 6.5,
+        "upper_limit": 7.8,
+        "unit": "pH",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "pressure",
+        "measured_value": 142.291,
+        "lower_limit": 125.0,
+        "upper_limit": 155.0,
+        "unit": "bar",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "temperature",
+        "measured_value": 75.544,
+        "lower_limit": 70.0,
+        "upper_limit": 85.0,
+        "unit": "C",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      },
+      {
+        "characteristic": "viscosity",
+        "measured_value": 45.019,
+        "lower_limit": 40.0,
+        "upper_limit": 50.0,
+        "unit": "cP",
+        "deviation_pct": 0.0,
+        "result": "PASS"
+      }
+    ],
+    "root_cause": "No significant quality deviation detected; within acceptable limits.",
+    "reason": "All characteristics within limits; quality score 0.97",
+    "agent": "QualityAgent",
+    "timestamp": "2026-04-09T10:04:27.271344+00:00"
+  }
+]
