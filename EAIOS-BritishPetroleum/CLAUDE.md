@@ -364,3 +364,200 @@ All repos above are registered in `.claude/hooks/session-start.sh` → `SKILL_SO
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
 - **Minimal Impact**: Changes should only touch what is necessary. Avoid introducing bugs.
+
+---
+
+## Enterprise Architecture — EAIOS-BritishPetroleum
+
+**Project:** EAIOS-BritishPetroleum — Enterprise AI Operating System
+**Client:** British Petroleum (BP)
+**Purpose:** AI-powered automation across 6 core business domains with 36 specialised agents
+
+---
+
+### Branch Strategy
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production-ready code only. Protected. Merge via PR after review. |
+| `develop` | Integration and testing branch. All domains merge here first. |
+| `domain/01-finance-accounting` | Finance domain development |
+| `domain/02-human-resources-safety` | HR & Safety domain development |
+| `domain/03-it-operations-cybersecurity` | IT & Cybersecurity domain development |
+| `domain/04-commercial-trading` | Commercial & Trading domain development |
+| `domain/05-manufacturing-plant-operations` | Manufacturing domain development |
+| `domain/06-supply-chain-logistics` | Supply Chain domain development |
+
+**Agent branches** follow the pattern: `agent/<agent-name>` (e.g., `agent/predictive-maintenance-agent`)
+
+---
+
+### Enterprise Folder Structure
+
+```
+EAIOS-BritishPetroleum/
+├── 01-finance-accounting/
+├── 02-human-resources-safety/
+├── 03-it-operations-cybersecurity/
+├── 04-commercial-trading/
+├── 05-manufacturing-plant-operations/
+├── 06-supply-chain-logistics/
+├── core/
+│   ├── shared-libs/
+│   ├── ai-platform/
+│   ├── data-pipelines/
+│   ├── api-gateway/
+│   └── auth/
+└── infrastructure/
+    ├── docker/
+    ├── kubernetes/
+    ├── airflow/
+    └── monitoring/
+```
+
+Each domain follows this layout:
+```
+<domain>/
+├── README.md
+├── agents/
+│   └── <agent-name>/
+│       ├── src/
+│       ├── tests/
+│       ├── config/
+│       └── README.md
+├── applications/
+├── services/
+└── models/
+```
+
+---
+
+### Domain 1 — Finance & Accounting (`01-finance-accounting/`)
+
+| Agent | Purpose |
+|---|---|
+| `financial-close-automation-agent` | Automates period-end financial close: reconciliations, accruals, intercompany eliminations |
+| `jv-accounting-agent` | Manages Joint Venture accounting, billing statements, cash calls, partner reporting |
+| `cost-forecasting-agent` | Predicts cost variances vs budget; early-warning for overruns |
+| `tax-compliance-agent` | Global tax compliance, filing reminders, transfer pricing validation |
+| `treasury-management-agent` | Cash/liquidity optimisation, FX exposure, intercompany loans |
+| `revenue-analytics-agent` | Revenue performance analytics across BUs, products, and geographies |
+
+---
+
+### Domain 2 — Human Resources & Safety (`02-human-resources-safety/`)
+
+| Agent | Purpose |
+|---|---|
+| `workforce-planning-agent` | Forecasts headcount needs using project pipelines and attrition data |
+| `skills-gap-analysis-agent` | Identifies capability gaps; recommends training and hiring interventions |
+| `talent-analytics-agent` | Talent pipeline health, flight risk, succession planning |
+| `safety-incident-prediction-agent` | Predicts HSE incidents using leading indicators and near-miss data |
+| `contractor-management-agent` | Full contractor lifecycle: onboarding, competency, PTW compliance, offboarding |
+| `energy-transition-reskilling-agent` | Maps oil & gas skills to renewable roles; personalised learning pathways |
+
+---
+
+### Domain 3 — IT Operations & Cybersecurity (`03-it-operations-cybersecurity/`)
+
+| Agent | Purpose |
+|---|---|
+| `it-service-desk-agent` | Automates IT ticket triage, classification, routing, and resolution |
+| `threat-detection-agent` | Detects cyber threats across IT/OT networks using behavioural analytics |
+| `ot-security-monitoring-agent` | Monitors ICS/SCADA/DCS environments for security threats |
+| `shadow-it-rationalization-agent` | Discovers unsanctioned cloud services; assesses risk and recommends governance |
+| `infrastructure-monitoring-agent` | Infrastructure health, performance, capacity; predictive alerting and auto-remediation |
+| `compliance-management-agent` | ISO 27001 / NIST / SOC2 compliance tracking, evidence collection, gap identification |
+
+---
+
+### Domain 4 — Commercial & Trading (`04-commercial-trading/`)
+
+| Agent | Purpose |
+|---|---|
+| `crude-trading-analytics-agent` | Crude oil market dynamics, supply/demand fundamentals, trading opportunity analysis |
+| `carbon-credit-trading-agent` | Carbon credit portfolio management, ETS compliance, voluntary market trading |
+| `castrol-pricing-engine-agent` | Castrol lubricant pricing optimisation across 120+ global markets |
+| `aviation-fuel-forecasting-agent` | Jet A-1 demand forecasting using flight schedules and airline capacity plans |
+| `lng-trading-platform-agent` | LNG cargo trading: spot/term markets, shipping schedules, pricing differentials |
+| `cross-commodity-arbitrage-agent` | Identifies arbitrage opportunities across crude, gas, power, and carbon |
+
+---
+
+### Domain 5 — Manufacturing & Plant Operations (`05-manufacturing-plant-operations/`)
+
+| Agent | Purpose |
+|---|---|
+| `predictive-maintenance-agent` | Predicts equipment failures using IoT sensors, vibration analysis, thermography |
+| `refinery-yield-optimization-agent` | Maximises refinery throughput via crude blend, unit conditions, product routing |
+| `quality-control-agent` | Real-time product quality monitoring; deviation detection and root cause analysis |
+| `downtime-prevention-agent` | Early-warning for unplanned plant shutdowns; triggers proactive interventions |
+| `energy-efficiency-agent` | Optimises steam, power, fuel gas, and cooling water usage; supports decarbonisation |
+| `digital-twin-agent` | High-fidelity plant simulation for scenario testing, operator training, and optimisation |
+
+---
+
+### Domain 6 — Supply Chain & Logistics (`06-supply-chain-logistics/`)
+
+| Agent | Purpose |
+|---|---|
+| `demand-supply-matching-agent` | Balances product supply with downstream demand; optimises crude and product movements |
+| `castrol-distribution-agent` | Optimises Castrol global distribution: blending, warehousing, last-mile delivery |
+| `aviation-fuel-logistics-agent` | End-to-end aviation fuel supply chain from refinery to airport hydrant |
+| `marine-bunkering-agent` | Marine fuel supply and bunkering operations across global ports |
+| `retail-fuel-optimization-agent` | Retail station supply, pricing, and delivery optimisation |
+| `inventory-management-agent` | Inventory level optimisation: safety stock, reorder points, tank utilisation |
+
+---
+
+### Core Shared Infrastructure (`core/`)
+
+| Component | Purpose |
+|---|---|
+| `shared-libs/` | Shared Python/TypeScript libraries: auth utils, logging, Pydantic models, test fixtures |
+| `ai-platform/` | Model registry, feature store, inference API, training orchestration, drift monitoring |
+| `data-pipelines/` | Airflow DAGs, SAP/PI/market data connectors, transformation utilities |
+| `api-gateway/` | **SOLE communication channel between all agents** — routes, auth, rate limiting, audit log |
+| `auth/` | JWT issuance, RBAC, OAuth2 (Azure AD), API key lifecycle, audit trail |
+
+---
+
+### Infrastructure (`infrastructure/`)
+
+| Component | Purpose |
+|---|---|
+| `docker/` | Docker Compose for local development and CI builds |
+| `kubernetes/` | K8s manifests: deployments, services, ingress, HPA, ConfigMaps, secrets refs |
+| `airflow/` | Airflow deployment config, plugins, connection templates |
+| `monitoring/` | Prometheus, Grafana, Loki, Jaeger, PagerDuty/Slack alert routing |
+
+---
+
+### Agent Communication Rules
+
+1. **API Gateway only** — All inter-agent communication routes through `core/api-gateway`. Direct calls are prohibited.
+2. **Isolated branches** — Each agent is developed on its own branch (`agent/<agent-name>`).
+3. **No shared state** — Agents do not share databases or in-memory state.
+4. **Validated contracts** — All inputs/outputs are validated at the gateway boundary using OpenAPI schemas.
+5. **Each agent must contain:** `src/`, `tests/`, `config/`, `README.md`
+
+---
+
+### Agent Branch Naming Convention
+
+```
+agent/financial-close-automation-agent
+agent/predictive-maintenance-agent
+agent/threat-detection-agent
+... (one branch per agent, 36 total)
+```
+
+Domain branches:
+```
+domain/01-finance-accounting
+domain/02-human-resources-safety
+domain/03-it-operations-cybersecurity
+domain/04-commercial-trading
+domain/05-manufacturing-plant-operations
+domain/06-supply-chain-logistics
+```
