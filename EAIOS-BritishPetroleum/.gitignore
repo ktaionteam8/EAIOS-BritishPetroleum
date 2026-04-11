@@ -1,15 +1,19 @@
 # Python
 __pycache__/
 *.py[cod]
-.env
 *.egg-info/
 .venv/
 venv/
 
+# Secrets — never commit these
+.env
+.env.local
+.env.production
+.env.*.local
+
 # Node
 node_modules/
 build/
-.env.local
 
 # Airflow
 logs/
@@ -20,3 +24,8 @@ airflow.db
 
 # OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
