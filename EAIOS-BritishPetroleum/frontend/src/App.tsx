@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 
 const LoginRoute     = lazy(() => import('./pages/login'));
 const DashboardRoute = lazy(() => import('./pages/dashboard'));
+const RefinerAIRoute = lazy(() => import('./pages/apps/RefinerAI'));
 
 const LoadingSpinner: React.FC = () => (
   <div className="min-h-screen bg-bp-dark flex items-center justify-center">
@@ -24,10 +25,11 @@ const App: React.FC = () => {
       <BrowserRouter>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-            <Route path="/login"     element={<LoginRoute />} />
-            <Route path="/dashboard" element={<DashboardRoute />} />
-            <Route path="/"          element={<Navigate to="/login" replace />} />
-            <Route path="*"          element={<Navigate to="/login" replace />} />
+            <Route path="/login"           element={<LoginRoute />} />
+            <Route path="/dashboard"       element={<DashboardRoute />} />
+            <Route path="/apps/refiner-ai" element={<RefinerAIRoute />} />
+            <Route path="/"                element={<Navigate to="/login" replace />} />
+            <Route path="*"                element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>

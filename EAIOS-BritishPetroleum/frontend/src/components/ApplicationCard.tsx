@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Application } from '../types';
 
 interface ApplicationCardProps {
@@ -12,7 +13,14 @@ const STATUS_CONFIG = {
 } as const;
 
 export const ApplicationCard: React.FC<ApplicationCardProps> = ({ application }) => {
+  const navigate = useNavigate();
   const status = STATUS_CONFIG[application.status];
+
+  const handleOpen = () => {
+    if (application.url) {
+      navigate(application.url);
+    }
+  };
 
   return (
     <div className="bg-bp-card border border-bp-border rounded-xl p-5 hover:border-bp-blue/40 hover:shadow-lg hover:shadow-bp-blue/5 transition-all duration-200 group">
@@ -48,7 +56,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({ application })
         {application.version && (
           <span className="text-xs text-gray-600">v{application.version}</span>
         )}
-        <button className="ml-auto flex items-center gap-1.5 text-xs text-bp-blue hover:text-white transition-colors font-medium">
+        <button
+          onClick={handleOpen}
+          disabled={!application.url}
+          className="ml-auto flex items-center gap-1.5 text-xs text-bp-blue hover:text-white transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           Open application
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

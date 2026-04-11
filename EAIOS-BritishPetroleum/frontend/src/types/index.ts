@@ -81,11 +81,12 @@ export const DOMAINS: Domain[] = [
 
 export const APPLICATIONS: Application[] = [
   {
-    id: 'refine-ai',
-    name: 'Refine AI',
-    description: '',
+    id: 'refiner-ai',
+    name: 'Refiner AI',
+    description: 'Predictive Maintenance Intelligence Platform monitoring 6,842 assets across 40 global refineries.',
     domainId: '05-manufacturing-plant-operations',
     status: 'active',
     version: '1.0.0',
+    url: '/apps/refiner-ai',
   },
 ];
