@@ -1,0 +1,42 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Refiner AI — Docker Compose (Local Development)
+# Database: Supabase cloud (no local PostgreSQL needed)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Redis (local cache) ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Refiner AI Backend API ────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    env_file: ./backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+
+  # ── Refiner AI Frontend ───────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001
+    depends_on:
+      - backend

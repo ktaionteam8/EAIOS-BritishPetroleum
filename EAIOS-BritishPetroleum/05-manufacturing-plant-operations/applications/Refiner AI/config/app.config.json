@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "Refiner AI",
+    "version": "1.0.0",
+    "description": "Predictive Maintenance Intelligence Platform",
+    "domain": "05-manufacturing-plant-operations"
+  },
+  "features": {
+    "dashboard": true,
+    "liveAlerts": true,
+    "equipmentHealth": true,
+    "digitalTwin": true,
+    "aiAdvisor": true,
+    "mlModels": true,
+    "spareParts": true,
+    "workOrders": true,
+    "roiAnalytics": true
+  },
+  "kpis": {
+    "targetDowntimeReduction": 40,
+    "totalRefineries": 40,
+    "totalAssets": 6842,
+    "aiModels": 9
+  },
+  "ports": {
+    "frontend": 3001,
+    "backend": 8001,
+    "redis": 6380
+  }
+}
