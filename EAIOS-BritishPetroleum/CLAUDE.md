@@ -163,6 +163,36 @@ EAIOS-BritishPetroleum/
 
 ---
 
+## PR Gate — Mandatory Before Every Merge to Main
+
+**This rule is PERMANENT and AUTOMATIC. It cannot be skipped.**
+
+Whenever the user says any of the following — even informally:
+- "merge to main", "create a PR", "raise a pull request"
+- "push to main", "ship this", "ready to merge", "deploy to production"
+
+You MUST run the full `/pr-gate` sequence **before** creating any PR or pushing to main.
+
+### The Gate (run in this exact order)
+
+| Step | Agent | File | Blocks Merge? |
+|------|-------|------|---------------|
+| 1 | Security Audit   | `.claude/agents/security-auditor.md` | ✅ YES — any critical |
+| 2 | Code Review      | `.claude/agents/code-reviewer.md`    | ✅ YES — any critical |
+| 3 | Debug Verify     | `.claude/agents/debugger.md`         | ✅ YES — any runtime error |
+| 4 | Test Coverage    | `.claude/agents/test-writer.md`      | ⚠️ WARNING only |
+| 5 | Code Quality     | `.claude/agents/refactorer.md`       | ⚠️ WARNING only |
+| 6 | Documentation    | `.claude/agents/doc-writer.md`       | ⚠️ WARNING only |
+
+### Rules
+- Run agents **sequentially** — each must finish before the next starts
+- If any STEP 1–3 returns a CRITICAL finding → **STOP. Do not proceed. Report to user.**
+- After all 6 steps pass → show the approval prompt (see `.claude/commands/pr-gate.md`)
+- Only create the PR if the user explicitly types **YES** at the approval prompt
+- Full gate spec: `.claude/commands/pr-gate.md`
+
+---
+
 ## .claude/ Configuration
 
 ### settings.json
