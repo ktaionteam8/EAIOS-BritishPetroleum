@@ -159,9 +159,43 @@ Present the user with this prompt:
 ```
 
 **If the user types YES:**
-1. Push the current branch to origin
-2. Create a pull request to main using the GitHub MCP tools with a structured summary
-3. Report the PR URL
+1. Push the current branch to origin: `git push -u origin <branch>`
+2. Create the PR automatically using the `gh` CLI:
+
+```bash
+gh pr create \
+  --repo ktaionteam8/eaios-britishpetroleum \
+  --base main \
+  --head <current-branch> \
+  --title "<feat|fix|chore>: <description>" \
+  --body "$(cat <<'EOF'
+## Summary
+<bullet points of what changed>
+
+## PR Gate — Full Report
+<paste the full gate report table here, all 6 steps with verdicts>
+
+### Critical Issues Fixed
+<list every CRITICAL finding that was fixed inline before this PR>
+
+### Warnings (non-blocking)
+<list all warnings from steps 4–6>
+
+## Files Changed
+<table of file → what changed>
+
+## Test Plan
+- [ ] <golden path test>
+- [ ] <edge case test>
+- [ ] App starts without error when .env is configured
+
+https://claude.ai/code/session_018i7aoKEFEQudDTU4YALYNs
+EOF
+)"
+```
+
+3. If `gh` is not available or `GITHUB_TOKEN` is not set, display the full PR body in a code block so the user can paste it manually at `https://github.com/ktaionteam8/eaios-britishpetroleum/compare/<branch>`.
+4. Report the PR URL once created.
 
 **If the user types NO:**
 - Cancel silently. No changes made.
