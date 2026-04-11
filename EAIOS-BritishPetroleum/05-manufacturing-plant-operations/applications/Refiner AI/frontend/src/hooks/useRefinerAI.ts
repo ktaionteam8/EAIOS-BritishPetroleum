@@ -33,7 +33,7 @@ function useAsync<T>(fetcher: () => Promise<T>, deps: unknown[] = []): AsyncStat
     setError(null);
     fetcher()
       .then(setData)
-      .catch((e: Error) => setError(e.message))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

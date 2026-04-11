@@ -20,6 +20,7 @@ class WorkOrder(Base):
     estimated_hours: Mapped[int]    = mapped_column(Integer, nullable=True)
     ai_generated: Mapped[bool]      = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
     due_date: Mapped[datetime]      = mapped_column(DateTime(timezone=True), nullable=True)
 
     equipment = relationship("Equipment", lazy="selectin")

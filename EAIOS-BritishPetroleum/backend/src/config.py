@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     # Redis — local
     redis_url: str = "redis://localhost:6379"
 
-    # App
-    secret_key: str = "change-me"
+    # App — SECRET_KEY has no default; app fails at startup if not set in .env
+    secret_key: str
     environment: str = "development"
 
     # CORS

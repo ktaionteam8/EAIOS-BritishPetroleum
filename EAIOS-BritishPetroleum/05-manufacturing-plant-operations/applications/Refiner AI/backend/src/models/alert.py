@@ -16,11 +16,12 @@ class Alert(Base):
     title: Mapped[str]              = mapped_column(String(500), nullable=False)
     equipment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("refiner_ai_equipment.id"), nullable=False)
     details: Mapped[str]            = mapped_column(Text, nullable=True)
-    rul_hours: Mapped[int]          = mapped_column(Float, nullable=True)
+    rul_hours: Mapped[float]        = mapped_column(Float, nullable=True)
     confidence: Mapped[float]       = mapped_column(Float, nullable=False)
     model_used: Mapped[str]         = mapped_column(String(100), nullable=True)
     is_resolved: Mapped[bool]       = mapped_column(default=False)
     created_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow, index=True)
+    updated_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
     resolved_at: Mapped[datetime]   = mapped_column(DateTime(timezone=True), nullable=True)
 
     equipment = relationship("Equipment", lazy="selectin")
