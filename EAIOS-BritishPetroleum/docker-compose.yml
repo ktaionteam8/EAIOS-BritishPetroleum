@@ -1,51 +1,51 @@
 version: "3.9"
 
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: eaios
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+# ─────────────────────────────────────────────────────────────────────────────
+# EAIOS-BP — Docker Compose (Local Development)
+#
+# Database: Supabase cloud (no local PostgreSQL needed)
+#           → https://hnmsgojeexhyhsrlhgcv.supabase.co
+#
+# Services started here: Redis, Backend API, Airflow
+# Frontend: run separately with `npm start` (see README)
+# ─────────────────────────────────────────────────────────────────────────────
 
+services:
+
+  # ── Redis (local cache) ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
+  # ── Backend API ───────────────────────────────────────────────────────────
   backend:
     build: ./backend
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
-    env_file: ./backend/.env.example
+    env_file: ./backend/.env
     depends_on:
-      - postgres
-      - redis
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-
+  # ── Airflow (data pipelines) ──────────────────────────────────────────────
   airflow:
     image: apache/airflow:2.9.1
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      # Airflow uses Supabase for its metadata DB
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ${AIRFLOW_DB_URL:-postgresql+psycopg2://postgres:postgres@db.hnmsgojeexhyhsrlhgcv.supabase.co:5432/airflow}
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${SECRET_KEY:-change-me}
     ports:
       - "8080:8080"
     volumes:
       - ./data-pipelines/ingestion:/opt/airflow/dags
-    depends_on:
-      - postgres
-
-volumes:
-  postgres_data:

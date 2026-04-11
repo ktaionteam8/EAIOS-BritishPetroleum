@@ -15,6 +15,31 @@ echo '{"async": true, "asyncTimeout": 300000}'
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+# ── 0. Install and auth gh CLI (if GITHUB_TOKEN is set) ───────────────────────
+
+# Load GITHUB_TOKEN from ~/.claude/.env if not already in environment
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -f "$HOME/.claude/.env" ]; then
+  # shellcheck disable=SC1090
+  set -a; source "$HOME/.claude/.env"; set +a
+fi
+
+if ! command -v gh &>/dev/null; then
+  log_early() { echo "[session-start] $1"; }
+  log_early "Installing gh CLI..."
+  if command -v apt-get &>/dev/null; then
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg 2>/dev/null
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list
+    apt-get update -qq && apt-get install -y -qq gh 2>/dev/null || log_early "gh install failed"
+  fi
+fi
+
+if command -v gh &>/dev/null && [ -n "${GITHUB_TOKEN:-}" ]; then
+  echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
+  export GH_TOKEN="$GITHUB_TOKEN"   # gh CLI also reads GH_TOKEN
+fi
 SKILLS_DIR="$PROJECT_DIR/.claude/skills"
 TIMESTAMP_FILE="$PROJECT_DIR/.claude/.skills-last-updated"
 LOG_FILE="$PROJECT_DIR/.claude/.session-start.log"

@@ -3,7 +3,41 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>EAIOS — BP AI Operations</title>
+    <title>EAIOS — BP Enterprise AI Operating System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bp: {
+                navy:    '#00205b',
+                blue:    '#00539f',
+                green:   '#00a651',
+                dark:    '#0a0f1e',
+                surface: '#111827',
+                card:    '#1a2332',
+                border:  '#2d3748',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background-color: #0a0f1e; }
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: #111827; }
+      ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
