@@ -11,7 +11,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6380"
     secret_key: str  # Required — no default. App fails at startup if not set in .env.
     environment: str = "development"
-    frontend_url: str = "http://localhost:3001"
+    # CORS — comma-separated list of allowed origins
+    allowed_origins: str = "http://localhost:3000,http://localhost:3001"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

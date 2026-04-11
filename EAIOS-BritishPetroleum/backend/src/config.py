@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     secret_key: str
     environment: str = "development"
 
-    # CORS
-    frontend_url: str = "http://localhost:3000"
+    # CORS — comma-separated list of allowed origins
+    # e.g. "https://eaios-bp.vercel.app,http://localhost:3000"
+    allowed_origins: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
