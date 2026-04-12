@@ -49,28 +49,9 @@ export const LandingPage: React.FC = () => {
       <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
 
         {/* Domain selector row */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Active Domain</p>
-            <DomainDropdown selectedDomain={selectedDomain} onSelect={setSelectedDomain} />
-          </div>
-
-          {/* Quick-select chips */}
-          <div className="flex flex-wrap gap-2 sm:ml-4">
-            {DOMAINS.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => setSelectedDomain(d)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  d.id === selectedDomain.id
-                    ? 'bg-bp-blue/20 border-bp-blue/40 text-bp-blue'
-                    : 'border-bp-border text-gray-500 hover:border-gray-500 hover:text-gray-300'
-                }`}
-              >
-                {d.shortName}
-              </button>
-            ))}
-          </div>
+        <div className="mb-8">
+          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">Active Domain</p>
+          <DomainDropdown selectedDomain={selectedDomain} onSelect={setSelectedDomain} />
         </div>
 
         {/* Domain hero banner */}
