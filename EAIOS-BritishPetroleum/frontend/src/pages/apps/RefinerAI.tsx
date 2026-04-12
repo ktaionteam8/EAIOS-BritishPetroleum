@@ -3333,6 +3333,139 @@ const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange }) => {
 };
 
 // ── REQ-22: TAR Shutdown Planning ────────────────────────────────────────────
+// ── Block J: Maintenance Scheduling Copilot ───────────────────────────────────
+
+// J-01: AI scheduling recommendations
+const SCHEDULE_RECS = [
+  { id:'REC-001', asset:'C-101 Compressor',  site:'Ruwais',   action:'Bearing replacement', window:'12-14 Apr',  risk:'critical', constraint:'Crew available, parts on-order ETA 13 Apr', aiConf:0.94 },
+  { id:'REC-002', asset:'E-212 Exchanger',   site:'Houston',  action:'Tube bundle clean',   window:'15-16 Apr',  risk:'high',     constraint:'No conflicting unit outages', aiConf:0.87 },
+  { id:'REC-003', asset:'P-205 Pump',        site:'Houston',  action:'Mechanical seal swap', window:'18-19 Apr', risk:'medium',   constraint:'Standby P-205B available',   aiConf:0.79 },
+];
+
+// J-02: Resource availability calendar (simplified)
+const RESOURCE_CAL = [
+  { crew:'Rotating Equipment (3 specialists)', available:'12-14 Apr', site:'Ruwais',  conflict:false },
+  { crew:'Heat Exchanger Team (2 technicians)',available:'15 Apr',    site:'Houston', conflict:false },
+  { crew:'Pump Repair (1 technician)',         available:'18 Apr',    site:'Houston', conflict:false },
+  { crew:'Rotating Equipment (3 specialists)', available:'15-17 Apr', site:'Ruwais',  conflict:true  },
+];
+
+// J-03: Constraint analysis
+const CONSTRAINTS = [
+  { type:'Safety', constraint:'Hot-work permit required for C-101 bearing work', status:'ready', owner:'HSE Lead' },
+  { type:'Permit', constraint:'PTW-2026-1841 issued for compressor entry', status:'ready', owner:'Shift Lead' },
+  { type:'Parts',  constraint:'Bearing 7B-2241-ZZ ETA 13 Apr 09:00', status:'watch', owner:'Supply Chain' },
+  { type:'Ops',    constraint:'CDU-1 throughput reduction 15% during work', status:'approved', owner:'Production' },
+];
+
+// J-04: Optimized schedule vs baseline
+const SCHEDULE_COMPARISON = [
+  { metric:'Total Planned Downtime',   baseline:'96h', optimized:'67h', saving:'29h',  pct:30 },
+  { metric:'Maintenance Cost Savings', baseline:'$0',  optimized:'-$142K', saving:'$142K', pct:18 },
+  { metric:'Risk Reduction Score',     baseline:'61',  optimized:'88',  saving:'+27',  pct:44 },
+  { metric:'Crew Utilisation',         baseline:'62%', optimized:'84%', saving:'+22pp', pct:35 },
+];
+
+const MaintenanceCopilotPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* J-01: AI scheduling recommendations */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">J-01 · AI Maintenance Scheduling Copilot</h3>
+        <p className="text-gray-500 text-xs">Optimal maintenance windows · Resource / permit / parts constraint resolution</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {SCHEDULE_RECS.map(r => {
+          const rc = { critical:'#ef4444', high:'#f59e0b', medium:'#60a5fa' };
+          return (
+            <div key={r.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 text-xs font-mono text-gray-500 pt-0.5">{r.id}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-sm font-semibold">{r.asset}</p>
+                  <span className="text-xs text-gray-500">· {r.site}</span>
+                  <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background:rc[r.risk as keyof typeof rc]+'22', color:rc[r.risk as keyof typeof rc] }}>{r.risk.toUpperCase()}</span>
+                </div>
+                <p className="text-gray-300 text-xs">Action: {r.action} · Window: <span className="text-blue-400 font-semibold">{r.window}</span></p>
+                <p className="text-gray-500 text-xs mt-0.5">{r.constraint}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-green-400 font-bold text-sm">{Math.round(r.aiConf*100)}%</p>
+                <p className="text-gray-600 text-xs">AI confidence</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      {/* J-02: Resource availability */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">J-02 · Crew Resource Calendar</h3>
+          <p className="text-gray-500 text-xs">Conflict detection · 2-week horizon</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {RESOURCE_CAL.map((r,i) => (
+            <div key={i} className="px-4 py-3 flex items-start gap-3">
+              <span className={`flex-shrink-0 mt-0.5 text-xs ${r.conflict?'text-red-400':'text-green-400'}`}>{r.conflict?'⚠':'✓'}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{r.crew}</p>
+                <p className="text-gray-500 text-xs">{r.site} · {r.available}</p>
+              </div>
+              {r.conflict && <span className="text-xs bg-red-900/40 text-red-400 rounded px-2 py-0.5">CONFLICT</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* J-03: Constraint analysis */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">J-03 · Constraint Analysis</h3>
+          <p className="text-gray-500 text-xs">Safety / permit / parts / ops readiness</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {CONSTRAINTS.map((c,i) => {
+            const sc = { ready:'text-green-400', watch:'text-amber-400', approved:'text-blue-400' };
+            return (
+              <div key={i} className="px-4 py-3 flex items-start gap-3">
+                <span className={`flex-shrink-0 text-xs font-bold w-12 pt-0.5 ${sc[c.status as keyof typeof sc]}`}>{c.type}</span>
+                <div className="flex-1">
+                  <p className="text-white text-xs">{c.constraint}</p>
+                  <p className="text-gray-500 text-xs">{c.owner}</p>
+                </div>
+                <span className={`flex-shrink-0 text-xs font-bold ${sc[c.status as keyof typeof sc]}`}>{c.status.toUpperCase()}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    {/* J-04: Schedule optimization comparison */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h3 className="text-white font-semibold text-sm mb-3">J-04 · Schedule Optimization Gains — AI vs Baseline</h3>
+      <div className="grid grid-cols-4 gap-3">
+        {SCHEDULE_COMPARISON.map(s => (
+          <div key={s.metric} className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs mb-2">{s.metric}</p>
+            <div className="flex items-end gap-2 mb-1">
+              <span className="text-green-400 font-bold text-xl">{s.optimized}</span>
+              <span className="text-gray-600 text-xs line-through pb-0.5">{s.baseline}</span>
+            </div>
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1">
+              <div className="h-full bg-green-500 rounded-full" style={{ width:`${s.pct}%` }} />
+            </div>
+            <p className="text-green-400 text-xs font-semibold">{s.saving} saved</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const TAR_ITEMS = [
   { id:'TAR-2026-01', site:'Ruwais, UAE',     unit:'CDU-1',      start:'2026-06-01', end:'2026-06-28', days:28, status:'planned',   cost:'$8.4M',  scope:124 },
   { id:'TAR-2026-02', site:'Houston, USA',    unit:'VDU + HDS',  start:'2026-08-10', end:'2026-09-15', days:36, status:'planned',   cost:'$14.2M', scope:218 },
@@ -3401,6 +3534,9 @@ const TARTab: React.FC = () => {
           </svg>
         </div>
       </div>
+
+      {/* Block J: Maintenance Copilot */}
+      <MaintenanceCopilotPanel />
 
       {/* Cards */}
       <div className="grid grid-cols-2 gap-4">
