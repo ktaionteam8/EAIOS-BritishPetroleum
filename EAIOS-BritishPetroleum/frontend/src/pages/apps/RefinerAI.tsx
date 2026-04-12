@@ -3451,6 +3451,120 @@ const COMP_CHIP: Record<string,{bg:string;color:string;label:string}> = {
   overdue:   {bg:'#450a0a',color:'#f87171',label:'OVERDUE'},
 };
 
+// ── Block N: Regulatory Compliance Enhancements ───────────────────────────────
+
+// N-01: Evidence document tracking
+const EVIDENCE_DOCS = [
+  { docId:'EV-API510-2026-01', regulation:'API 510', site:'Ruwais',    doc:'Annual inspection report + UT thickness data', uploaded:'10 Apr 2026', status:'verified' },
+  { docId:'EV-PSM-2026-04',    regulation:'PSM',     site:'Whiting',   doc:'Process Hazard Analysis (PHA) revalidation',  uploaded:'02 Apr 2026', status:'verified' },
+  { docId:'EV-ISO45001-Q1',    regulation:'ISO 45001',site:'All Sites', doc:'Q1 2026 Safety KPI report + incident log',    uploaded:'01 Apr 2026', status:'pending'  },
+  { docId:'EV-API570-HOU-01',  regulation:'API 570', site:'Houston',   doc:'Corrosion under insulation (CUI) survey',     uploaded:'—',           status:'missing'  },
+];
+
+// N-02: Regulatory change tracker
+const REG_CHANGES = [
+  { reg:'API RP 580 Rev 4',      effective:'01 Jul 2026', impact:'Risk-Based Inspection scope expanded to include offshore risers', action:'Update RBI programme by 30 Jun', status:'in-progress' },
+  { reg:'EU Industrial Emissions',effective:'01 Jan 2027', impact:'NOx/SOx limits tightened 20% at Rotterdam refinery',           action:'Upgrade SCR units Q3 2026',     status:'planned'     },
+  { reg:'OSHA PSM Modernisation',effective:'01 Sep 2026', impact:'Enhanced safeguards for highly hazardous chemicals',           action:'PSM revalidation required',      status:'not-started' },
+];
+
+// N-04: AI-generated compliance checklist
+const AI_CHECKLIST = [
+  { item:'API 570 piping inspection overdue — Bureau Veritas booking needed',     priority:'critical', status:'open',  owner:'Maintenance Lead Houston' },
+  { item:'ISO 45001 Q1 evidence upload incomplete — safety KPI doc missing',      priority:'high',     status:'open',  owner:'HSSE Manager' },
+  { item:'ASME B31.3 Ras Tanura — 13 days overdue — escalate to Engineering VP',  priority:'critical', status:'open',  owner:'VP Engineering MENA' },
+  { item:'API 580 RBI programme review required before Jul 2026 deadline',         priority:'medium',   status:'in-progress', owner:'Reliability Engineer' },
+];
+
+const ComplianceEnhancementsPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* N-04: AI compliance checklist */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div>
+          <h3 className="text-white font-semibold text-sm">N-04 · AI-Generated Compliance Action List</h3>
+          <p className="text-gray-500 text-xs">Proactive AI monitoring · Auto-generated actions from regulation changes + deadlines</p>
+        </div>
+        <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
+          {AI_CHECKLIST.filter(i=>i.priority==='critical').length} CRITICAL OPEN
+        </span>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {AI_CHECKLIST.map((c,i) => {
+          const pc = { critical:'text-red-400 bg-red-900/40', high:'text-amber-400 bg-amber-900/30', medium:'text-blue-400 bg-blue-900/30' };
+          const sc = { open:'text-red-400', 'in-progress':'text-amber-400', closed:'text-green-400' };
+          return (
+            <div key={i} className="px-5 py-4 flex items-start gap-4">
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${pc[c.priority as keyof typeof pc]}`}>{c.priority.toUpperCase()}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{c.item}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Owner: {c.owner}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${sc[c.status as keyof typeof sc]}`}>{c.status.toUpperCase()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* N-01: Evidence document tracker */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">N-01 · Evidence Document Tracker</h3>
+        <p className="text-gray-500 text-xs">Audit-ready evidence vault · Upload status per regulation</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          {['Doc ID','Regulation','Site','Document','Uploaded','Status'].map(h => (
+            <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {EVIDENCE_DOCS.map(d => {
+            const sc = { verified:'text-green-400', pending:'text-amber-400', missing:'text-red-400' };
+            return (
+              <tr key={d.docId} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{d.docId}</td>
+                <td className="px-4 py-2 text-white">{d.regulation}</td>
+                <td className="px-4 py-2 text-gray-400">{d.site}</td>
+                <td className="px-4 py-2 text-gray-300">{d.doc}</td>
+                <td className="px-4 py-2 text-gray-400">{d.uploaded}</td>
+                <td className="px-4 py-2 font-bold"><span className={sc[d.status as keyof typeof sc]}>{d.status.toUpperCase()}</span></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    {/* N-02: Regulatory change tracker */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">N-02 · Upcoming Regulatory Changes</h3>
+        <p className="text-gray-500 text-xs">Horizon scanning · Change impact assessment · Action planning</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {REG_CHANGES.map((r,i) => {
+          const sc = { 'in-progress':'text-amber-400', planned:'text-blue-400', 'not-started':'text-red-400' };
+          return (
+            <div key={i} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-xs font-semibold">{r.reg}</p>
+                  <span className="text-gray-500 text-xs">· Effective: {r.effective}</span>
+                </div>
+                <p className="text-gray-400 text-xs">Impact: {r.impact}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Action: {r.action}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${sc[r.status as keyof typeof sc]}`}>{r.status.toUpperCase()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
 const ComplianceTab: React.FC = () => (
   <div className="space-y-4">
     <div className="grid grid-cols-3 gap-3">
@@ -3504,6 +3618,9 @@ const ComplianceTab: React.FC = () => (
         })}
       </div>
     </div>
+
+    {/* Block N: Compliance Enhancements */}
+    <ComplianceEnhancementsPanel />
   </div>
 );
 
