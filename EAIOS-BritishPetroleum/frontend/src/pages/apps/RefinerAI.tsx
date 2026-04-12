@@ -11,7 +11,12 @@ type TabId =
   | 'ml-models'
   | 'spare-parts'
   | 'work-orders'
-  | 'roi';
+  | 'roi'
+  | 'reliability'
+  | 'compliance'
+  | 'field-ops'
+  | 'energy'
+  | 'tar';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 interface KPICardProps {
@@ -260,6 +265,9 @@ const DashboardTab: React.FC = () => (
 
     {/* REQ-04 — Failure Prediction Gantt */}
     <FailurePredictionGantt />
+
+    {/* REQ-10 — Multi-Site Benchmarking */}
+    <MultiSiteBenchmark />
   </div>
 );
 
@@ -286,6 +294,12 @@ const LiveAlertsTab: React.FC = () => (
         <AlertRow severity="advisory" title="Blade Erosion Detected — Turbine T-405"        site="Ras Tanura, KSA" details="Power Gen Unit 3 · IR signature anomaly" rul="14d" confidence={71.6} time="2h ago" />
       </div>
     </div>
+
+    {/* REQ-12 — Anomaly Detection Heatmap */}
+    <AnomalyHeatmap />
+
+    {/* REQ-16 — Alert Escalation Matrix */}
+    <EscalationMatrix />
   </div>
 );
 
@@ -595,6 +609,23 @@ const EquipmentHealthTab: React.FC = () => {
       </div>
       <VibrationSpectrumPanel assetId={fftAsset} />
     </div>
+
+    {/* REQ-07 — Health Trend & Degradation Forecast */}
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest">Degradation Forecast — Select Asset:</p>
+        {Object.keys(HEALTH_TREND).map(id => (
+          <button key={id} onClick={() => setFftAsset(id)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors font-mono ${fftAsset === id ? 'bg-indigo-900/50 text-indigo-300 border-indigo-700' : 'text-gray-500 border-gray-700 hover:border-gray-500'}`}>
+            {id}
+          </button>
+        ))}
+      </div>
+      <HealthTrendPanel assetId={fftAsset} />
+    </div>
+
+    {/* REQ-17 — Oil Analysis & Lubrication Tracker */}
+    <OilAnalysisPanel />
 
     {/* REQ-06 — Risk Matrix 5×5 */}
     <RiskMatrix5x5 />
@@ -917,6 +948,9 @@ const MLModelsTab: React.FC = () => (
       </div>
     </div>
 
+    {/* REQ-19 — AI Feedback Loop */}
+    <AIFeedbackPanel />
+
     {/* Model cards */}
     <div className="grid grid-cols-3 gap-4">
       {ML_MODELS.map(m => (
@@ -1008,6 +1042,9 @@ const SparePartsTab: React.FC = () => (
         ))}
       </div>
     </div>
+
+    {/* REQ-14 — Spare Parts Criticality Matrix */}
+    <SpareCriticalityMatrix />
   </div>
 );
 
@@ -1201,6 +1238,12 @@ const WorkOrdersTab: React.FC = () => {
         </div>
       )}
 
+      {/* REQ-13 — Root Cause Analysis */}
+      <RCAPanel />
+
+      {/* REQ-18 — Contractor & Crew Planner */}
+      <CrewPlanner />
+
       {/* All Work Orders table */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
@@ -1346,6 +1389,9 @@ const ROITab: React.FC = () => (
       </div>
     </div>
 
+    {/* REQ-15 — Maintenance Budget vs Actuals */}
+    <BudgetActuals />
+
     {/* Hero — 40% Target */}
     <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-6">
       <div className="flex items-center justify-between">
@@ -1443,6 +1489,662 @@ const ROITab: React.FC = () => (
   </div>
 );
 
+// ── REQ-16: Alert Escalation Matrix ──────────────────────────────────────────
+const ESCALATION_MATRIX = [
+  { sev: 'CRITICAL', sla: '<15 min', l1: 'Shift Supervisor',   l2: 'Plant Manager',    l3: 'VP Operations',    channel: 'Call + SMS + SCADA alarm' },
+  { sev: 'HIGH',     sla: '<1 hour', l1: 'Maintenance Lead',   l2: 'Shift Supervisor', l3: 'Plant Manager',    channel: 'SMS + Email + CMMS WO'    },
+  { sev: 'MEDIUM',   sla: '<4 hours',l1: 'Maintenance Tech',   l2: 'Maintenance Lead', l3: 'Shift Supervisor', channel: 'Email + CMMS WO'           },
+  { sev: 'ADVISORY', sla: '<24 hours',l1: 'Reliability Eng.',  l2: 'Maintenance Lead', l3: '—',                channel: 'CMMS notification'         },
+];
+const ESC_COL: Record<string,{bg:string;color:string}> = {
+  CRITICAL: {bg:'#450a0a',color:'#f87171'},
+  HIGH:     {bg:'#431407',color:'#fb923c'},
+  MEDIUM:   {bg:'#2a1e00',color:'#fbbf24'},
+  ADVISORY: {bg:'#0c1a2e',color:'#60a5fa'},
+};
+
+const EscalationMatrix: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="px-5 py-3 border-b border-gray-800">
+      <h3 className="text-white font-semibold text-sm">REQ-16 · Alert Escalation Matrix</h3>
+      <p className="text-gray-500 text-xs mt-0.5">Severity → response chain · SLA · ISO 55000 aligned</p>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead><tr className="border-b border-gray-800">
+          {['Severity','Response SLA','Level 1 — Immediate','Level 2 — Escalate','Level 3 — Critical','Notification Channel'].map(h => (
+            <th key={h} className="py-2.5 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {ESCALATION_MATRIX.map(r => (
+            <tr key={r.sev} className="border-b border-gray-800 hover:bg-gray-800/30">
+              <td className="py-3 px-4">
+                <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: ESC_COL[r.sev].bg, color: ESC_COL[r.sev].color }}>{r.sev}</span>
+              </td>
+              <td className="py-3 px-4 text-amber-400 text-xs font-mono font-semibold">{r.sla}</td>
+              <td className="py-3 px-4 text-white text-xs">{r.l1}</td>
+              <td className="py-3 px-4 text-gray-300 text-xs">{r.l2}</td>
+              <td className="py-3 px-4 text-gray-400 text-xs">{r.l3}</td>
+              <td className="py-3 px-4 text-gray-500 text-xs">{r.channel}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// ── REQ-12: Anomaly Detection Heatmap ────────────────────────────────────────
+const ANOMALY_ASSETS = ['C-101','E-212','P-205','T-405','K-302','V-305','G-302','F-101'];
+const ANOMALY_DAYS   = ['Day −6','Day −5','Day −4','Day −3','Day −2','Yesterday','Today'];
+const ANOMALY_SCORES: Record<string, number[]> = {
+  'C-101': [0.30, 0.40, 0.52, 0.70, 0.80, 0.92, 0.97],
+  'E-212': [0.20, 0.30, 0.50, 0.60, 0.70, 0.80, 0.91],
+  'P-205': [0.10, 0.20, 0.30, 0.42, 0.52, 0.62, 0.78],
+  'T-405': [0.10, 0.20, 0.22, 0.30, 0.42, 0.52, 0.71],
+  'K-302': [0.02, 0.05, 0.08, 0.10, 0.12, 0.14, 0.15],
+  'V-305': [0.20, 0.22, 0.28, 0.32, 0.38, 0.40, 0.42],
+  'G-302': [0.10, 0.12, 0.18, 0.28, 0.38, 0.50, 0.62],
+  'F-101': [0.02, 0.08, 0.12, 0.18, 0.22, 0.28, 0.38],
+};
+
+const anomalyBg   = (v: number) => v >= 0.9 ? '#7f1d1d' : v >= 0.7 ? '#7c2d12' : v >= 0.5 ? '#713f12' : v >= 0.3 ? '#1a2e05' : '#0f172a';
+const anomalyText = (v: number) => v >= 0.9 ? '#f87171' : v >= 0.7 ? '#fb923c' : v >= 0.5 ? '#fbbf24' : v >= 0.3 ? '#86efac' : '#374151';
+
+const AnomalyHeatmap: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+      <div>
+        <h3 className="text-white font-semibold text-sm">REQ-12 · Anomaly Detection Heatmap</h3>
+        <p className="text-gray-500 text-xs mt-0.5">Equipment × Time · LSTM anomaly score · 7-day rolling window</p>
+      </div>
+      <div className="flex items-center gap-3 text-xs">
+        {[['≥0.9','#f87171','Critical'],['≥0.7','#fb923c','High'],['≥0.5','#fbbf24','Med'],['<0.3','#86efac','Low']].map(([t,c,l]) => (
+          <span key={l} className="flex items-center gap-1.5 text-gray-400">
+            <span className="w-3 h-3 rounded inline-block" style={{ background: c }}/>{l} ({t})
+          </span>
+        ))}
+      </div>
+    </div>
+    <div className="p-4 overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr>
+            <th className="py-1.5 px-3 text-left text-gray-500 font-normal w-20">Asset</th>
+            {ANOMALY_DAYS.map(d => <th key={d} className="py-1.5 px-1 text-gray-500 font-normal text-center whitespace-nowrap">{d}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {ANOMALY_ASSETS.map(asset => (
+            <tr key={asset}>
+              <td className="py-1 px-3 font-mono font-bold text-purple-400">{asset}</td>
+              {ANOMALY_SCORES[asset].map((score, j) => (
+                <td key={j} className="py-1 px-1">
+                  <div className="rounded text-center py-1.5 font-bold" style={{ background: anomalyBg(score), color: anomalyText(score), minWidth: 52, fontSize: 11 }}>
+                    {score.toFixed(2)}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// ── REQ-10: Multi-Site Benchmarking ──────────────────────────────────────────
+const MultiSiteBenchmark: React.FC = () => {
+  const sorted = [...RELIABILITY_SITES].sort((a, b) => b.oee - a.oee);
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h3 className="text-white font-semibold text-sm">REQ-10 · Multi-Site Benchmarking</h3>
+          <p className="text-gray-500 text-xs mt-0.5">OEE · MTBF · MTTR ranked by performance · ISO 55001</p>
+        </div>
+        <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/50 px-3 py-1 rounded-full">5 refineries</span>
+      </div>
+      <div className="p-5 space-y-4">
+        {sorted.map((s, i) => (
+          <div key={s.site} className="flex items-center gap-4">
+            <span className="text-gray-600 text-xs w-5 text-right font-bold">#{i+1}</span>
+            <span className="text-gray-300 text-xs w-36 truncate">{s.site}</span>
+            <div className="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
+              <div className="h-2 rounded-full transition-all" style={{ width: `${s.oee}%`, background: s.oee >= 85 ? '#4ade80' : s.oee >= 75 ? '#fbbf24' : '#ef4444' }}/>
+            </div>
+            <span className="text-xs font-bold w-16 text-right" style={{ color: s.oee >= 85 ? '#4ade80' : s.oee >= 75 ? '#fbbf24' : '#ef4444' }}>OEE {s.oee}%</span>
+            <span className="text-blue-400 text-xs w-20 text-right font-mono">MTBF {s.mtbf}h</span>
+            <span className="text-green-400 text-xs w-18 text-right font-mono">MTTR {s.mttr}h</span>
+            <span className={`text-xs font-semibold w-14 text-right ${s.trend > 0 ? 'text-red-400' : 'text-green-400'}`}>
+              {s.trend > 0 ? '↑' : '↓'} {Math.abs(s.trend)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-19: AI Feedback Loop & Accuracy Tracker ───────────────────────────────
+const PREDICTION_FEEDBACK = [
+  { id:'PRED-4821', asset:'C-101', predicted:'Bearing failure',  conf:97.3, outcome:'CONFIRMED', actual:'Bearing failure confirmed on inspection', date:'2026-03-28' },
+  { id:'PRED-4817', asset:'E-414', predicted:'Fouling risk',     conf:88.2, outcome:'CONFIRMED', actual:'Fouling found — efficiency −22%',         date:'2026-03-25' },
+  { id:'PRED-4812', asset:'P-301', predicted:'Seal failure',     conf:74.1, outcome:'FALSE POS', actual:'No failure — vibration from cavitation',   date:'2026-03-20' },
+  { id:'PRED-4809', asset:'T-405', predicted:'Blade erosion',    conf:71.6, outcome:'CONFIRMED', actual:'Blade erosion confirmed via borescope',    date:'2026-03-18' },
+  { id:'PRED-4801', asset:'K-102', predicted:'Valve leak',       conf:65.4, outcome:'MISSED',    actual:'Valve failed — not predicted by model',    date:'2026-03-15' },
+];
+const OUTCOME_STYLE: Record<string,{bg:string;color:string}> = {
+  'CONFIRMED': {bg:'#052e16',color:'#4ade80'},
+  'FALSE POS': {bg:'#431407',color:'#fb923c'},
+  'MISSED':    {bg:'#450a0a',color:'#f87171'},
+};
+
+const AIFeedbackPanel: React.FC = () => {
+  const conf  = PREDICTION_FEEDBACK.filter(p => p.outcome === 'CONFIRMED').length;
+  const fp    = PREDICTION_FEEDBACK.filter(p => p.outcome === 'FALSE POS').length;
+  const miss  = PREDICTION_FEEDBACK.filter(p => p.outcome === 'MISSED').length;
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h3 className="text-white font-semibold text-sm">REQ-19 · AI Feedback Loop & Accuracy Tracker</h3>
+          <p className="text-gray-500 text-xs mt-0.5">Prediction outcomes · Model self-correction · Rolling 30-day</p>
+        </div>
+        <div className="flex gap-4 text-xs">
+          <span className="text-green-400 font-bold">{conf} Confirmed</span>
+          <span className="text-amber-400 font-bold">{fp} False Pos</span>
+          <span className="text-red-400 font-bold">{miss} Missed</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead><tr className="border-b border-gray-800">
+            {['Prediction ID','Asset','Prediction','Confidence','Outcome','Actual Result','Date'].map(h => (
+              <th key={h} className="py-2.5 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {PREDICTION_FEEDBACK.map(p => (
+              <tr key={p.id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                <td className="py-2.5 px-4 text-purple-400 text-xs font-mono">{p.id}</td>
+                <td className="py-2.5 px-4 text-white text-xs font-mono font-bold">{p.asset}</td>
+                <td className="py-2.5 px-4 text-gray-300 text-xs">{p.predicted}</td>
+                <td className="py-2.5 px-4 text-xs font-bold" style={{ color: p.conf>=90?'#4ade80':p.conf>=70?'#fbbf24':'#f87171' }}>{p.conf}%</td>
+                <td className="py-2.5 px-4">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background:OUTCOME_STYLE[p.outcome].bg, color:OUTCOME_STYLE[p.outcome].color }}>{p.outcome}</span>
+                </td>
+                <td className="py-2.5 px-4 text-gray-400 text-xs">{p.actual}</td>
+                <td className="py-2.5 px-4 text-gray-600 text-xs">{p.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-18: Contractor & Crew Planner ────────────────────────────────────────
+const CREW = [
+  { name:'Ahmed Al-Rashid', role:'Lead Rotating Equipment Eng.', certs:['API 510','ISO 13373'], avail:'Available',  wos:2, site:'Ruwais, UAE'     },
+  { name:'Maria Santos',    role:'Mechanical Technician L3',     certs:['ASME','LOTO'],         avail:'Assigned',   wos:1, site:'Houston, USA'    },
+  { name:'James Okafor',    role:'Safety Officer',               certs:['HSE L3','PTW'],        avail:'Available',  wos:3, site:'Rotterdam, NL'   },
+  { name:'Li Wei',          role:'OEM Specialist (MAN)',         certs:['MAN Certified'],       avail:'In Transit', wos:1, site:'Ruwais, UAE'     },
+  { name:'Priya Mehta',     role:'Reliability Engineer',         certs:['CMRP','ISO 55001'],    avail:'Available',  wos:0, site:'Jamnagar, India' },
+  { name:'Carlos Ruiz',     role:'Mechanical Technician L2',     certs:['LOTO','Rigging'],      avail:'On Leave',   wos:0, site:'Castellon, ES'   },
+];
+const AVAIL_COL: Record<string,string> = { Available:'#4ade80', Assigned:'#fbbf24', 'In Transit':'#fb923c', 'On Leave':'#9ca3af' };
+
+const CrewPlanner: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+      <div>
+        <h3 className="text-white font-semibold text-sm">REQ-18 · Contractor & Crew Planner</h3>
+        <p className="text-gray-500 text-xs mt-0.5">Current roster · Certifications · WO assignments</p>
+      </div>
+      <div className="flex gap-4 text-xs">
+        <span style={{ color:'#4ade80' }}>{CREW.filter(c => c.avail==='Available').length} Available</span>
+        <span style={{ color:'#fbbf24' }}>{CREW.filter(c => c.avail==='Assigned'||c.avail==='In Transit').length} Deployed</span>
+        <span className="text-gray-500">{CREW.filter(c => c.avail==='On Leave').length} On Leave</span>
+      </div>
+    </div>
+    <div className="divide-y divide-gray-800">
+      {CREW.map(c => (
+        <div key={c.name} className="px-5 py-3 flex items-center gap-4 hover:bg-gray-800/30 transition-colors">
+          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+            {c.name.split(' ').map(n => n[0]).join('')}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-semibold">{c.name}</p>
+            <p className="text-gray-500 text-xs">{c.role} · {c.site}</p>
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {c.certs.map(cert => <span key={cert} className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">{cert}</span>)}
+          </div>
+          <span className="text-xs font-bold w-20 text-right" style={{ color: AVAIL_COL[c.avail] }}>{c.avail}</span>
+          <div className="text-center w-10">
+            <p className="text-white text-sm font-bold">{c.wos}</p>
+            <p className="text-gray-600 text-xs">WOs</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ── REQ-13: Root Cause Analysis Module ───────────────────────────────────────
+const RCAPanel: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="px-5 py-3 border-b border-gray-800">
+      <h3 className="text-white font-semibold text-sm">REQ-13 · Root Cause Analysis — C-101 Bearing Failure</h3>
+      <p className="text-gray-500 text-xs mt-0.5">5-Why methodology · AI-assisted · WO-2026-0847</p>
+    </div>
+    <div className="p-5 grid grid-cols-2 gap-6">
+      <div>
+        <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">5-Why Analysis</p>
+        {[
+          ['Why 1?','Compressor C-101 bearing failing','Vibration 8.4 mm/s · alarm 7.1 mm/s exceeded'],
+          ['Why 2?','Bearing inner race fatigue crack','BPFI spike at 87 Hz — 97.3% model confidence'],
+          ['Why 3?','Lube oil film breakdown at bearing','Oil pressure 2.1 bar — target ≥ 2.5 bar'],
+          ['Why 4?','Lube oil filter LF-7A blocked','Filter ΔP: 2.4 bar — maintenance threshold 1.8 bar'],
+          ['Why 5?','Filter change interval exceeded 18d','Last PM: 23 Jan 2026 · interval 90d · actual 108d'],
+        ].map(([why, what, evidence]) => (
+          <div key={why} className="mb-3 flex gap-3">
+            <span className="text-purple-500 font-bold text-xs flex-shrink-0 w-10 pt-0.5">{why}</span>
+            <div className="flex-1 bg-gray-800/60 rounded-lg p-3">
+              <p className="text-white text-xs font-semibold">{what}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{evidence}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Root Cause & Corrective Actions</p>
+        <div className="bg-red-950/30 border border-red-900/40 rounded-lg p-4 mb-4">
+          <p className="text-red-400 text-xs font-bold mb-1">Root Cause Identified</p>
+          <p className="text-gray-300 text-sm leading-relaxed">PM interval overrun caused lube oil starvation, accelerating bearing inner-race fatigue failure.</p>
+        </div>
+        <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-2">Corrective Actions</p>
+        <div className="space-y-2">
+          {[
+            ['Immediate', 'Replace bearing + full lube oil flush',   '#ef4444'],
+            ['Short-term','Reduce PM interval: 90d → 60d (C-series)','#f59e0b'],
+            ['Long-term', 'Install online oil ΔP + viscosity sensor', '#60a5fa'],
+            ['Systemic',  'CMMS alert at 80% of PM interval',         '#a78bfa'],
+          ].map(([type, action, color]) => (
+            <div key={type} className="flex items-start gap-3 bg-gray-800/40 rounded-lg p-3">
+              <span className="text-xs font-bold px-2 py-0.5 rounded flex-shrink-0" style={{ background:`${color}22`, color }}>{type}</span>
+              <p className="text-gray-300 text-xs">{action}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ── REQ-15: Maintenance Budget vs Actuals ────────────────────────────────────
+const BUDGET_DATA = [
+  { site:'Ruwais, UAE',     budget:12.4, actual:14.1, variance:+1.7 },
+  { site:'Houston, USA',    budget:8.2,  actual:7.6,  variance:-0.6 },
+  { site:'Rotterdam, NL',   budget:6.8,  actual:6.2,  variance:-0.6 },
+  { site:'Ras Tanura, KSA', budget:9.1,  actual:10.4, variance:+1.3 },
+  { site:'Jamnagar, India', budget:5.4,  actual:4.8,  variance:-0.6 },
+];
+
+const BudgetActuals: React.FC = () => {
+  const maxVal = 16;
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h3 className="text-white font-semibold text-sm">REQ-15 · Maintenance Budget vs Actuals ($M)</h3>
+          <p className="text-gray-500 text-xs mt-0.5">YTD 2026 · All sites · Variance analysis</p>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-1.5 text-gray-400"><span className="w-3 h-2 rounded bg-blue-500/50 inline-block"/>Budget</span>
+          <span className="flex items-center gap-1.5 text-gray-400"><span className="w-3 h-2 rounded bg-purple-500/80 inline-block"/>Actual</span>
+        </div>
+      </div>
+      <div className="p-5 space-y-5">
+        {BUDGET_DATA.map(d => (
+          <div key={d.site}>
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-gray-300 w-32">{d.site}</span>
+              <span className={`font-bold ${d.variance > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {d.variance > 0 ? '+' : ''}{d.variance}M · {d.variance > 0 ? '↑ Over' : '↓ Under'}
+              </span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 text-xs w-12 text-right">Budget</span>
+                <div className="flex-1 bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-blue-500/50" style={{ width:`${(d.budget/maxVal)*100}%` }}/>
+                </div>
+                <span className="text-gray-400 text-xs w-10">${d.budget}M</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 text-xs w-12 text-right">Actual</span>
+                <div className="flex-1 bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                  <div className="h-2.5 rounded-full" style={{ width:`${(d.actual/maxVal)*100}%`, background: d.variance > 0 ? '#ef4444aa' : '#a855f7' }}/>
+                </div>
+                <span className="text-xs w-10 font-bold" style={{ color: d.variance > 0 ? '#f87171' : '#c084fc' }}>${d.actual}M</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-14: Spare Parts Criticality Matrix ────────────────────────────────────
+const PARTS_MATRIX_ITEMS = [
+  { part:'Bearing 7B-2241-ZZ', leftPct:22, topPct:18, quad:'HL' },
+  { part:'Impeller IP-100-8',  leftPct:78, topPct:22, quad:'HH' },
+  { part:'Seal Kit MS-400',    leftPct:26, topPct:38, quad:'HL' },
+  { part:'Coupling CH-SGT8',   leftPct:82, topPct:42, quad:'HH' },
+  { part:'Lube Filter LF-7A',  leftPct:20, topPct:72, quad:'LL' },
+  { part:'O-Ring Kit OR-HT',   leftPct:28, topPct:80, quad:'LL' },
+];
+
+const SpareCriticalityMatrix: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="px-5 py-3 border-b border-gray-800">
+      <h3 className="text-white font-semibold text-sm">REQ-14 · Spare Parts Criticality Matrix</h3>
+      <p className="text-gray-500 text-xs mt-0.5">Criticality × Lead Time · Strategic stockholding positions</p>
+    </div>
+    <div className="p-5">
+      <div className="relative rounded-xl overflow-hidden border border-gray-800" style={{ height: 300 }}>
+        {/* Quadrant backgrounds */}
+        <div style={{ position:'absolute', inset:0, display:'grid', gridTemplateColumns:'1fr 1fr', gridTemplateRows:'1fr 1fr' }}>
+          <div style={{ background:'#1c0a2e', borderRight:'1px solid #374151', borderBottom:'1px solid #374151' }}/>
+          <div style={{ background:'#200a0a', borderBottom:'1px solid #374151' }}/>
+          <div style={{ background:'#0a1c0a', borderRight:'1px solid #374151' }}/>
+          <div style={{ background:'#0a0a1c' }}/>
+        </div>
+        {/* Quadrant labels */}
+        <div style={{ position:'absolute', top:8, left:8, fontSize:9, color:'#a78bfa', fontWeight:700 }}>
+          HIGH CRIT · SHORT LEAD<br/><span style={{ color:'#6b7280', fontWeight:400 }}>Buffer stock</span>
+        </div>
+        <div style={{ position:'absolute', top:8, right:8, fontSize:9, color:'#f87171', fontWeight:700, textAlign:'right' }}>
+          HIGH CRIT · LONG LEAD<br/><span style={{ color:'#6b7280', fontWeight:400 }}>Strategic reserve</span>
+        </div>
+        <div style={{ position:'absolute', bottom:28, left:8, fontSize:9, color:'#4ade80', fontWeight:700 }}>
+          LOW CRIT · SHORT LEAD<br/><span style={{ color:'#6b7280', fontWeight:400 }}>Just-in-time</span>
+        </div>
+        <div style={{ position:'absolute', bottom:28, right:8, fontSize:9, color:'#60a5fa', fontWeight:700, textAlign:'right' }}>
+          LOW CRIT · LONG LEAD<br/><span style={{ color:'#6b7280', fontWeight:400 }}>Consignment</span>
+        </div>
+        {/* Parts dots */}
+        {PARTS_MATRIX_ITEMS.map(p => (
+          <div key={p.part} style={{ position:'absolute', left:`${p.leftPct}%`, top:`${p.topPct}%`, transform:'translate(-50%,-50%)' }}>
+            <div style={{ width:12, height:12, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }}/>
+            <p style={{ color:'#e5e7eb', fontSize:9, whiteSpace:'nowrap', marginTop:2 }}>{p.part}</p>
+          </div>
+        ))}
+        {/* Axis labels */}
+        <div style={{ position:'absolute', bottom:4, left:0, right:0, textAlign:'center', fontSize:10, color:'#4b5563' }}>← Short Lead Time · Long Lead Time →</div>
+        <div style={{ position:'absolute', top:0, bottom:24, left:2, display:'flex', alignItems:'center', writingMode:'vertical-rl', fontSize:10, color:'#4b5563' }}>High Criticality ↑</div>
+      </div>
+    </div>
+  </div>
+);
+
+// ── REQ-17: Oil Analysis & Lubrication Tracker ───────────────────────────────
+const OIL_SAMPLES = [
+  { asset:'C-101', date:'2026-04-05', visc:'HIGH',  ferrous:'CRITICAL', water:'OK',    tbn:'LOW',  status:'critical', action:'Immediate oil change + bearing inspect'     },
+  { asset:'E-212', date:'2026-04-08', visc:'OK',    ferrous:'HIGH',    water:'OK',    tbn:'OK',   status:'warning',  action:'Schedule oil change within 5 days'           },
+  { asset:'P-205', date:'2026-04-10', visc:'OK',    ferrous:'OK',      water:'TRACE', tbn:'OK',   status:'advisory', action:'Monitor water ingress source'                 },
+  { asset:'T-405', date:'2026-04-09', visc:'OK',    ferrous:'OK',      water:'OK',    tbn:'OK',   status:'ok',       action:'No action — next sample in 30d'              },
+  { asset:'K-302', date:'2026-04-11', visc:'OK',    ferrous:'OK',      water:'OK',    tbn:'OK',   status:'ok',       action:'No action — next sample in 30d'              },
+];
+const OIL_PARAM_COL: Record<string,string> = { CRITICAL:'#f87171', HIGH:'#fb923c', LOW:'#fbbf24', TRACE:'#fbbf24', OK:'#4ade80' };
+
+const OilAnalysisPanel: React.FC = () => (
+  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+      <div>
+        <h3 className="text-white font-semibold text-sm">REQ-17 · Oil Analysis & Lubrication Tracker</h3>
+        <p className="text-gray-500 text-xs mt-0.5">ISO 4406 · Ferrography · ASTM D445 viscosity · TBN depletion</p>
+      </div>
+      <span className="text-xs bg-purple-900/30 text-purple-400 border border-purple-900/50 px-2 py-1 rounded">Shell / Mobil OEM spec</span>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead><tr className="border-b border-gray-800">
+          {['Asset','Sample Date','Viscosity','Ferrous','Water','TBN','Status','Recommended Action'].map(h => (
+            <th key={h} className="py-2.5 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {OIL_SAMPLES.map(s => (
+            <tr key={s.asset} className="border-b border-gray-800 hover:bg-gray-800/30">
+              <td className="py-3 px-4 text-purple-400 font-mono text-sm font-bold">{s.asset}</td>
+              <td className="py-3 px-4 text-gray-400 text-xs">{s.date}</td>
+              {[s.visc, s.ferrous, s.water, s.tbn].map((v, i) => (
+                <td key={i} className="py-3 px-4">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: `${OIL_PARAM_COL[v] ?? '#9ca3af'}22`, color: OIL_PARAM_COL[v] ?? '#9ca3af' }}>{v}</span>
+                </td>
+              ))}
+              <td className="py-3 px-4">
+                <span className="text-xs font-bold capitalize" style={{ color: s.status==='critical'?'#f87171':s.status==='warning'?'#fb923c':s.status==='advisory'?'#fbbf24':'#4ade80' }}>
+                  {s.status.toUpperCase()}
+                </span>
+              </td>
+              <td className="py-3 px-4 text-gray-400 text-xs">{s.action}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// ── REQ-07: Health Trend & Degradation Forecast ──────────────────────────────
+const HEALTH_TREND: Record<string, { past: number[]; forecast: number[] }> = {
+  'C-101': { past: [82,79,76,72,67,62,55,48,42,38], forecast: [32,24,15,5]  },
+  'E-212': { past: [88,86,83,80,77,73,68,62,56,52], forecast: [45,37,28,18] },
+  'P-205': { past: [94,93,91,89,86,83,79,74,69,64], forecast: [58,51,43,34] },
+  'T-405': { past: [91,90,89,87,85,83,80,77,74,72], forecast: [68,63,57,51] },
+  'K-302': { past: [98,97,97,96,95,94,93,92,91,91], forecast: [90,89,88,86] },
+};
+
+const HealthTrendPanel: React.FC<{ assetId: string }> = ({ assetId }) => {
+  const d = HEALTH_TREND[assetId];
+  if (!d) return null;
+  const W = 680, H = 160, PL = 40, PR = 30, PT = 16, PB = 28;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const total = d.past.length + d.forecast.length;
+  const xS = (i: number) => PL + (i / (total - 1)) * cW;
+  const yS = (v: number) => PT + cH - (v / 100) * cH;
+  const pastPts  = d.past.map((v,i) => `${xS(i)},${yS(v)}`).join(' ');
+  const fcastPts = [d.past[d.past.length-1], ...d.forecast]
+    .map((v,i) => `${xS(d.past.length - 1 + i)},${yS(v)}`).join(' ');
+  const todayX = xS(d.past.length - 1);
+  const alarmY = yS(60), critY = yS(40);
+
+  return (
+    <div className="bg-gray-900 border border-indigo-900/40 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h4 className="text-white font-semibold text-sm">REQ-07 · Health Trend & Degradation Forecast — {assetId}</h4>
+          <p className="text-gray-500 text-xs mt-0.5">180-day history · AI degradation model · RUL projection</p>
+        </div>
+        <div className="flex gap-5 text-xs text-gray-500">
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t border-indigo-400 inline-block"/>Historical</span>
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-amber-400 inline-block"/>Forecast</span>
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-amber-400/50 inline-block"/>Alarm 60%</span>
+          <span className="flex items-center gap-1.5"><span className="w-4 border-t border-dashed border-red-400/50 inline-block"/>Critical 40%</span>
+        </div>
+      </div>
+      <div className="p-4">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+          {[0,25,50,75,100].map(v => {
+            const y = yS(v);
+            return <g key={v}>
+              <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#1f2937" strokeWidth="1"/>
+              <text x={PL-4} y={y+3} fill="#4b5563" fontSize="8" textAnchor="end">{v}%</text>
+            </g>;
+          })}
+          <line x1={PL} y1={alarmY} x2={W-PR} y2={alarmY} stroke="#fbbf24" strokeWidth="1" strokeDasharray="4,3"/>
+          <text x={W-PR+2} y={alarmY+3} fill="#fbbf24" fontSize="7">60%</text>
+          <line x1={PL} y1={critY} x2={W-PR} y2={critY} stroke="#ef4444" strokeWidth="1" strokeDasharray="4,3"/>
+          <text x={W-PR+2} y={critY+3} fill="#ef4444" fontSize="7">40%</text>
+          <polyline points={pastPts}  fill="none" stroke="#818cf8" strokeWidth="2"/>
+          <polyline points={fcastPts} fill="none" stroke="#fbbf24" strokeWidth="1.5" strokeDasharray="5,4"/>
+          <line x1={todayX} y1={PT} x2={todayX} y2={H-PB} stroke="#7c3aed" strokeWidth="1.5" strokeDasharray="4,3"/>
+          <text x={todayX} y={PT-3} fill="#a78bfa" fontSize="7" textAnchor="middle">TODAY</text>
+          {d.past.map((v,i) => <circle key={i} cx={xS(i)} cy={yS(v)} r="3" fill="#818cf8"/>)}
+          <text x={PL}     y={H-4} fill="#4b5563" fontSize="7" textAnchor="start">−180d</text>
+          <text x={todayX} y={H-4} fill="#a78bfa" fontSize="7" textAnchor="middle">Today</text>
+          <text x={W-PR}   y={H-4} fill="#fbbf24" fontSize="7" textAnchor="end">+60d</text>
+        </svg>
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-09: Regulatory Compliance Tracker ────────────────────────────────────
+const COMPLIANCE_ITEMS = [
+  { reg:'API 510 — Pressure Vessel Inspection', site:'Ruwais',     status:'compliant', next:'2026-09-15', daysLeft:156, inspector:'DNV GL',          score:96 },
+  { reg:'API 570 — Piping Inspection',          site:'Houston',    status:'due-soon',  next:'2026-05-01', daysLeft:19,  inspector:'Bureau Veritas',   score:88 },
+  { reg:'ISO 13374 — Condition Monitoring',     site:'Rotterdam',  status:'compliant', next:'2026-11-30', daysLeft:232, inspector:'Internal',          score:94 },
+  { reg:'ASME B31.3 — Process Piping',          site:'Ras Tanura', status:'overdue',   next:'2026-03-30', daysLeft:-13, inspector:"Lloyd's Register",  score:71 },
+  { reg:'PSM / RMP — Process Safety',           site:'Whiting',    status:'compliant', next:'2026-08-20', daysLeft:130, inspector:'OSHA',              score:91 },
+  { reg:'API 580 — Risk-Based Inspection',      site:'Jamnagar',   status:'compliant', next:'2026-10-10', daysLeft:181, inspector:'TÜV SÜD',           score:97 },
+  { reg:'ISO 45001 — OHS Management',           site:'All Sites',  status:'due-soon',  next:'2026-04-30', daysLeft:18,  inspector:'BSI',               score:83 },
+];
+const COMP_CHIP: Record<string,{bg:string;color:string;label:string}> = {
+  compliant: {bg:'#052e16',color:'#4ade80',label:'COMPLIANT'},
+  'due-soon':{bg:'#2a1e00',color:'#fbbf24',label:'DUE SOON'},
+  overdue:   {bg:'#450a0a',color:'#f87171',label:'OVERDUE'},
+};
+
+const ComplianceTab: React.FC = () => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-3 gap-3">
+      {[
+        [String(COMPLIANCE_ITEMS.filter(i => i.status==='compliant').length), 'COMPLIANT', 'text-green-400','border-green-900/50'],
+        [String(COMPLIANCE_ITEMS.filter(i => i.status==='due-soon').length),  'DUE SOON',  'text-amber-400','border-amber-900/50'],
+        [String(COMPLIANCE_ITEMS.filter(i => i.status==='overdue').length),   'OVERDUE',   'text-red-400',  'border-red-900/50'],
+      ].map(([v,l,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+        </div>
+      ))}
+    </div>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold">Regulatory Compliance Tracker</h3>
+        <p className="text-gray-500 text-xs mt-0.5">API · ASME · ISO · PSM standards · Real-time compliance status</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {COMPLIANCE_ITEMS.map(item => {
+          const chip = COMP_CHIP[item.status];
+          return (
+            <div key={item.reg} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background:chip.bg, color:chip.color }}>{chip.label}</span>
+                    <p className="text-white text-sm font-semibold">{item.reg}</p>
+                  </div>
+                  <p className="text-gray-500 text-xs">{item.site} · Inspector: {item.inspector}</p>
+                </div>
+                <div className="text-right flex-shrink-0 w-28">
+                  <p className={`text-sm font-bold ${item.daysLeft < 0 ? 'text-red-400' : item.daysLeft < 30 ? 'text-amber-400' : 'text-white'}`}>
+                    {item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d left`}
+                  </p>
+                  <p className="text-gray-600 text-xs">{item.next}</p>
+                </div>
+                <div className="flex-shrink-0 w-32">
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-gray-600">Score</span>
+                    <span className="font-bold" style={{ color: item.score>=90?'#4ade80':item.score>=75?'#fbbf24':'#f87171' }}>{item.score}%</span>
+                  </div>
+                  <div className="bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="h-1.5 rounded-full" style={{ width:`${item.score}%`, background:item.score>=90?'#4ade80':item.score>=75?'#fbbf24':'#ef4444' }}/>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
+// ── REQ-08: FMEA Failure Mode Library ────────────────────────────────────────
+const FMEA_DATA = [
+  { type:'Centrifugal Compressor', mode:'Bearing Failure',   effect:'Compressor shutdown, production loss',  cause:'Lube oil starvation / fatigue',        control:'Vibration monitoring, oil analysis',  s:5, o:5, d:3, action:'Increase PM frequency, add backup lube circuit' },
+  { type:'Centrifugal Compressor', mode:'Impeller Fouling',  effect:'Reduced throughput',                   cause:'Process fluid contamination',          control:'ΔP monitoring, periodic inspection',  s:3, o:4, d:3, action:'Install upstream filter, increase wash frequency' },
+  { type:'Heat Exchanger',         mode:'Tube Fouling',      effect:'Reduced heat transfer, efficiency loss',cause:'Scale / biological growth',            control:'Efficiency monitoring',               s:3, o:5, d:2, action:'Chemical dosing, hydro-jetting schedule' },
+  { type:'Heat Exchanger',         mode:'Tube Rupture',      effect:'Process leak, HSE risk',               cause:'Corrosion / erosion',                  control:'API 510 inspection, UT scanning',     s:5, o:2, d:2, action:'RBI intervals, cathodic protection' },
+  { type:'Centrifugal Pump',       mode:'Mechanical Seal Failure', effect:'Product leak, fire risk',        cause:'Dry run / misalignment',               control:'Seal flush monitoring',               s:5, o:3, d:2, action:'Upgrade to Plan 53B seal system' },
+  { type:'Gas Turbine',            mode:'Blade Erosion',     effect:'Power reduction, unplanned outage',   cause:'Inlet air contamination',              control:'Borescope, vibration monitoring',      s:5, o:2, d:3, action:'Enhanced inlet filtration, annual borescope' },
+  { type:'Separator Vessel',       mode:'Overpressure',      effect:'Vessel rupture, HSE catastrophe',     cause:'PSV failure / instrumentation fault',  control:'PSV testing, PLC interlocks',          s:5, o:1, d:1, action:'Redundant PSV, SIL-2 interlock review' },
+];
+
+const FMEATab: React.FC = () => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-4 gap-3">
+      {[
+        ['7','FAILURE MODES','text-white','border-gray-800'],
+        [String(FMEA_DATA.filter(f => f.s*f.o*f.d >= 15).length),'CRITICAL RPN ≥15','text-red-400','border-red-900/50'],
+        [String(FMEA_DATA.filter(f => { const r=f.s*f.o*f.d; return r>=10&&r<15; }).length),'HIGH RPN 10–14','text-amber-400','border-amber-900/50'],
+        ['IEC 60812','FMEA STANDARD','text-purple-400','border-purple-900/50'],
+      ].map(([v,l,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+        </div>
+      ))}
+    </div>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold">FMEA Failure Mode Library</h3>
+        <p className="text-gray-500 text-xs mt-0.5">Severity × Occurrence × Detection = RPN · AI-scored and ranked</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead><tr className="border-b border-gray-800">
+            {['Equipment Type','Failure Mode','Effect','Cause','Current Control','S','O','D','RPN','Recommended Action'].map(h => (
+              <th key={h} className="py-2.5 px-3 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {FMEA_DATA.map((f, i) => {
+              const rpn = f.s * f.o * f.d;
+              const rpnCol = rpn >= 15 ? '#f87171' : rpn >= 10 ? '#fb923c' : rpn >= 5 ? '#fbbf24' : '#4ade80';
+              return (
+                <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
+                  <td className="py-2.5 px-3 text-purple-400 text-xs font-semibold whitespace-nowrap">{f.type}</td>
+                  <td className="py-2.5 px-3 text-white text-xs font-semibold whitespace-nowrap">{f.mode}</td>
+                  <td className="py-2.5 px-3 text-gray-300 text-xs">{f.effect}</td>
+                  <td className="py-2.5 px-3 text-gray-400 text-xs">{f.cause}</td>
+                  <td className="py-2.5 px-3 text-gray-500 text-xs">{f.control}</td>
+                  <td className="py-2.5 px-3 text-center text-red-400 text-xs font-bold">{f.s}</td>
+                  <td className="py-2.5 px-3 text-center text-amber-400 text-xs font-bold">{f.o}</td>
+                  <td className="py-2.5 px-3 text-center text-blue-400 text-xs font-bold">{f.d}</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background:`${rpnCol}22`, color:rpnCol }}>{rpn}</span>
+                  </td>
+                  <td className="py-2.5 px-3 text-gray-400 text-xs">{f.action}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
 // ── Tab content router ────────────────────────────────────────────────────────
 const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
   switch (tab) {
@@ -1455,6 +2157,9 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'spare-parts':      return <SparePartsTab />;
     case 'work-orders':      return <WorkOrdersTab />;
     case 'roi':              return <ROITab />;
+    case 'reliability':      return <FMEATab />;
+    case 'compliance':       return <ComplianceTab />;
+    default:                 return null;
   }
 };
 
@@ -1534,6 +2239,24 @@ const RefinerAIPage: React.FC = () => {
               { id: 'ai-advisor',  label: 'AI Advisor',  icon: '◎' },
               { id: 'ml-models',   label: 'ML Models',   icon: '▣' },
               { id: 'digital-twin',label: 'Digital Twin',icon: '◎' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
+                style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', gap: 8, transition: 'all .15s',
+                  background: activeTab === item.id ? '#1e1b4b' : 'transparent',
+                  color: activeTab === item.id ? '#a78bfa' : '#9ca3af',
+                  border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
+                }}>
+                <span>{item.icon}</span>{item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Reliability */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 8 }}>Reliability</p>
+            {[
+              { id: 'reliability', label: 'FMEA Library',  icon: '⊞' },
+              { id: 'compliance',  label: 'Compliance',    icon: '✓' },
             ].map(item => (
               <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
                 style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', gap: 8, transition: 'all .15s',
