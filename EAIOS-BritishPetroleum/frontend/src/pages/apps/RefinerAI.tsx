@@ -1483,6 +1483,108 @@ const EquipmentHealthTab: React.FC = () => {
 };
 
 // ── Digital Twin Tab ──────────────────────────────────────────────────────────
+// ── Block K: Digital Twin Enhancements ───────────────────────────────────────
+
+// K-01: Multi-asset twin registry
+const TWIN_ASSETS = [
+  { id:'C-101', name:'Compressor C-101',        type:'Centrifugal Compressor', site:'Ruwais',  fidelity:'High', lastSync:'2s ago',   status:'critical' },
+  { id:'T-405', name:'Gas Turbine T-405',        type:'Gas Turbine',           site:'Ras Tanura',fidelity:'High', lastSync:'5s ago',   status:'warning'  },
+  { id:'E-212', name:'Shell & Tube E-212',       type:'Heat Exchanger',         site:'Houston', fidelity:'Medium',lastSync:'12s ago',  status:'warning'  },
+  { id:'P-205', name:'Centrifugal Pump P-205',   type:'Process Pump',           site:'Houston', fidelity:'Medium',lastSync:'8s ago',   status:'warning'  },
+];
+
+// K-03: Scenario testing (what-if)
+const TWIN_SCENARIOS = [
+  { scenario:'Reduce speed to 3,000 RPM (-16%)', outcome:'Vibration drops to ~4.1 mm/s · RUL extends to ~72h', impact:'positive', runTime:'1.4s' },
+  { scenario:'Increase lube oil pressure to 3.5 bar', outcome:'Bearing temp falls 6°C · Health index improves to 52', impact:'positive', runTime:'0.9s' },
+  { scenario:'Continue at current operating point',   outcome:'Bearing failure probability 97.3% within 48h',     impact:'negative', runTime:'0.2s' },
+];
+
+// K-04: Operating envelope parameters
+const OP_ENVELOPE: { param: string; current: number; normal_lo: number; normal_hi: number; unit: string }[] = [
+  { param:'Speed',                current:3580, normal_lo:2800, normal_hi:3200, unit:'RPM'   },
+  { param:'Bearing Temperature',  current:94,   normal_lo:50,   normal_hi:80,   unit:'°C'    },
+  { param:'Vibration RMS',        current:8.4,  normal_lo:0,    normal_hi:4.5,  unit:'mm/s'  },
+  { param:'Lube Oil Pressure',    current:2.1,  normal_lo:2.8,  normal_hi:4.0,  unit:'bar'   },
+  { param:'Discharge Pressure',   current:18.4, normal_lo:16.0, normal_hi:22.0, unit:'bar'   },
+  { param:'Motor Current',        current:142,  normal_lo:95,   normal_hi:110,  unit:'A'     },
+];
+
+const DigitalTwinEnhancementsPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* K-01: Twin registry */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">K-01 · Digital Twin Asset Registry</h3>
+        <p className="text-gray-500 text-xs">Live fidelity status · Sync frequency · Physics-based models</p>
+      </div>
+      <div className="grid grid-cols-4 divide-x divide-gray-800">
+        {TWIN_ASSETS.map(a => {
+          const sc = { critical:'border-t-red-500 text-red-400', warning:'border-t-amber-500 text-amber-400', healthy:'border-t-green-500 text-green-400' };
+          return (
+            <div key={a.id} className={`p-4 border-t-2 ${a.status==='critical'?'border-t-red-500':a.status==='warning'?'border-t-amber-500':'border-t-green-500'}`}>
+              <p className="text-white font-mono font-bold text-sm">{a.id}</p>
+              <p className="text-gray-400 text-xs">{a.type}</p>
+              <p className="text-gray-600 text-xs">{a.site}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className={`text-xs font-semibold ${sc[a.status as keyof typeof sc]}`}>{a.status.toUpperCase()}</span>
+                <span className="text-gray-600 text-xs">{a.lastSync}</span>
+              </div>
+              <div className="mt-1">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${a.fidelity==='High'?'bg-purple-900/40 text-purple-400':'bg-gray-800 text-gray-500'}`}>{a.fidelity} Fidelity</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* K-04: Operating envelope */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h3 className="text-white font-semibold text-sm mb-3">K-04 · Operating Envelope — C-101 Compressor</h3>
+      <div className="space-y-2.5">
+        {OP_ENVELOPE.map(p => {
+          const range = p.normal_hi - p.normal_lo;
+          const pct = Math.max(0, Math.min(100, ((p.current - p.normal_lo) / range) * 100));
+          const inRange = p.current >= p.normal_lo && p.current <= p.normal_hi;
+          const color = inRange ? '#22c55e' : '#ef4444';
+          return (
+            <div key={p.param} className="flex items-center gap-3">
+              <span className="text-gray-400 text-xs w-40 flex-shrink-0">{p.param}</span>
+              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                <div className="absolute inset-0 bg-green-900/20 rounded-full" />
+                <div className="absolute h-full w-1 rounded" style={{ left:`${Math.max(0,Math.min(100,((p.current - p.normal_lo)/(p.normal_hi-p.normal_lo))*100))}%`, background:color }} />
+              </div>
+              <span className="font-mono text-xs w-24 text-right" style={{ color }}>{p.current} {p.unit}</span>
+              <span className="text-gray-600 text-xs w-28 text-right">[{p.normal_lo}–{p.normal_hi}]</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* K-03: Scenario testing */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">K-03 · Scenario Testing — What-If Analysis</h3>
+        <p className="text-gray-500 text-xs">Physics-based simulation · Real-time scenario evaluation</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {TWIN_SCENARIOS.map((s,i) => (
+          <div key={i} className="px-5 py-4 flex items-start gap-4">
+            <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${s.impact==='positive'?'bg-green-900/40 text-green-400':'bg-red-900/40 text-red-400'}`}>SIM {i+1}</span>
+            <div className="flex-1">
+              <p className="text-white text-xs font-semibold">{s.scenario}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{s.outcome}</p>
+            </div>
+            <span className="text-gray-500 text-xs flex-shrink-0">{s.runTime}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const DigitalTwinTab: React.FC = () => (
   <div className="space-y-4">
     <div className="flex items-center gap-3">
@@ -1530,6 +1632,9 @@ const DigitalTwinTab: React.FC = () => (
         />
       </svg>
     </div>
+
+    {/* Block K: Digital Twin Enhancements */}
+    <DigitalTwinEnhancementsPanel />
   </div>
 );
 
