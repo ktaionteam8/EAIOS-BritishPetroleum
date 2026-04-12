@@ -515,7 +515,7 @@ const FailurePredictionGantt: React.FC = () => {
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h3 className="text-white font-semibold text-sm">REQ-04 · Failure Prediction Timeline — 90-Day Horizon</h3>
+          <h3 className="text-white font-semibold text-sm">Failure Prediction Timeline — 90-Day Horizon</h3>
           <p className="text-gray-500 text-xs mt-0.5">AI-predicted failure dates · sorted by urgency · confidence-weighted</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -624,7 +624,7 @@ const EnterpriseIntelligencePanel: React.FC = () => {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-white font-semibold text-sm">F-06 · Enterprise Reliability Score — 12-Month Trend</h3>
+            <h3 className="text-white font-semibold text-sm">Enterprise Reliability Score — 12-Month Trend</h3>
             <p className="text-gray-500 text-xs">Fleet-weighted average · Target ≥ 90</p>
           </div>
           <div className="text-right">
@@ -645,7 +645,7 @@ const EnterpriseIntelligencePanel: React.FC = () => {
       {/* F-01/02/03/04/05: Site comparison table */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">F-01 · Multi-Site Performance Benchmark</h3>
+          <h3 className="text-white font-semibold text-sm">Multi-Site Performance Benchmark</h3>
           <p className="text-gray-500 text-xs">Production efficiency · Energy intensity · Maintenance cost · AI adoption score</p>
         </div>
         <table className="w-full text-xs">
@@ -679,7 +679,7 @@ const EnterpriseIntelligencePanel: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  {s.status === 'critical' && <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-0.5 font-bold">F-05 PRIORITY</span>}
+                  {s.status === 'critical' && <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-0.5 font-bold">PRIORITY</span>}
                   {s.status === 'warning'  && <span className="text-xs bg-amber-900/40 text-amber-400 border border-amber-800 rounded px-2 py-0.5">IMPROVE</span>}
                   {s.status === 'healthy'  && <span className="text-xs text-gray-600">Maintain</span>}
                 </td>
@@ -1176,7 +1176,7 @@ const RiskMatrix5x5: React.FC = () => {
     <div className="bg-gray-900 border border-orange-900/40 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h4 className="text-white font-semibold text-sm">REQ-06 · Risk Matrix (5×5) — Equipment Criticality</h4>
+          <h4 className="text-white font-semibold text-sm">Risk Matrix (5×5) — Equipment Criticality</h4>
           <p className="text-gray-500 text-xs mt-0.5">ISO 31000 · Likelihood × Consequence = RPN · Equipment plotted by AI assessment</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -1305,7 +1305,7 @@ const RulConfidenceBar: React.FC<{ assetId: string }> = ({ assetId }) => {
   if (!rul) return null;
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">E-03 · RUL Confidence Interval — {assetId}</p>
+      <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">RUL Confidence Interval — {assetId}</p>
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="relative h-6 bg-gray-800 rounded-full overflow-hidden">
@@ -1335,7 +1335,7 @@ const FleetHeatmap: React.FC = () => {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">E-04 · Fleet-Wide Health Heatmap</h3>
+        <h3 className="text-white font-semibold text-sm">Fleet-Wide Health Heatmap</h3>
         <p className="text-gray-500 text-xs">Average health index by site × asset class</p>
       </div>
       <table className="w-full text-xs">
@@ -1444,7 +1444,7 @@ const EquipmentHealthTab: React.FC = () => {
     {/* E-01: Failure Signature Library */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">E-01 · Multi-Modal Failure Signature Library</h3>
+        <h3 className="text-white font-semibold text-sm">Multi-Modal Failure Signature Library</h3>
         <p className="text-gray-500 text-xs">Active failure modes matched across vibration, thermal, oil, and process signals</p>
       </div>
       <div className="divide-y divide-gray-800">
@@ -1468,7 +1468,7 @@ const EquipmentHealthTab: React.FC = () => {
     {/* E-08: PM KPI Scorecard */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">E-08 · Predictive Maintenance KPI Scorecard</h3>
+        <h3 className="text-white font-semibold text-sm">Predictive Maintenance KPI Scorecard</h3>
         <p className="text-gray-500 text-xs">Programme performance vs targets · Rolling 90-day period</p>
       </div>
       <div className="grid grid-cols-3 gap-0 divide-x divide-y divide-gray-800 border-t border-gray-800">
@@ -1518,7 +1518,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
     {/* K-01: Twin registry */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">K-01 · Digital Twin Asset Registry</h3>
+        <h3 className="text-white font-semibold text-sm">Digital Twin Asset Registry</h3>
         <p className="text-gray-500 text-xs">Live fidelity status · Sync frequency · Physics-based models</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
@@ -1544,7 +1544,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
 
     {/* K-04: Operating envelope */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <h3 className="text-white font-semibold text-sm mb-3">K-04 · Operating Envelope — C-101 Compressor</h3>
+      <h3 className="text-white font-semibold text-sm mb-3">Operating Envelope — C-101 Compressor</h3>
       <div className="space-y-2.5">
         {OP_ENVELOPE.map(p => {
           const range = p.normal_hi - p.normal_lo;
@@ -1569,7 +1569,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
     {/* K-03: Scenario testing */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">K-03 · Scenario Testing — What-If Analysis</h3>
+        <h3 className="text-white font-semibold text-sm">Scenario Testing — What-If Analysis</h3>
         <p className="text-gray-500 text-xs">Physics-based simulation · Real-time scenario evaluation</p>
       </div>
       <div className="divide-y divide-gray-800">
@@ -1941,7 +1941,7 @@ const AIGovernancePanel: React.FC = () => {
       {/* H-01: Model Registry */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">H-01 · AI Model Registry & Lifecycle</h3>
+          <h3 className="text-white font-semibold text-sm">AI Model Registry & Lifecycle</h3>
           <p className="text-gray-500 text-xs">Version tracking · Drift monitoring · Approval status</p>
         </div>
         <table className="w-full text-xs">
@@ -1972,7 +1972,7 @@ const AIGovernancePanel: React.FC = () => {
       {/* H-02: Drift Detection */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">H-02 · Model Drift Detection</h3>
+          <h3 className="text-white font-semibold text-sm">Model Drift Detection</h3>
           <p className="text-gray-500 text-xs">PSI / Feature drift / Concept drift — alert threshold PSI &gt; 0.2</p>
         </div>
         <table className="w-full text-xs">
@@ -1998,7 +1998,7 @@ const AIGovernancePanel: React.FC = () => {
       {/* H-05: Bias detection */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">H-05 · Bias Detection by Equipment Group</h3>
+          <h3 className="text-white font-semibold text-sm">Bias Detection by Equipment Group</h3>
           <p className="text-gray-500 text-xs">Equal opportunity check · FPR / TPR across asset segments</p>
         </div>
         <table className="w-full text-xs">
@@ -2030,7 +2030,7 @@ const SHAPPanel: React.FC = () => {
     <div className="space-y-4">
       {/* I-01: Global feature importance */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">I-01 · Global SHAP Feature Importance — Bearing Fault LSTM</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Global SHAP Feature Importance — Bearing Fault LSTM</h3>
         <div className="space-y-2">
           {SHAP_GLOBAL.map(f => (
             <div key={f.feature} className="flex items-center gap-3">
@@ -2048,7 +2048,7 @@ const SHAPPanel: React.FC = () => {
       {/* I-02: SHAP Waterfall for C-101 */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <div className="mb-3">
-          <h3 className="text-white font-semibold text-sm">I-02 · SHAP Waterfall — C-101 Latest Prediction</h3>
+          <h3 className="text-white font-semibold text-sm">SHAP Waterfall — C-101 Latest Prediction</h3>
           <p className="text-gray-500 text-xs">Individual feature contributions → failure probability {(SHAP_WATERFALL[SHAP_WATERFALL.length-1].cumulative*100).toFixed(0)}%</p>
         </div>
         <div className="space-y-1.5">
@@ -2074,7 +2074,7 @@ const SHAPPanel: React.FC = () => {
       {/* I-06: Counterfactuals */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">I-06 · Counterfactual Explanations</h3>
+          <h3 className="text-white font-semibold text-sm">Counterfactual Explanations</h3>
           <p className="text-gray-500 text-xs">What would need to change to reduce failure probability?</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -2149,7 +2149,7 @@ const ContinuousLearningPanel: React.FC = () => {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-white font-semibold text-sm">L-04 · Model Accuracy — Version History</h3>
+            <h3 className="text-white font-semibold text-sm">Model Accuracy — Version History</h3>
             <p className="text-gray-500 text-xs">Bearing Fault LSTM continuous improvement trajectory</p>
           </div>
           <div className="text-right">
@@ -2170,7 +2170,7 @@ const ContinuousLearningPanel: React.FC = () => {
 
       {/* L-02: Retraining pipeline */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">L-02 · Retraining Pipeline — Bearing Fault LSTM</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Retraining Pipeline — Bearing Fault LSTM</h3>
         <div className="space-y-3">
           {RETRAIN_PIPELINE.map((s,i) => (
             <div key={i} className="flex items-start gap-3">
@@ -2192,7 +2192,7 @@ const ContinuousLearningPanel: React.FC = () => {
         {/* L-01: Active learning queue */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800">
-            <h3 className="text-white font-semibold text-sm">L-01 · Active Learning Queue</h3>
+            <h3 className="text-white font-semibold text-sm">Active Learning Queue</h3>
             <p className="text-gray-500 text-xs">Low-confidence predictions awaiting expert labelling</p>
           </div>
           <div className="divide-y divide-gray-800">
@@ -2211,7 +2211,7 @@ const ContinuousLearningPanel: React.FC = () => {
         {/* L-05: Feedback integration log */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800">
-            <h3 className="text-white font-semibold text-sm">L-05 · Feedback Integration Log</h3>
+            <h3 className="text-white font-semibold text-sm">Feedback Integration Log</h3>
             <p className="text-gray-500 text-xs">Override / label feedback → model improvement</p>
           </div>
           <div className="divide-y divide-gray-800">
@@ -2463,7 +2463,7 @@ const SAPIntegrationPanel: React.FC<SAPIntegrationPanelProps> = ({ records, tota
       <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
         <div>
           <h3 className="text-white font-semibold text-sm">SAP PM / MM Integration</h3>
-          <p className="text-gray-500 text-xs">Live BAPI simulation · IW21 · IW31 · MM reservations · B-07 S/4HANA migration ready</p>
+          <p className="text-gray-500 text-xs">Live BAPI simulation · IW21 · IW31 · MM reservations · S/4HANA migration ready</p>
         </div>
         <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-800 px-3 py-1 rounded font-mono">SAP ECC → S/4HANA</span>
       </div>
@@ -2744,7 +2744,7 @@ const ROITab: React.FC = () => (
     <div className="bg-gray-900 border border-blue-900/40 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h3 className="text-white font-semibold text-sm">REQ-05 · Reliability KPIs — MTBF / MTTR / OEE</h3>
+          <h3 className="text-white font-semibold text-sm">Reliability KPIs — MTBF / MTTR / OEE</h3>
           <p className="text-gray-500 text-xs mt-0.5">Fleet-wide · ISO 55001 aligned · Rolling 12-month average</p>
         </div>
         <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/50 px-3 py-1 rounded-full">YTD 2026</span>
@@ -2937,7 +2937,7 @@ const ESC_COL: Record<string,{bg:string;color:string}> = {
 const EscalationMatrix: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="px-5 py-3 border-b border-gray-800">
-      <h3 className="text-white font-semibold text-sm">REQ-16 · Alert Escalation Matrix</h3>
+      <h3 className="text-white font-semibold text-sm">Alert Escalation Matrix</h3>
       <p className="text-gray-500 text-xs mt-0.5">Severity → response chain · SLA · ISO 55000 aligned</p>
     </div>
     <div className="overflow-x-auto">
@@ -2987,7 +2987,7 @@ const AnomalyHeatmap: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
       <div>
-        <h3 className="text-white font-semibold text-sm">REQ-12 · Anomaly Detection Heatmap</h3>
+        <h3 className="text-white font-semibold text-sm">Anomaly Detection Heatmap</h3>
         <p className="text-gray-500 text-xs mt-0.5">Equipment × Time · LSTM anomaly score · 7-day rolling window</p>
       </div>
       <div className="flex items-center gap-3 text-xs">
@@ -3032,7 +3032,7 @@ const MultiSiteBenchmark: React.FC = () => {
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h3 className="text-white font-semibold text-sm">REQ-10 · Multi-Site Benchmarking</h3>
+          <h3 className="text-white font-semibold text-sm">Multi-Site Benchmarking</h3>
           <p className="text-gray-500 text-xs mt-0.5">OEE · MTBF · MTTR ranked by performance · ISO 55001</p>
         </div>
         <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/50 px-3 py-1 rounded-full">5 refineries</span>
@@ -3080,7 +3080,7 @@ const AIFeedbackPanel: React.FC = () => {
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h3 className="text-white font-semibold text-sm">REQ-19 · AI Feedback Loop & Accuracy Tracker</h3>
+          <h3 className="text-white font-semibold text-sm">AI Feedback Loop & Accuracy Tracker</h3>
           <p className="text-gray-500 text-xs mt-0.5">Prediction outcomes · Model self-correction · Rolling 30-day</p>
         </div>
         <div className="flex gap-4 text-xs">
@@ -3132,7 +3132,7 @@ const CrewPlanner: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
       <div>
-        <h3 className="text-white font-semibold text-sm">REQ-18 · Contractor & Crew Planner</h3>
+        <h3 className="text-white font-semibold text-sm">Contractor & Crew Planner</h3>
         <p className="text-gray-500 text-xs mt-0.5">Current roster · Certifications · WO assignments</p>
       </div>
       <div className="flex gap-4 text-xs">
@@ -3169,7 +3169,7 @@ const CrewPlanner: React.FC = () => (
 const RCAPanel: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="px-5 py-3 border-b border-gray-800">
-      <h3 className="text-white font-semibold text-sm">REQ-13 · Root Cause Analysis — C-101 Bearing Failure</h3>
+      <h3 className="text-white font-semibold text-sm">Root Cause Analysis — C-101 Bearing Failure</h3>
       <p className="text-gray-500 text-xs mt-0.5">5-Why methodology · AI-assisted · WO-2026-0847</p>
     </div>
     <div className="p-5 grid grid-cols-2 gap-6">
@@ -3231,7 +3231,7 @@ const BudgetActuals: React.FC = () => {
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h3 className="text-white font-semibold text-sm">REQ-15 · Maintenance Budget vs Actuals ($M)</h3>
+          <h3 className="text-white font-semibold text-sm">Maintenance Budget vs Actuals ($M)</h3>
           <p className="text-gray-500 text-xs mt-0.5">YTD 2026 · All sites · Variance analysis</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -3284,7 +3284,7 @@ const PARTS_MATRIX_ITEMS = [
 const SpareCriticalityMatrix: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="px-5 py-3 border-b border-gray-800">
-      <h3 className="text-white font-semibold text-sm">REQ-14 · Spare Parts Criticality Matrix</h3>
+      <h3 className="text-white font-semibold text-sm">Spare Parts Criticality Matrix</h3>
       <p className="text-gray-500 text-xs mt-0.5">Criticality × Lead Time · Strategic stockholding positions</p>
     </div>
     <div className="p-5">
@@ -3338,7 +3338,7 @@ const OilAnalysisPanel: React.FC = () => (
   <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
     <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
       <div>
-        <h3 className="text-white font-semibold text-sm">REQ-17 · Oil Analysis & Lubrication Tracker</h3>
+        <h3 className="text-white font-semibold text-sm">Oil Analysis & Lubrication Tracker</h3>
         <p className="text-gray-500 text-xs mt-0.5">ISO 4406 · Ferrography · ASTM D445 viscosity · TBN depletion</p>
       </div>
       <span className="text-xs bg-purple-900/30 text-purple-400 border border-purple-900/50 px-2 py-1 rounded">Shell / Mobil OEM spec</span>
@@ -3401,7 +3401,7 @@ const HealthTrendPanel: React.FC<{ assetId: string }> = ({ assetId }) => {
     <div className="bg-gray-900 border border-indigo-900/40 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
         <div>
-          <h4 className="text-white font-semibold text-sm">REQ-07 · Health Trend & Degradation Forecast — {assetId}</h4>
+          <h4 className="text-white font-semibold text-sm">Health Trend & Degradation Forecast — {assetId}</h4>
           <p className="text-gray-500 text-xs mt-0.5">180-day history · AI degradation model · RUL projection</p>
         </div>
         <div className="flex gap-5 text-xs text-gray-500">
@@ -3485,7 +3485,7 @@ const ComplianceEnhancementsPanel: React.FC = () => (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
         <div>
-          <h3 className="text-white font-semibold text-sm">N-04 · AI-Generated Compliance Action List</h3>
+          <h3 className="text-white font-semibold text-sm">AI-Generated Compliance Action List</h3>
           <p className="text-gray-500 text-xs">Proactive AI monitoring · Auto-generated actions from regulation changes + deadlines</p>
         </div>
         <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
@@ -3513,7 +3513,7 @@ const ComplianceEnhancementsPanel: React.FC = () => (
     {/* N-01: Evidence document tracker */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">N-01 · Evidence Document Tracker</h3>
+        <h3 className="text-white font-semibold text-sm">Evidence Document Tracker</h3>
         <p className="text-gray-500 text-xs">Audit-ready evidence vault · Upload status per regulation</p>
       </div>
       <table className="w-full text-xs">
@@ -3543,7 +3543,7 @@ const ComplianceEnhancementsPanel: React.FC = () => (
     {/* N-02: Regulatory change tracker */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">N-02 · Upcoming Regulatory Changes</h3>
+        <h3 className="text-white font-semibold text-sm">Upcoming Regulatory Changes</h3>
         <p className="text-gray-500 text-xs">Horizon scanning · Change impact assessment · Action planning</p>
       </div>
       <div className="divide-y divide-gray-800">
@@ -3735,7 +3735,7 @@ const MaintenanceCopilotPanel: React.FC = () => (
     {/* J-01: AI scheduling recommendations */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">J-01 · AI Maintenance Scheduling Copilot</h3>
+        <h3 className="text-white font-semibold text-sm">AI Maintenance Scheduling Copilot</h3>
         <p className="text-gray-500 text-xs">Optimal maintenance windows · Resource / permit / parts constraint resolution</p>
       </div>
       <div className="divide-y divide-gray-800">
@@ -3767,7 +3767,7 @@ const MaintenanceCopilotPanel: React.FC = () => (
       {/* J-02: Resource availability */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">J-02 · Crew Resource Calendar</h3>
+          <h3 className="text-white font-semibold text-sm">Crew Resource Calendar</h3>
           <p className="text-gray-500 text-xs">Conflict detection · 2-week horizon</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -3787,7 +3787,7 @@ const MaintenanceCopilotPanel: React.FC = () => (
       {/* J-03: Constraint analysis */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">J-03 · Constraint Analysis</h3>
+          <h3 className="text-white font-semibold text-sm">Constraint Analysis</h3>
           <p className="text-gray-500 text-xs">Safety / permit / parts / ops readiness</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -3810,7 +3810,7 @@ const MaintenanceCopilotPanel: React.FC = () => (
 
     {/* J-04: Schedule optimization comparison */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <h3 className="text-white font-semibold text-sm mb-3">J-04 · Schedule Optimization Gains — AI vs Baseline</h3>
+      <h3 className="text-white font-semibold text-sm mb-3">Schedule Optimization Gains — AI vs Baseline</h3>
       <div className="grid grid-cols-4 gap-3">
         {SCHEDULE_COMPARISON.map(s => (
           <div key={s.metric} className="bg-gray-800/50 rounded-lg px-4 py-3">
@@ -3867,7 +3867,7 @@ const TARTab: React.FC = () => {
       {/* Gantt */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold">REQ-22 · TAR Shutdown Planning — 2026 Schedule</h3>
+          <h3 className="text-white font-semibold">TAR Shutdown Planning — 2026 Schedule</h3>
           <p className="text-gray-500 text-xs mt-0.5">May–Oct 2026 horizon · Planned turnarounds</p>
         </div>
         <div className="p-5">
@@ -3955,7 +3955,7 @@ const EnergyTab: React.FC = () => (
     </div>
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold">REQ-21 · Energy Consumption Monitor — Per Site</h3>
+        <h3 className="text-white font-semibold">Energy Consumption Monitor — Per Site</h3>
         <p className="text-gray-500 text-xs mt-0.5">GJ/tonne · Carbon intensity · Power & steam · BP decarbonisation tracking</p>
       </div>
       <div className="overflow-x-auto">
@@ -4048,7 +4048,7 @@ const FieldOpsTab: React.FC = () => (
     </div>
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold">REQ-20 · Inspection Route Optimiser</h3>
+        <h3 className="text-white font-semibold">Inspection Route Optimiser</h3>
         <p className="text-gray-500 text-xs mt-0.5">AI-optimised inspection sequences · Shortest path · Priority weighted</p>
       </div>
       <div className="divide-y divide-gray-800">
@@ -4761,7 +4761,7 @@ const OTDataTab: React.FC = () => {
       {/* G-01: OT data source inventory */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">G-01 · OT Data Source Inventory</h3>
+          <h3 className="text-white font-semibold text-sm">OT Data Source Inventory</h3>
           <p className="text-gray-500 text-xs">Live connections · OSIsoft PI / OPC-UA / DCS / SCADA / MQTT</p>
         </div>
         <table className="w-full text-xs">
@@ -4798,7 +4798,7 @@ const OTDataTab: React.FC = () => {
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
           <div>
-            <h3 className="text-white font-semibold text-sm">G-02 · Data Quality Issues</h3>
+            <h3 className="text-white font-semibold text-sm">Data Quality Issues</h3>
             <p className="text-gray-500 text-xs">Frozen values, out-of-range, stale timestamps, missing data</p>
           </div>
           <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
@@ -4822,7 +4822,7 @@ const OTDataTab: React.FC = () => {
       <div className="grid grid-cols-2 gap-5">
         {/* G-04: Protocol breakdown */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 className="text-white font-semibold text-sm mb-3">G-04 · Protocol Breakdown</h3>
+          <h3 className="text-white font-semibold text-sm mb-3">Protocol Breakdown</h3>
           <div className="space-y-2">
             {PROTOCOL_BREAKDOWN.map(p => (
               <div key={p.protocol} className="flex items-center gap-3">
@@ -4840,7 +4840,7 @@ const OTDataTab: React.FC = () => {
         {/* G-05: Schema normalization log */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800">
-            <h3 className="text-white font-semibold text-sm">G-05 · Schema Normalization Log</h3>
+            <h3 className="text-white font-semibold text-sm">Schema Normalization Log</h3>
             <p className="text-gray-500 text-xs">ISA-88 / ISO 15926 tag normalization pipeline</p>
           </div>
           <div className="divide-y divide-gray-800">
@@ -4918,7 +4918,7 @@ const AdoptionTab: React.FC = () => (
     {/* M-01: Site adoption table */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">M-01 · Site-by-Site Adoption Scorecard</h3>
+        <h3 className="text-white font-semibold text-sm">Site-by-Site Adoption Scorecard</h3>
         <p className="text-gray-500 text-xs">Active users · Alert action rate · Response time · Training completion</p>
       </div>
       <table className="w-full text-xs">
@@ -4952,7 +4952,7 @@ const AdoptionTab: React.FC = () => (
       {/* M-02: Training modules */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">M-02 · Training Module Progress</h3>
+          <h3 className="text-white font-semibold text-sm">Training Module Progress</h3>
           <p className="text-gray-500 text-xs">Completion rate · Average assessment score</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -4980,7 +4980,7 @@ const AdoptionTab: React.FC = () => (
       {/* M-03: Adoption barriers */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">M-03 · Adoption Barriers — User Feedback</h3>
+          <h3 className="text-white font-semibold text-sm">Adoption Barriers — User Feedback</h3>
           <p className="text-gray-500 text-xs">Aggregated from in-app feedback surveys</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -5003,7 +5003,7 @@ const AdoptionTab: React.FC = () => (
     {/* M-04: Change champions */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">M-04 · Change Champion Network</h3>
+        <h3 className="text-white font-semibold text-sm">Change Champion Network</h3>
         <p className="text-gray-500 text-xs">Power users driving adoption across sites</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
@@ -5114,7 +5114,7 @@ const WaveTrackerTab: React.FC = () => {
       {/* O-02: Milestone tracker */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">O-02 · Milestone Tracker</h3>
+          <h3 className="text-white font-semibold text-sm">Milestone Tracker</h3>
           <p className="text-gray-500 text-xs">Cross-wave delivery milestones · Owner accountability</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -5134,7 +5134,7 @@ const WaveTrackerTab: React.FC = () => {
       {/* O-03: Risk register */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">O-03 · Delivery Risk Register</h3>
+          <h3 className="text-white font-semibold text-sm">Delivery Risk Register</h3>
           <p className="text-gray-500 text-xs">Programme risks · Probability · Mitigation status</p>
         </div>
         <table className="w-full text-xs">
@@ -5202,7 +5202,7 @@ const CrossDomainPanel: React.FC = () => {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-white font-semibold text-sm">P-03 · Cross-Domain Event Bus — Throughput</h3>
+            <h3 className="text-white font-semibold text-sm">Cross-Domain Event Bus — Throughput</h3>
             <p className="text-gray-500 text-xs">Messages per minute · API Gateway routing · All 6 domains</p>
           </div>
           <div className="text-right">
@@ -5221,7 +5221,7 @@ const CrossDomainPanel: React.FC = () => {
       {/* P-01: Active orchestration events */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">P-01 · Cross-Domain Orchestration Events</h3>
+          <h3 className="text-white font-semibold text-sm">Cross-Domain Orchestration Events</h3>
           <p className="text-gray-500 text-xs">AI-triggered cascades spanning multiple domains</p>
         </div>
         <div className="divide-y divide-gray-800">
@@ -5243,7 +5243,7 @@ const CrossDomainPanel: React.FC = () => {
 
       {/* P-02: Agent health grid */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 className="text-white font-semibold text-sm mb-3">P-02 · Cross-Domain Agent Health</h3>
+        <h3 className="text-white font-semibold text-sm mb-3">Cross-Domain Agent Health</h3>
         <div className="grid grid-cols-5 gap-3">
           {AGENT_HEALTH.map(a => (
             <div key={a.agent} className="bg-gray-800/50 rounded-lg p-3 text-center">
@@ -5308,7 +5308,7 @@ const EdgeAITab: React.FC = () => {
       {/* Q-01: Edge node table */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">Q-01 · Edge Node Inventory</h3>
+          <h3 className="text-white font-semibold text-sm">Edge Node Inventory</h3>
           <p className="text-gray-500 text-xs">On-premise AI inference · Air-gapped-capable · OT network–safe</p>
         </div>
         <table className="w-full text-xs">
@@ -5342,7 +5342,7 @@ const EdgeAITab: React.FC = () => {
       {/* Q-02: Edge vs cloud latency */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">Q-02 · Edge vs Cloud Latency Comparison</h3>
+          <h3 className="text-white font-semibold text-sm">Edge vs Cloud Latency Comparison</h3>
           <p className="text-gray-500 text-xs">On-device inference vs cloud round-trip · Critical for OT safety response</p>
         </div>
         <table className="w-full text-xs">
@@ -5367,7 +5367,7 @@ const EdgeAITab: React.FC = () => {
       {/* Q-03: Edge model deployments */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-800">
-          <h3 className="text-white font-semibold text-sm">Q-03 · Edge Model Deployments</h3>
+          <h3 className="text-white font-semibold text-sm">Edge Model Deployments</h3>
           <p className="text-gray-500 text-xs">Quantised models deployed to edge nodes · OTA update capable</p>
         </div>
         <div className="divide-y divide-gray-800">
