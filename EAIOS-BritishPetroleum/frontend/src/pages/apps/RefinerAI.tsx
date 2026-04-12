@@ -102,6 +102,117 @@ const EquipmentRow: React.FC<EquipmentRowProps> = ({ tag, name, site, health, ru
   </tr>
 );
 
+// ── REQ-04: Failure Prediction Gantt data ────────────────────────────────────
+interface GanttItem {
+  tag: string; name: string; site: string;
+  rul: number; conf: number;
+  sev: 'critical' | 'high' | 'medium' | 'low';
+}
+const GANTT_ITEMS: GanttItem[] = [
+  { tag: 'C-101', name: 'Centrifugal Compressor', site: 'Ruwais, UAE',       rul: 2,  conf: 97.3, sev: 'critical' },
+  { tag: 'E-212', name: 'Shell & Tube Exchanger', site: 'Houston, USA',      rul: 3,  conf: 91.8, sev: 'critical' },
+  { tag: 'P-205', name: 'Centrifugal Pump',       site: 'Houston, USA',      rul: 8,  conf: 78.3, sev: 'high'     },
+  { tag: 'T-405', name: 'Gas Turbine',            site: 'Ras Tanura, KSA',   rul: 14, conf: 71.6, sev: 'high'     },
+  { tag: 'K-302', name: 'Screw Compressor',       site: 'Jamnagar, India',   rul: 22, conf: 65.2, sev: 'medium'   },
+  { tag: 'V-305', name: 'Separator Vessel',       site: 'Cherry Point, USA', rul: 28, conf: 62.1, sev: 'medium'   },
+  { tag: 'G-302', name: 'Gas Turbine',            site: 'Ras Tanura, KSA',   rul: 35, conf: 58.4, sev: 'medium'   },
+  { tag: 'F-101', name: 'Fired Heater',           site: 'Rotterdam, NL',     rul: 41, conf: 54.7, sev: 'medium'   },
+  { tag: 'R-201', name: 'Reactor',                site: 'Whiting, USA',      rul: 48, conf: 51.2, sev: 'low'      },
+  { tag: 'P-401', name: 'Crude Pump',             site: 'Ras Tanura, KSA',   rul: 55, conf: 48.9, sev: 'low'      },
+  { tag: 'C-203', name: 'Cooling Tower Fan',      site: 'Castellon, ES',     rul: 62, conf: 44.3, sev: 'low'      },
+  { tag: 'K-201', name: 'Reformer Heater',        site: 'Gelsenkirchen, DE', rul: 71, conf: 41.8, sev: 'low'      },
+  { tag: 'E-501', name: 'Pre-heater',             site: 'Rotterdam, NL',     rul: 78, conf: 38.5, sev: 'low'      },
+  { tag: 'T-103', name: 'Storage Tank',           site: 'Ruwais, UAE',       rul: 85, conf: 35.2, sev: 'low'      },
+];
+const GANTT_COLOR: Record<string, string> = { critical: '#ef4444', high: '#f59e0b', medium: '#60a5fa', low: '#4ade80' };
+const GRID_DAYS = [7, 14, 21, 30, 45, 60, 75, 90];
+const HORIZON = 90;
+
+const FailurePredictionGantt: React.FC = () => {
+  const LW = 195, CW = 620, W = LW + CW;
+  const ROW = 30, HDR = 26;
+  const H = HDR + GANTT_ITEMS.length * ROW;
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h3 className="text-white font-semibold text-sm">REQ-04 · Failure Prediction Timeline — 90-Day Horizon</h3>
+          <p className="text-gray-500 text-xs mt-0.5">AI-predicted failure dates · sorted by urgency · confidence-weighted</p>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          {([['critical','#ef4444','< 7d'],['high','#f59e0b','7–30d'],['medium','#60a5fa','30–60d'],['low','#4ade80','60–90d']] as [string,string,string][]).map(([s,c,l]) => (
+            <span key={s} className="flex items-center gap-1.5 text-gray-400">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: c }} />{l}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 overflow-x-auto">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H, minWidth: 600 }}>
+          {/* Day gridlines + labels */}
+          {GRID_DAYS.map(d => {
+            const x = LW + (d / HORIZON) * CW;
+            return (
+              <g key={d}>
+                <line x1={x} y1={HDR} x2={x} y2={H} stroke="#1f2937" strokeWidth="1" />
+                <text x={x} y={HDR - 7} fill="#4b5563" fontSize="8" textAnchor="middle">Day {d}</text>
+              </g>
+            );
+          })}
+
+          {/* Today marker */}
+          <line x1={LW} y1={0} x2={LW} y2={H} stroke="#7c3aed" strokeWidth="1.5" strokeDasharray="5,3" />
+          <text x={LW} y={HDR - 7} fill="#a78bfa" fontSize="8" textAnchor="middle" fontWeight="bold">TODAY</text>
+
+          {/* Rows */}
+          {GANTT_ITEMS.map((g, i) => {
+            const y = HDR + i * ROW;
+            const col = GANTT_COLOR[g.sev];
+            const barW = Math.max(6, (g.rul / HORIZON) * CW);
+            const midY = y + ROW / 2;
+            return (
+              <g key={g.tag}>
+                {i % 2 === 0 && <rect x={0} y={y} width={W} height={ROW} fill="#0d1117" opacity="0.6" />}
+
+                {/* Tag */}
+                <text x={4} y={midY - 4} fill={col} fontSize="9" fontWeight="bold" dominantBaseline="middle">{g.tag}</text>
+                {/* Name */}
+                <text x={46} y={midY - 4} fill="#e5e7eb" fontSize="8" dominantBaseline="middle">{g.name}</text>
+                {/* Site */}
+                <text x={46} y={midY + 7} fill="#6b7280" fontSize="7" dominantBaseline="middle">{g.site}</text>
+
+                {/* Risk bar (filled) */}
+                <rect x={LW} y={y + 8} width={barW} height={ROW - 16} fill={col} opacity={0.18} rx="3" />
+                <rect x={LW} y={y + 8} width={barW} height={ROW - 16} fill="none" stroke={col} strokeWidth="1" rx="3" opacity="0.7" />
+
+                {/* Failure marker dot */}
+                <circle cx={LW + barW} cy={midY} r="4" fill={col} />
+
+                {/* RUL label */}
+                <text x={LW + barW + 7} y={midY - 4} fill={col} fontSize="8" fontWeight="bold" dominantBaseline="middle">
+                  {g.rul < 1 ? '<1d' : `${g.rul}d`}
+                </text>
+                <text x={LW + barW + 7} y={midY + 7} fill="#6b7280" fontSize="7" dominantBaseline="middle">{g.conf}%</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Summary strip */}
+      <div className="px-5 py-3 border-t border-gray-800 flex items-center gap-6 text-xs">
+        <span className="text-gray-500">14 assets in failure prediction window</span>
+        <span className="text-red-400 font-semibold">2 critical — action required now</span>
+        <span className="text-amber-400 font-semibold">2 high — schedule within 14 days</span>
+        <span className="text-blue-400 font-semibold">4 medium — plan within 45 days</span>
+        <span className="text-gray-500 ml-auto">Estimated exposure if unaddressed: <span className="text-white font-semibold">$18.4M</span></span>
+      </div>
+    </div>
+  );
+};
+
 // ── Dashboard Tab ─────────────────────────────────────────────────────────────
 const DashboardTab: React.FC = () => (
   <div className="space-y-6">
@@ -126,22 +237,14 @@ const DashboardTab: React.FC = () => (
         </div>
       </div>
       <div className="relative rounded-lg overflow-hidden" style={{ height: 220, background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-        {/* Simplified continent outlines via SVG */}
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} viewBox="0 0 800 400">
-          {/* North America */}
           <ellipse cx="160" cy="170" rx="100" ry="80" fill="#4b5563"/>
-          {/* South America */}
-          <ellipse cx="200" cy="310" rx="55" ry="70" fill="#4b5563"/>
-          {/* Europe */}
-          <ellipse cx="420" cy="140" rx="50" ry="45" fill="#4b5563"/>
-          {/* Africa */}
-          <ellipse cx="430" cy="270" rx="60" ry="75" fill="#4b5563"/>
-          {/* Asia */}
+          <ellipse cx="200" cy="310" rx="55"  ry="70" fill="#4b5563"/>
+          <ellipse cx="420" cy="140" rx="50"  ry="45" fill="#4b5563"/>
+          <ellipse cx="430" cy="270" rx="60"  ry="75" fill="#4b5563"/>
           <ellipse cx="600" cy="170" rx="130" ry="80" fill="#4b5563"/>
-          {/* Australia */}
-          <ellipse cx="660" cy="320" rx="55" ry="40" fill="#4b5563"/>
+          <ellipse cx="660" cy="320" rx="55"  ry="40" fill="#4b5563"/>
         </svg>
-        {/* Refinery dots */}
         <RefineryDot top={42} left={19}  status="warning"  label="Houston" />
         <RefineryDot top={35} left={55}  status="healthy"  label="Rotterdam" />
         <RefineryDot top={28} left={68}  status="critical" label="Ruwais, UAE" />
@@ -154,6 +257,9 @@ const DashboardTab: React.FC = () => (
         <RefineryDot top={60} left={48}  status="healthy"  />
       </div>
     </div>
+
+    {/* REQ-04 — Failure Prediction Gantt */}
+    <FailurePredictionGantt />
   </div>
 );
 
