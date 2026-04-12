@@ -23,8 +23,8 @@ class SparePart(Base):
     )
     lead_time_days: Mapped[int]   = mapped_column(Integer, default=7)
     unit_cost: Mapped[float]      = mapped_column(Float, nullable=False)
-    location: Mapped[str]         = mapped_column(String(255), nullable=True)
-    last_ordered: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    location: Mapped[str | None]          = mapped_column(String(255), nullable=True)
+    last_ordered: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime]  = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime]  = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
