@@ -592,6 +592,106 @@ const FailurePredictionGantt: React.FC = () => {
 };
 
 // ── Dashboard Tab ─────────────────────────────────────────────────────────────
+// ── Block F: Multi-Site Enterprise Intelligence ───────────────────────────────
+
+// F-01/02/03/04: Site benchmark data
+const SITE_BENCHMARK = [
+  { site: 'Ras Tanura, KSA',  region:'MENA',  prod:410000, efficiency:94.2, energyInt:5.2, mCostBbl:0.38, aiScore:91, status:'healthy'  },
+  { site: 'Jamnagar, India',  region:'APAC',  prod:280000, efficiency:91.7, energyInt:6.1, mCostBbl:0.42, aiScore:87, status:'healthy'  },
+  { site: 'Rotterdam, NL',    region:'Europe',prod:195000, efficiency:88.3, energyInt:7.4, mCostBbl:0.61, aiScore:78, status:'warning'  },
+  { site: 'Houston, USA',     region:'NAM',   prod:172000, efficiency:85.1, energyInt:8.2, mCostBbl:0.74, aiScore:72, status:'warning'  },
+  { site: 'Ruwais, UAE',      region:'MENA',  prod:160000, efficiency:78.4, energyInt:9.8, mCostBbl:1.12, aiScore:61, status:'critical' },
+];
+
+// F-06: Enterprise reliability score trend (12-month rolling)
+const ENT_RELIABILITY = [82,83,84,83,85,86,87,88,89,90,91,92];
+
+const EnterpriseIntelligencePanel: React.FC = () => {
+  const W = 480, H = 60, PL = 8, PR = 8;
+  const cW = W - PL - PR;
+  const minR = Math.min(...ENT_RELIABILITY) - 2;
+  const maxR = Math.max(...ENT_RELIABILITY) + 2;
+  const xR = (i: number) => PL + (i / (ENT_RELIABILITY.length - 1)) * cW;
+  const yR = (v: number) => H - 8 - ((v - minR) / (maxR - minR)) * (H - 16);
+  const relPts = ENT_RELIABILITY.map((v,i) => `${xR(i).toFixed(1)},${yR(v).toFixed(1)}`).join(' ');
+
+  const statusColor = { healthy:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
+  const sorted = [...SITE_BENCHMARK].sort((a,b) => b.aiScore - a.aiScore);
+
+  return (
+    <div className="space-y-4">
+      {/* F-06: Enterprise reliability trend */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-white font-semibold text-sm">F-06 · Enterprise Reliability Score — 12-Month Trend</h3>
+            <p className="text-gray-500 text-xs">Fleet-weighted average · Target ≥ 90</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-green-400">{ENT_RELIABILITY[ENT_RELIABILITY.length-1]}</p>
+            <p className="text-gray-500 text-xs">Current score</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+          <line x1={PL} y1={yR(90)} x2={W-PR} y2={yR(90)} stroke="#22c55e" strokeWidth="1" strokeDasharray="4,3" />
+          <text x={W-PR+2} y={yR(90)+3} fill="#22c55e" fontSize="8">Target 90</text>
+          <polyline points={relPts} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" />
+          {ENT_RELIABILITY.map((v,i) => (
+            <circle key={i} cx={xR(i)} cy={yR(v)} r="3" fill={i === ENT_RELIABILITY.length-1 ? '#60a5fa' : '#60a5fa'} opacity={i === ENT_RELIABILITY.length-1 ? 1 : 0.4} />
+          ))}
+        </svg>
+      </div>
+
+      {/* F-01/02/03/04/05: Site comparison table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">F-01 · Multi-Site Performance Benchmark</h3>
+          <p className="text-gray-500 text-xs">Production efficiency · Energy intensity · Maintenance cost · AI adoption score</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Rank','Site','Region','Prod (BOPD)','Efficiency %','Energy Int (GJ/t)','Maint $/bbl','AI Score','Priority'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {sorted.map((s,i) => (
+              <tr key={s.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-gray-500 font-mono">#{i+1}</td>
+                <td className="px-3 py-2 text-white font-semibold">{s.site}</td>
+                <td className="px-3 py-2 text-gray-400">{s.region}</td>
+                <td className="px-3 py-2 text-white font-mono">{s.prod.toLocaleString()}</td>
+                <td className="px-3 py-2">
+                  <span className="font-mono font-bold" style={{ color: s.efficiency>=90 ? '#22c55e' : s.efficiency>=85 ? '#f59e0b' : '#ef4444' }}>{s.efficiency}%</span>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="font-mono" style={{ color: s.energyInt<=6 ? '#22c55e' : s.energyInt<=8 ? '#f59e0b' : '#ef4444' }}>{s.energyInt}</span>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="font-mono" style={{ color: s.mCostBbl<=0.5 ? '#22c55e' : s.mCostBbl<=0.8 ? '#f59e0b' : '#ef4444' }}>${s.mCostBbl.toFixed(2)}</span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                      <div className="h-full rounded-full" style={{ width:`${s.aiScore}%`, background: statusColor[s.status as keyof typeof statusColor] }} />
+                    </div>
+                    <span className="font-mono font-bold" style={{ color: statusColor[s.status as keyof typeof statusColor] }}>{s.aiScore}</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2">
+                  {s.status === 'critical' && <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-0.5 font-bold">F-05 PRIORITY</span>}
+                  {s.status === 'warning'  && <span className="text-xs bg-amber-900/40 text-amber-400 border border-amber-800 rounded px-2 py-0.5">IMPROVE</span>}
+                  {s.status === 'healthy'  && <span className="text-xs text-gray-600">Maintain</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const DashboardTab: React.FC = () => (
   <div className="space-y-6">
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -641,6 +741,9 @@ const DashboardTab: React.FC = () => (
 
     {/* REQ-10 — Multi-Site Benchmarking */}
     <MultiSiteBenchmark />
+
+    {/* Block F — Enterprise Intelligence Panel */}
+    <EnterpriseIntelligencePanel />
   </div>
 );
 
