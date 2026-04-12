@@ -1702,33 +1702,122 @@ const INITIAL_WOS: WO[] = [
 const PRI_COLOR: Record<string, string> = { EMERGENCY: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#60a5fa', LOW: '#9ca3af' };
 const ST_COLOR:  Record<string, string> = { Open: '#f87171', 'In Progress': '#fbbf24', Scheduled: '#818cf8', Completed: '#4ade80' };
 
+// ── B-03: Spare parts availability lookup ─────────────────────────────────────
+const SAP_PARTS_AVAIL: Record<string, { partNo: string; qty: number; min: number; status: 'available' | 'low' | 'zero' }> = {
+  'C-101': { partNo: '7B-2241-ZZ', qty: 2, min: 2, status: 'available' },
+  'E-212': { partNo: 'HX-SEAL-884', qty: 0, min: 1, status: 'zero' },
+  'P-205': { partNo: 'IMP-P205-TR', qty: 1, min: 2, status: 'low'   },
+  'T-405': { partNo: 'BLD-T405-S3', qty: 4, min: 2, status: 'available' },
+};
+
+// ── B-01/02/05: SAP Integration Panel ────────────────────────────────────────
+interface SapRecord {
+  type: 'IW21' | 'IW31' | 'MMMR';
+  id: string;
+  desc: string;
+  asset: string;
+  time: string;
+  s4Ready: boolean;
+}
+interface SAPIntegrationPanelProps {
+  records: SapRecord[];
+  totalAlerts: number;
+}
+const SAPIntegrationPanel: React.FC<SAPIntegrationPanelProps> = ({ records, totalAlerts }) => {
+  const iw21  = records.filter(r => r.type === 'IW21').length;
+  const iw31  = records.filter(r => r.type === 'IW31').length;
+  const mmmr  = records.filter(r => r.type === 'MMMR').length;
+  const autoRate = totalAlerts > 0 ? Math.round(((iw21) / totalAlerts) * 100) : 0;
+  const s4Ready  = records.filter(r => r.s4Ready).length;
+  return (
+    <div className="bg-gray-900 border border-blue-900/40 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div>
+          <h3 className="text-white font-semibold text-sm">SAP PM / MM Integration</h3>
+          <p className="text-gray-500 text-xs">Live BAPI simulation · IW21 · IW31 · MM reservations · B-07 S/4HANA migration ready</p>
+        </div>
+        <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-800 px-3 py-1 rounded font-mono">SAP ECC → S/4HANA</span>
+      </div>
+      {/* B-05: Automation rate KPI */}
+      <div className="grid grid-cols-5 gap-3 p-5 border-b border-gray-800">
+        {([
+          ['IW21 Notifications', String(iw21), 'text-purple-400', 'Notification creation'],
+          ['IW31 Work Orders',   String(iw31), 'text-blue-400',   'Order auto-generated'],
+          ['MM Reservations',    String(mmmr), 'text-green-400',  'Material reserved'],
+          ['S/4HANA Ready',      String(s4Ready), 'text-cyan-400','ODATA-aligned WOs'],
+          ['Automation Rate',    `${autoRate}%`, autoRate >= 85 ? 'text-green-400' : 'text-amber-400', 'Target: >85%'],
+        ] as [string,string,string,string][]).map(([l,v,c,sub]) => (
+          <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-3 text-center">
+            <p className={`text-xl font-bold ${c}`}>{v}</p>
+            <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">{l}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{sub}</p>
+          </div>
+        ))}
+      </div>
+      {/* SAP action log */}
+      {records.length === 0 ? (
+        <p className="text-gray-600 text-xs text-center py-6">No SAP actions yet — approve a work order above to trigger BAPI integration</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="border-b border-gray-800">
+              {['BAPI','SAP Object ID','Description','Asset','Time','S/4HANA'].map(h => (
+                <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2"><span className="font-mono font-bold text-blue-400">{r.type}</span></td>
+                  <td className="px-4 py-2 text-purple-400 font-mono">{r.id}</td>
+                  <td className="px-4 py-2 text-gray-300">{r.desc}</td>
+                  <td className="px-4 py-2 text-gray-400">{r.asset}</td>
+                  <td className="px-4 py-2 text-gray-500">{r.time}</td>
+                  <td className="px-4 py-2">
+                    {r.s4Ready
+                      ? <span className="text-cyan-400 font-semibold">✓ ODATA</span>
+                      : <span className="text-gray-600">Legacy</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const WorkOrdersTab: React.FC = () => {
   const [wos, setWos] = useState<WO[]>(INITIAL_WOS);
   const [toast, setToast] = useState<string | null>(null);
   const [prCounter, setPrCounter] = useState(1);
+  // B-01/02/04: SAP BAPI records
+  const [sapRecords, setSapRecords] = useState<SapRecord[]>([]);
 
   const featuredWO = wos.find(w => w.priority === 'EMERGENCY' && w.status === 'Open') ?? null;
 
   const handleApprove = (wo: WO) => {
-    const prId = `PR-2026-${String(prCounter).padStart(4, '0')}`;
+    const prId  = `PR-2026-${String(prCounter).padStart(4, '0')}`;
+    const nowT  = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const notifId = `N-${Date.now().toString().slice(-6)}`;
+    const woSapId = `WO-SAP-${Date.now().toString().slice(-5)}`;
+    const mmrId   = `MR-${Date.now().toString().slice(-5)}`;
+    const assetTag = wo.equipment.split(' ')[0];
     setPrCounter(c => c + 1);
     setWos(prev => [
-      // Transition approved WO → In Progress
       ...prev.map(w => w.id === wo.id ? { ...w, status: 'In Progress' as const } : w),
-      // Auto-generated PR → immediately Completed
-      {
-        id: prId,
-        equipment: `${wo.equipment} [PR: Parts & Services]`,
-        site: wo.site,
-        priority: wo.priority,
-        status: 'Completed' as const,
-        cost: wo.cost,
-        due: '—',
-        isPR: true,
-      },
+      { id: prId, equipment: `${wo.equipment} [PR: Parts & Services]`, site: wo.site, priority: wo.priority, status: 'Completed' as const, cost: wo.cost, due: '—', isPR: true },
     ]);
-    setToast(`✓ ${wo.id} dispatched — ${prId} auto-completed`);
-    setTimeout(() => setToast(null), 4000);
+    // B-01 IW21, B-02 IW31, B-04 MM reservation
+    setSapRecords(prev => [
+      ...prev,
+      { type: 'IW21', id: notifId, desc: `PM Notification — ${wo.equipment}`, asset: assetTag, time: nowT, s4Ready: true },
+      { type: 'IW31', id: woSapId, desc: `Work Order — Bearing Replacement`,  asset: assetTag, time: nowT, s4Ready: true },
+      { type: 'MMMR', id: mmrId,   desc: `Material Reservation — Bearing Set`, asset: assetTag, time: nowT, s4Ready: true },
+    ]);
+    setToast(`✓ ${wo.id} dispatched — IW21 ${notifId} · IW31 ${woSapId} · MM ${mmrId} created`);
+    setTimeout(() => setToast(null), 5000);
   };
 
   const counts = {
@@ -1816,6 +1905,23 @@ const WorkOrdersTab: React.FC = () => {
                   </div>
                 ))}
               </div>
+              {/* B-03: SAP MM spare parts availability */}
+              {(() => {
+                const assetTag = featuredWO.equipment.split(' ')[0];
+                const partAvail = SAP_PARTS_AVAIL[assetTag];
+                if (!partAvail) return null;
+                const col = partAvail.status === 'available' ? '#22c55e' : partAvail.status === 'low' ? '#f59e0b' : '#ef4444';
+                const label = partAvail.status === 'available' ? '✓ IN STOCK' : partAvail.status === 'low' ? '⚠ LOW STOCK' : '✕ ZERO STOCK';
+                return (
+                  <div className="rounded-lg p-3 mb-3 border" style={{ background:`${col}11`, borderColor:`${col}44` }}>
+                    <p className="text-xs font-semibold mb-1" style={{ color: col }}>SAP MM — Parts Availability Check</p>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400">Part No: {partAvail.partNo}</span>
+                      <span className="font-bold" style={{ color: col }}>{label} ({partAvail.qty} on-hand)</span>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="bg-green-950/40 border border-green-900/40 rounded-lg p-3">
                 <p className="text-green-400 text-xs font-semibold mb-1">Cost vs Failure</p>
                 {[['WO cost (planned)','$28,400','text-white'],['Failure cost (avoided)','$2,100,000','text-green-400'],['Net savings','$2,071,600','text-green-400 font-bold']].map(([l,v,c]) => (
@@ -1828,6 +1934,9 @@ const WorkOrdersTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* B-01/02/04/05/07: SAP Integration Panel */}
+      <SAPIntegrationPanel records={sapRecords} totalAlerts={ALERT_DATA.length} />
 
       {/* REQ-13 — Root Cause Analysis */}
       <RCAPanel />
@@ -1855,6 +1964,8 @@ const WorkOrdersTab: React.FC = () => {
                     <span className={`text-sm font-mono ${wo.isPR ? 'text-green-400' : 'text-purple-400'}`}>{wo.id}</span>
                     {wo.aiGenerated && <span className="ml-2 text-xs text-purple-500/70">AI</span>}
                     {wo.isPR && <span className="ml-2 text-xs bg-green-900/50 text-green-400 px-1.5 py-0.5 rounded">PR</span>}
+                    {/* B-07: S/4HANA badge */}
+                    <span className="ml-1 text-xs text-cyan-600/70 font-mono">S/4</span>
                   </td>
                   <td className="py-2.5 px-4 text-white text-sm">{wo.equipment}</td>
                   <td className="py-2.5 px-4 text-gray-400 text-sm whitespace-nowrap">{wo.site}</td>
