@@ -3462,6 +3462,7 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'tar':              return <TARTab />;
     case 'castrol':          return <CastrolTab />;
     case 'offshore':         return <OffshoreTab />;
+    case 'ot-data':          return <OTDataTab />;
     default:                 return null;
   }
 };
@@ -3963,6 +3964,171 @@ const OffshoreTab: React.FC = () => {
             })}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block G: OT Data Ingestion & Quality ─────────────────────────────────────
+
+// G-01: OT data source inventory
+const OT_SOURCES = [
+  { id:'PI-HOU-01', type:'OSIsoft PI',  site:'Houston, USA',     tags:4821, latency:'250ms', status:'connected', lastPoll:'Just now',    qScore:98 },
+  { id:'MATRIKON-RUW',type:'OPC-UA',  site:'Ruwais, UAE',       tags:3204, latency:'180ms', status:'connected', lastPoll:'4s ago',      qScore:96 },
+  { id:'DCS-RT-01',  type:'DCS Honeywell',site:'Ras Tanura, KSA',tags:6102, latency:'95ms',  status:'connected', lastPoll:'1s ago',      qScore:99 },
+  { id:'SCADA-JAM',  type:'SCADA GE',  site:'Jamnagar, India',   tags:2890, latency:'320ms', status:'degraded',  lastPoll:'38s ago',     qScore:71 },
+  { id:'PI-ROT-02',  type:'OSIsoft PI', site:'Rotterdam, NL',    tags:3710, latency:'140ms', status:'connected', lastPoll:'2s ago',      qScore:94 },
+];
+
+// G-02: Data quality issues
+const OT_QUALITY_ISSUES = [
+  { tag:'FT-2201.PV', site:'Jamnagar', issue:'Frozen value detected — same reading for 47min', severity:'critical', impact:'Flow calculation error in unit B-12' },
+  { tag:'TI-4405.PV', site:'Ruwais',   issue:'Out-of-range value: 2847°C (instrument max 1200°C)', severity:'critical', impact:'Bearing temp alarm suppression' },
+  { tag:'PT-1108.PV', site:'Houston',  issue:'Stale timestamp — last update 8 minutes ago', severity:'warning', impact:'Compressor health model input gap' },
+  { tag:'LT-3302.PV', site:'Rotterdam',issue:'Intermittent dropouts (12% missing last hour)', severity:'warning', impact:'Tank level calculation uncertainty' },
+];
+
+// G-03: Tag statistics
+const OT_STATS = [
+  { label:'Total Tags Ingested',  value:'20,727', sub:'Across 5 sites',    color:'text-blue-400' },
+  { label:'Data Quality Score',   value:'91.6%',  sub:'Fleet average',     color:'text-green-400' },
+  { label:'Active Quality Issues',value:'4',       sub:'2 critical',       color:'text-red-400' },
+  { label:'Avg Latency',          value:'197ms',   sub:'P95: 420ms',       color:'text-amber-400' },
+];
+
+// G-04: Protocol breakdown
+const PROTOCOL_BREAKDOWN = [
+  { protocol:'OSIsoft PI', tags:8531, pct:41 },
+  { protocol:'OPC-UA',     tags:6102, pct:29 },
+  { protocol:'Modbus TCP', tags:3204, pct:15 },
+  { protocol:'MQTT',       tags:1890, pct:9  },
+  { protocol:'REST/JSON',  tags:1000, pct:5  },
+];
+
+// G-05: Schema normalization log
+const NORM_LOG = [
+  { ts:'12 Apr 09:14', action:'Tag renaming applied', detail:'FIC_2201 → FT-2201.PV (ISA-88 standard)', status:'success' },
+  { ts:'12 Apr 09:12', action:'Unit conversion', detail:'kPa → bar for 312 pressure tags (Houston)', status:'success' },
+  { ts:'12 Apr 09:10', action:'Frozen value filter', detail:'FT-2201.PV excluded from model inputs', status:'warn' },
+  { ts:'12 Apr 09:08', action:'Schema mismatch detected', detail:'SCADA-JAM sends 3-decimal pct vs 2-decimal expected', status:'error' },
+];
+
+const OTDataTab: React.FC = () => {
+  const statusC = { connected:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  const sevC    = { critical:'text-red-400', warning:'text-amber-400', advisory:'text-blue-400' };
+  const normC   = { success:'#22c55e', warn:'#f59e0b', error:'#ef4444' };
+
+  return (
+    <div className="space-y-5">
+      {/* G-03: KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {OT_STATS.map(s => (
+          <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{s.label}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* G-01: OT data source inventory */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">G-01 · OT Data Source Inventory</h3>
+          <p className="text-gray-500 text-xs">Live connections · OSIsoft PI / OPC-UA / DCS / SCADA / MQTT</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Source ID','Protocol','Site','Tags','Latency','Quality Score','Status','Last Poll'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {OT_SOURCES.map(s => (
+              <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{s.id}</td>
+                <td className="px-4 py-2 text-gray-300">{s.type}</td>
+                <td className="px-4 py-2 text-gray-400">{s.site}</td>
+                <td className="px-4 py-2 text-white font-mono">{s.tags.toLocaleString()}</td>
+                <td className="px-4 py-2 text-white font-mono">{s.latency}</td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-1.5 bg-gray-800 rounded-full">
+                      <div className="h-full rounded-full" style={{ width:`${s.qScore}%`, background: s.qScore>=90?'#22c55e':s.qScore>=70?'#f59e0b':'#ef4444' }} />
+                    </div>
+                    <span className="font-mono text-white">{s.qScore}%</span>
+                  </div>
+                </td>
+                <td className="px-4 py-2 font-bold"><span className={statusC[s.status as keyof typeof statusC]}>{s.status.toUpperCase()}</span></td>
+                <td className="px-4 py-2 text-gray-400">{s.lastPoll}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* G-02: Data quality issues */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-semibold text-sm">G-02 · Data Quality Issues</h3>
+            <p className="text-gray-500 text-xs">Frozen values, out-of-range, stale timestamps, missing data</p>
+          </div>
+          <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
+            {OT_QUALITY_ISSUES.filter(i=>i.severity==='critical').length} CRITICAL
+          </span>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {OT_QUALITY_ISSUES.map(q => (
+            <div key={q.tag} className="px-5 py-4 flex items-start gap-4">
+              <span className={`flex-shrink-0 font-mono font-bold text-xs pt-0.5 ${sevC[q.severity as keyof typeof sevC]}`}>{q.tag}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{q.issue}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Impact: {q.impact}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${q.severity==='critical'?'bg-red-900/40 text-red-400':'bg-amber-900/40 text-amber-400'}`}>{q.severity.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5">
+        {/* G-04: Protocol breakdown */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 className="text-white font-semibold text-sm mb-3">G-04 · Protocol Breakdown</h3>
+          <div className="space-y-2">
+            {PROTOCOL_BREAKDOWN.map(p => (
+              <div key={p.protocol} className="flex items-center gap-3">
+                <span className="text-gray-400 text-xs w-28 flex-shrink-0">{p.protocol}</span>
+                <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-500" style={{ width:`${p.pct}%` }} />
+                </div>
+                <span className="text-white font-mono text-xs w-12 text-right">{p.tags.toLocaleString()}</span>
+                <span className="text-gray-500 text-xs w-8 text-right">{p.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* G-05: Schema normalization log */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">G-05 · Schema Normalization Log</h3>
+            <p className="text-gray-500 text-xs">ISA-88 / ISO 15926 tag normalization pipeline</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {NORM_LOG.map((n,i) => (
+              <div key={i} className="px-4 py-3 flex items-start gap-3">
+                <span style={{ width:6,height:6,borderRadius:'50%',background:normC[n.status as keyof typeof normC],flexShrink:0,marginTop:5 }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-semibold">{n.action}</p>
+                  <p className="text-gray-500 text-xs">{n.detail}</p>
+                </div>
+                <span className="text-gray-600 text-xs flex-shrink-0">{n.ts}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
