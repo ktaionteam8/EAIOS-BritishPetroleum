@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
-    setUser(null);
+    setUser(GUEST_USER);
   }, []);
 
   return (
