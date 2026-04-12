@@ -4067,6 +4067,7 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'castrol':          return <CastrolTab />;
     case 'offshore':         return <OffshoreTab />;
     case 'ot-data':          return <OTDataTab />;
+    case 'adoption':         return <AdoptionTab />;
     default:                 return null;
   }
 };
@@ -4737,6 +4738,171 @@ const OTDataTab: React.FC = () => {
     </div>
   );
 };
+
+// ── Block M: Operator Adoption & Training ─────────────────────────────────────
+
+// M-01: User adoption metrics per site
+const ADOPTION_METRICS = [
+  { site:'Ras Tanura, KSA',  users:42, active:39, alertsActioned:94, avgResponseMin:8.2,  training:92, score:94 },
+  { site:'Jamnagar, India',  users:38, active:34, alertsActioned:88, avgResponseMin:11.4, training:85, score:86 },
+  { site:'Rotterdam, NL',    users:31, active:26, alertsActioned:79, avgResponseMin:14.1, training:74, score:74 },
+  { site:'Houston, USA',     users:44, active:33, alertsActioned:72, avgResponseMin:16.8, training:68, score:68 },
+  { site:'Ruwais, UAE',      users:36, active:24, alertsActioned:61, avgResponseMin:22.3, training:55, score:57 },
+];
+
+// M-02: Training module completion
+const TRAINING_MODULES = [
+  { module:'RefinerAI Fundamentals',       type:'mandatory', completionPct:88, avgScore:84, dueDate:'30 Apr' },
+  { module:'Alert-to-Action Protocol',     type:'mandatory', completionPct:79, avgScore:79, dueDate:'30 Apr' },
+  { module:'SHAP Explainability for Ops',  type:'optional',  completionPct:52, avgScore:77, dueDate:'—'      },
+  { module:'Override & Audit Trail',       type:'mandatory', completionPct:91, avgScore:88, dueDate:'30 Apr' },
+  { module:'Digital Twin Operations',      type:'optional',  completionPct:41, avgScore:81, dueDate:'—'      },
+];
+
+// M-03: Adoption barriers / feedback themes
+const ADOPTION_BARRIERS = [
+  { theme:'Too many alerts — hard to prioritise',  votes:28, priority:'high'   },
+  { theme:'SHAP explanations not intuitive',       votes:21, priority:'high'   },
+  { theme:'Mobile interface needed on field',      votes:17, priority:'medium' },
+  { theme:'SAP integration adds extra steps',      votes:14, priority:'medium' },
+  { theme:'Dashboard loads slowly on site network',votes:9,  priority:'low'    },
+];
+
+// M-04: Change champion network
+const CHAMPIONS = [
+  { name:'A. Rahman',  site:'Ruwais',   role:'Lead Maintenance Engineer', sessions:47, alertsActioned:118 },
+  { name:'S. Nair',    site:'Jamnagar', role:'Senior Reliability Engineer',sessions:39, alertsActioned:94  },
+  { name:'L. Müller',  site:'Rotterdam',role:'Process Engineer',          sessions:31, alertsActioned:71  },
+  { name:'K. Johnson', site:'Houston',  role:'Maintenance Supervisor',    sessions:22, alertsActioned:48  },
+];
+
+const AdoptionTab: React.FC = () => (
+  <div className="space-y-5">
+    {/* M-01: KPIs */}
+    <div className="grid grid-cols-4 gap-3">
+      {([
+        [String(ADOPTION_METRICS.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.alertsActioned,0)/ADOPTION_METRICS.length))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.avgResponseMin,0)/ADOPTION_METRICS.length))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.training,0)/ADOPTION_METRICS.length))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
+      ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+        </div>
+      ))}
+    </div>
+
+    {/* M-01: Site adoption table */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">M-01 · Site-by-Site Adoption Scorecard</h3>
+        <p className="text-gray-500 text-xs">Active users · Alert action rate · Response time · Training completion</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          {['Site','Users','Active','Alerts Actioned','Avg Response','Training','Score'].map(h => (
+            <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {ADOPTION_METRICS.sort((a,b)=>b.score-a.score).map(a => (
+            <tr key={a.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+              <td className="px-4 py-2 text-white font-semibold">{a.site}</td>
+              <td className="px-4 py-2 text-gray-400">{a.users}</td>
+              <td className="px-4 py-2 text-white">{a.active}</td>
+              <td className="px-4 py-2 font-bold" style={{ color:a.alertsActioned>=85?'#22c55e':a.alertsActioned>=70?'#f59e0b':'#ef4444' }}>{a.alertsActioned}%</td>
+              <td className="px-4 py-2 font-mono" style={{ color:a.avgResponseMin<=10?'#22c55e':a.avgResponseMin<=15?'#f59e0b':'#ef4444' }}>{a.avgResponseMin}m</td>
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-gray-800 rounded-full"><div className="h-full rounded-full bg-purple-500" style={{ width:`${a.training}%` }} /></div>
+                  <span className="text-white">{a.training}%</span>
+                </div>
+              </td>
+              <td className="px-4 py-2 font-bold" style={{ color:a.score>=85?'#22c55e':a.score>=70?'#f59e0b':'#ef4444' }}>{a.score}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="grid grid-cols-2 gap-5">
+      {/* M-02: Training modules */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">M-02 · Training Module Progress</h3>
+          <p className="text-gray-500 text-xs">Completion rate · Average assessment score</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {TRAINING_MODULES.map(t => (
+            <div key={t.module} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-white text-xs font-semibold">{t.module}</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${t.type==='mandatory'?'bg-red-900/30 text-red-400':'bg-gray-800 text-gray-500'}`}>{t.type}</span>
+                  <span className="text-gray-600 text-xs">Due: {t.dueDate}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div className="h-full rounded-full" style={{ width:`${t.completionPct}%`, background:t.completionPct>=80?'#22c55e':t.completionPct>=60?'#f59e0b':'#ef4444' }} />
+                </div>
+                <span className="text-xs text-white w-8 text-right">{t.completionPct}%</span>
+                <span className="text-xs text-gray-500 w-16 text-right">Avg: {t.avgScore}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* M-03: Adoption barriers */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">M-03 · Adoption Barriers — User Feedback</h3>
+          <p className="text-gray-500 text-xs">Aggregated from in-app feedback surveys</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {ADOPTION_BARRIERS.map((b,i) => {
+            const c = { high:'text-red-400', medium:'text-amber-400', low:'text-gray-500' };
+            return (
+              <div key={i} className="px-4 py-3 flex items-center gap-3">
+                <span className="text-2xl font-bold text-gray-700 w-6 flex-shrink-0">{i+1}</span>
+                <div className="flex-1">
+                  <p className="text-white text-xs">{b.theme}</p>
+                </div>
+                <span className={`font-bold text-xs ${c[b.priority as keyof typeof c]}`}>{b.votes} votes</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    {/* M-04: Change champions */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">M-04 · Change Champion Network</h3>
+        <p className="text-gray-500 text-xs">Power users driving adoption across sites</p>
+      </div>
+      <div className="grid grid-cols-4 divide-x divide-gray-800">
+        {CHAMPIONS.map(c => (
+          <div key={c.name} className="p-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-800 flex items-center justify-center text-purple-400 font-bold text-lg mx-auto mb-2">
+              {c.name[0]}
+            </div>
+            <p className="text-white text-xs font-semibold">{c.name}</p>
+            <p className="text-gray-500 text-xs">{c.site}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{c.role}</p>
+            <div className="mt-2 flex justify-center gap-3">
+              <div className="text-center"><p className="text-blue-400 font-bold text-sm">{c.sessions}</p><p className="text-gray-600 text-xs">sessions</p></div>
+              <div className="text-center"><p className="text-green-400 font-bold text-sm">{c.alertsActioned}</p><p className="text-gray-600 text-xs">actioned</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const RefinerAIPage: React.FC = () => {
