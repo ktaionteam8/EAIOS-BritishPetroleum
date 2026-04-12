@@ -744,6 +744,9 @@ const DashboardTab: React.FC = () => (
 
     {/* Block F — Enterprise Intelligence Panel */}
     <EnterpriseIntelligencePanel />
+
+    {/* Block P — Cross-Domain Orchestration */}
+    <CrossDomainPanel />
   </div>
 );
 
@@ -4186,6 +4189,7 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'ot-data':          return <OTDataTab />;
     case 'adoption':         return <AdoptionTab />;
     case 'wave-tracker':     return <WaveTrackerTab />;
+    case 'edge-ai':          return <EdgeAITab />;
     default:                 return null;
   }
 };
@@ -5154,6 +5158,235 @@ const WaveTrackerTab: React.FC = () => {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block P: Cross-Domain Orchestration Panel ────────────────────────────────
+
+// P-01: Active orchestration scenarios
+const ORCHESTRATION_EVENTS = [
+  { id:'ORC-001', trigger:'C-101 bearing failure probability >90%',  domains:['Equipment Health','Work Orders','Spare Parts','SAP PM'], status:'active',   impact:'Cascade: WO auto-drafted → parts reserved → crew notified' },
+  { id:'ORC-002', trigger:'Ras Tanura CDU throughput anomaly +18%',   domains:['Digital Twin','Energy','OT Data','AI Advisor'],         status:'active',   impact:'Twin simulation running → energy model updated' },
+  { id:'ORC-003', trigger:'API 570 Houston compliance due in 19 days', domains:['Compliance','Work Orders','Wave Tracker'],              status:'pending',  impact:'Inspection WO to be auto-raised by 14 Apr' },
+  { id:'ORC-004', trigger:'Offshore Brent-C weather UNSAFE forecast',  domains:['North Sea Ops','TAR Planning','Logistics'],            status:'resolved', impact:'PSV departure deferred 48h; crew change rescheduled' },
+];
+
+// P-02: Agent health (cross-domain agents status)
+const AGENT_HEALTH = [
+  { agent:'PredictiveMaintenance',    domain:'Equipment',   calls24h:4821, latency:42,   status:'healthy' },
+  { agent:'CastrolQuality',           domain:'Blending',    calls24h:1240, latency:68,   status:'healthy' },
+  { agent:'OffshoreOps',              domain:'North Sea',   calls24h:892,  latency:88,   status:'healthy' },
+  { agent:'ComplianceMonitor',        domain:'Regulatory',  calls24h:312,  latency:121,  status:'degraded'},
+  { agent:'EnergyOptimisation',       domain:'Sustainability',calls24h:1860, latency:55, status:'healthy' },
+];
+
+// P-03: Event bus throughput (messages/min, 12-point history)
+const EVENT_BUS_THROUGHPUT = [120,135,142,138,155,162,158,171,180,174,188,194];
+
+const CrossDomainPanel: React.FC = () => {
+  const W = 480, H = 60, PL = 8, PR = 8;
+  const cW = W - PL - PR;
+  const minT = Math.min(...EVENT_BUS_THROUGHPUT) - 10;
+  const maxT = Math.max(...EVENT_BUS_THROUGHPUT) + 10;
+  const xT = (i:number) => PL + (i/(EVENT_BUS_THROUGHPUT.length-1))*cW;
+  const yT = (v:number) => H - 6 - ((v-minT)/(maxT-minT))*(H-12);
+  const tPts = EVENT_BUS_THROUGHPUT.map((v,i) => `${xT(i).toFixed(1)},${yT(v).toFixed(1)}`).join(' ');
+  const agentC = { healthy:'#22c55e', degraded:'#f59e0b', offline:'#ef4444' };
+  const stC = { active:'text-green-400 bg-green-900/30', pending:'text-amber-400 bg-amber-900/30', resolved:'text-gray-500 bg-gray-800' };
+
+  return (
+    <div className="space-y-4">
+      {/* P-03: Event bus throughput */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="text-white font-semibold text-sm">P-03 · Cross-Domain Event Bus — Throughput</h3>
+            <p className="text-gray-500 text-xs">Messages per minute · API Gateway routing · All 6 domains</p>
+          </div>
+          <div className="text-right">
+            <p className="text-green-400 font-bold text-xl">{EVENT_BUS_THROUGHPUT[EVENT_BUS_THROUGHPUT.length-1]}</p>
+            <p className="text-gray-500 text-xs">msg/min</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height:H }}>
+          <polyline points={tPts} fill="none" stroke="#34d399" strokeWidth="2" strokeLinejoin="round" />
+          {EVENT_BUS_THROUGHPUT.map((v,i) => (
+            <circle key={i} cx={xT(i)} cy={yT(v)} r="2.5" fill={i===EVENT_BUS_THROUGHPUT.length-1?'#34d399':'#34d399'} opacity={i===EVENT_BUS_THROUGHPUT.length-1?1:0.4} />
+          ))}
+        </svg>
+      </div>
+
+      {/* P-01: Active orchestration events */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">P-01 · Cross-Domain Orchestration Events</h3>
+          <p className="text-gray-500 text-xs">AI-triggered cascades spanning multiple domains</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {ORCHESTRATION_EVENTS.map(e => (
+            <div key={e.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 text-xs font-mono text-gray-500 pt-0.5">{e.id}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{e.trigger}</p>
+                <div className="flex flex-wrap gap-1 my-1">
+                  {e.domains.map(d => <span key={d} className="text-xs bg-indigo-900/30 text-indigo-400 border border-indigo-800/30 rounded px-1.5 py-0.5">{d}</span>)}
+                </div>
+                <p className="text-gray-500 text-xs">{e.impact}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${stC[e.status as keyof typeof stC]}`}>{e.status.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* P-02: Agent health grid */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">P-02 · Cross-Domain Agent Health</h3>
+        <div className="grid grid-cols-5 gap-3">
+          {AGENT_HEALTH.map(a => (
+            <div key={a.agent} className="bg-gray-800/50 rounded-lg p-3 text-center">
+              <span className="inline-block w-2 h-2 rounded-full mb-2" style={{ background:agentC[a.status as keyof typeof agentC] }} />
+              <p className="text-white text-xs font-semibold leading-tight">{a.agent}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{a.domain}</p>
+              <p className="text-gray-400 text-xs font-mono mt-1">{a.calls24h.toLocaleString()} calls/24h</p>
+              <p className="text-gray-500 text-xs">{a.latency}ms p50</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Block Q: Edge AI Infrastructure ──────────────────────────────────────────
+
+// Q-01: Edge node inventory
+const EDGE_NODES = [
+  { id:'EDGE-RUW-01', site:'Ruwais, UAE',      hw:'NVIDIA Jetson AGX',  models:3, inferencePct:91, latency:12,  status:'online',  lastSync:'30s ago' },
+  { id:'EDGE-JAM-01', site:'Jamnagar, India',  hw:'Intel NUC i7',       models:2, inferencePct:88, latency:18,  status:'online',  lastSync:'1m ago'  },
+  { id:'EDGE-HOU-01', site:'Houston, USA',     hw:'NVIDIA Jetson Nano', models:2, inferencePct:78, latency:24,  status:'online',  lastSync:'45s ago' },
+  { id:'EDGE-ROT-01', site:'Rotterdam, NL',    hw:'NVIDIA Jetson AGX',  models:3, inferencePct:94, latency:9,   status:'online',  lastSync:'15s ago' },
+  { id:'EDGE-TERN-01',site:'Tern Alpha (Offshr)',hw:'Ruggedised NUC',   models:2, inferencePct:82, latency:28,  status:'degraded',lastSync:'8m ago'  },
+];
+
+// Q-02: Edge vs cloud latency comparison
+const LATENCY_COMPARISON = [
+  { scenario:'Critical bearing alert detection', edge:12,  cloud:280, saving:'95.7%' },
+  { scenario:'Anomaly isolation forest',          edge:18,  cloud:410, saving:'95.6%' },
+  { scenario:'Vibration FFT analysis',            edge:24,  cloud:560, saving:'95.7%' },
+  { scenario:'Quality prediction (Castrol)',       edge:31,  cloud:340, saving:'90.9%' },
+];
+
+// Q-03: Models deployed to edge
+const EDGE_MODELS = [
+  { model:'Bearing Fault LSTM (quantised)',   version:'v3.2.1-edge', size:'48MB',  nodes:['EDGE-RUW-01','EDGE-JAM-01','EDGE-HOU-01','EDGE-ROT-01'] },
+  { model:'Anomaly Isolation Forest',          version:'v2.1.3-edge', size:'12MB',  nodes:['EDGE-RUW-01','EDGE-ROT-01','EDGE-TERN-01'] },
+  { model:'Vibration Signature CNN (int8)',     version:'v1.4.2-edge', size:'68MB',  nodes:['EDGE-RUW-01','EDGE-JAM-01','EDGE-ROT-01'] },
+];
+
+const EdgeAITab: React.FC = () => {
+  const nodeC = { online:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  return (
+    <div className="space-y-5">
+      {/* Q-01: KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(EDGE_NODES.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
+          [String(EDGE_NODES.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
+          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.inferencePct,0)/EDGE_NODES.length)+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
+          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.latency,0)/EDGE_NODES.length)+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Q-01: Edge node table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-01 · Edge Node Inventory</h3>
+          <p className="text-gray-500 text-xs">On-premise AI inference · Air-gapped-capable · OT network–safe</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Node ID','Site','Hardware','Models','Inference Offload','Latency','Status','Last Sync'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {EDGE_NODES.map(n => (
+              <tr key={n.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-purple-400 font-mono">{n.id}</td>
+                <td className="px-3 py-2 text-white">{n.site}</td>
+                <td className="px-3 py-2 text-gray-400">{n.hw}</td>
+                <td className="px-3 py-2 text-white text-center">{n.models}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-1.5 bg-gray-800 rounded-full"><div className="h-full rounded-full bg-purple-500" style={{ width:`${n.inferencePct}%` }} /></div>
+                    <span className="text-white font-mono">{n.inferencePct}%</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-white font-mono">{n.latency}ms</td>
+                <td className="px-3 py-2 font-bold"><span className={nodeC[n.status as keyof typeof nodeC]}>{n.status.toUpperCase()}</span></td>
+                <td className="px-3 py-2 text-gray-400">{n.lastSync}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Q-02: Edge vs cloud latency */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-02 · Edge vs Cloud Latency Comparison</h3>
+          <p className="text-gray-500 text-xs">On-device inference vs cloud round-trip · Critical for OT safety response</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Scenario','Edge (ms)','Cloud (ms)','Latency Saving'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {LATENCY_COMPARISON.map(l => (
+              <tr key={l.scenario} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-white">{l.scenario}</td>
+                <td className="px-4 py-2 text-green-400 font-mono font-bold">{l.edge}ms</td>
+                <td className="px-4 py-2 text-gray-400 font-mono">{l.cloud}ms</td>
+                <td className="px-4 py-2 text-green-400 font-bold">{l.saving}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Q-03: Edge model deployments */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-03 · Edge Model Deployments</h3>
+          <p className="text-gray-500 text-xs">Quantised models deployed to edge nodes · OTA update capable</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {EDGE_MODELS.map(m => (
+            <div key={m.model} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-xs font-semibold">{m.model}</p>
+                  <span className="text-gray-500 font-mono text-xs">{m.version}</span>
+                  <span className="text-gray-600 text-xs">{m.size}</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {m.nodes.map(n => <span key={n} className="text-xs bg-gray-800 text-gray-400 rounded px-1.5 py-0.5 font-mono">{n}</span>)}
+                </div>
+              </div>
+              <span className="text-green-400 text-xs font-bold">DEPLOYED</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
