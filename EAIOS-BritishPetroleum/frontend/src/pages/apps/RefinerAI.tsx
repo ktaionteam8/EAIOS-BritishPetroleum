@@ -528,131 +528,238 @@ const SparePartsTab: React.FC = () => (
 );
 
 // ── AI Work Orders Tab ────────────────────────────────────────────────────────
-const WorkOrdersTab: React.FC = () => (
-  <div className="space-y-4">
-    <div className="grid grid-cols-4 gap-3">
-      {[['1','EMERGENCY','text-red-400','border-red-900/50'],['3','IN PROGRESS','text-amber-400','border-amber-900/50'],['12','SCHEDULED','text-blue-400','border-blue-900/50'],['48','COMPLETED 30D','text-green-400','border-green-900/50']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
-        </div>
-      ))}
-    </div>
+interface WO {
+  id: string;
+  equipment: string;
+  site: string;
+  priority: 'EMERGENCY' | 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'Open' | 'In Progress' | 'Scheduled' | 'Completed';
+  cost: string;
+  due: string;
+  aiGenerated?: boolean;
+  isPR?: boolean;
+}
 
-    {/* Emergency WO — C-101 */}
-    <div className="bg-gray-900 border border-red-900/60 rounded-xl overflow-hidden">
-      <div className="bg-red-950/50 border-b border-red-900/50 px-5 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold bg-red-500 text-white px-2 py-0.5 rounded">EMERGENCY</span>
-          <span className="text-white font-semibold">WO-2026-0847 · Bearing Replacement — Compressor C-101</span>
+const INITIAL_WOS: WO[] = [
+  // Emergency
+  { id: 'WO-2026-0847', equipment: 'C-101 Compressor',           site: 'Ruwais, UAE',          priority: 'EMERGENCY', status: 'Open',        cost: '$28,400', due: 'Now',  aiGenerated: true },
+  { id: 'WO-2026-0846', equipment: 'G-302 Gas Turbine',          site: 'Ras Tanura, KSA',      priority: 'EMERGENCY', status: 'Open',        cost: '$54,200', due: 'Now',  aiGenerated: true },
+  { id: 'WO-2026-0845', equipment: 'P-101A Feed Pump',           site: 'Whiting, USA',         priority: 'EMERGENCY', status: 'In Progress', cost: '$18,600', due: '2h',   aiGenerated: true },
+  { id: 'WO-2026-0844', equipment: 'E-501 Heat Exchanger',       site: 'Rotterdam, NL',        priority: 'EMERGENCY', status: 'In Progress', cost: '$31,800', due: '4h',   aiGenerated: true },
+  { id: 'WO-2026-0843', equipment: 'K-201 Reformer Heater',      site: 'Gelsenkirchen, DE',    priority: 'EMERGENCY', status: 'Open',        cost: '$72,000', due: 'Now',  aiGenerated: true },
+  { id: 'WO-2026-0842', equipment: 'V-305 Separator Vessel',     site: 'Cherry Point, USA',    priority: 'EMERGENCY', status: 'Open',        cost: '$22,500', due: 'Now',  aiGenerated: true },
+  { id: 'WO-2026-0840', equipment: 'C-203 Cooling Tower Fan',    site: 'Castellon, ES',        priority: 'EMERGENCY', status: 'In Progress', cost: '$15,900', due: '6h',   aiGenerated: true },
+  // High
+  { id: 'WO-2026-0841', equipment: 'E-212 Heat Exchanger',       site: 'Houston, USA',         priority: 'HIGH',      status: 'In Progress', cost: '$14,200', due: '3d' },
+  { id: 'WO-2026-0839', equipment: 'P-401 Crude Pump',           site: 'Ras Tanura, KSA',      priority: 'HIGH',      status: 'In Progress', cost: '$9,800',  due: '2d' },
+  { id: 'WO-2026-0838', equipment: 'C-105 Compressor',           site: 'Ruwais, UAE',          priority: 'HIGH',      status: 'Scheduled',   cost: '$16,400', due: '4d' },
+  { id: 'WO-2026-0837', equipment: 'T-202 Turbine',              site: 'Gelsenkirchen, DE',    priority: 'HIGH',      status: 'Scheduled',   cost: '$38,500', due: '5d' },
+  { id: 'WO-2026-0836', equipment: 'F-101 Fired Heater',         site: 'Rotterdam, NL',        priority: 'HIGH',      status: 'Scheduled',   cost: '$28,900', due: '7d' },
+  { id: 'WO-2026-0834', equipment: 'R-201 Reactor',              site: 'Whiting, USA',         priority: 'HIGH',      status: 'Scheduled',   cost: '$45,600', due: '6d' },
+  { id: 'WO-2026-0833', equipment: 'C-301 Centrifuge',           site: 'Cherry Point, USA',    priority: 'HIGH',      status: 'Scheduled',   cost: '$12,300', due: '9d' },
+  { id: 'WO-2026-0832', equipment: 'E-407 Condenser',            site: 'Castellon, ES',        priority: 'HIGH',      status: 'In Progress', cost: '$8,700',  due: '1d' },
+  { id: 'WO-2026-0831', equipment: 'P-502 Transfer Pump',        site: 'Houston, USA',         priority: 'HIGH',      status: 'Scheduled',   cost: '$6,200',  due: '10d' },
+  { id: 'WO-2026-0830', equipment: 'G-104 Generator',            site: 'Ruwais, UAE',          priority: 'HIGH',      status: 'Scheduled',   cost: '$22,100', due: '8d' },
+  // Medium
+  { id: 'WO-2026-0829', equipment: 'T-405 Turbine',              site: 'Ras Tanura, KSA',      priority: 'MEDIUM',    status: 'Scheduled',   cost: '$41,000', due: '14d' },
+  { id: 'WO-2026-0828', equipment: 'P-205 Pump',                 site: 'Houston, USA',         priority: 'MEDIUM',    status: 'Scheduled',   cost: '$6,800',  due: '8d' },
+  { id: 'WO-2026-0827', equipment: 'V-101 Surge Drum',           site: 'Rotterdam, NL',        priority: 'MEDIUM',    status: 'Scheduled',   cost: '$9,400',  due: '12d' },
+  { id: 'WO-2026-0826', equipment: 'E-314 Reboiler',             site: 'Gelsenkirchen, DE',    priority: 'MEDIUM',    status: 'Scheduled',   cost: '$18,700', due: '15d' },
+  { id: 'WO-2026-0825', equipment: 'C-402 Screw Compressor',     site: 'Whiting, USA',         priority: 'MEDIUM',    status: 'Scheduled',   cost: '$14,500', due: '11d' },
+  { id: 'WO-2026-0824', equipment: 'P-303 Booster Pump',         site: 'Cherry Point, USA',    priority: 'MEDIUM',    status: 'In Progress', cost: '$5,600',  due: '5d' },
+  { id: 'WO-2026-0823', equipment: 'F-202 Flare Stack',          site: 'Castellon, ES',        priority: 'MEDIUM',    status: 'Scheduled',   cost: '$32,000', due: '20d' },
+  { id: 'WO-2026-0822', equipment: 'R-102 Hydrotreater',         site: 'Ras Tanura, KSA',      priority: 'MEDIUM',    status: 'Scheduled',   cost: '$55,000', due: '18d' },
+  { id: 'WO-2026-0821', equipment: 'T-103 Storage Tank',         site: 'Ruwais, UAE',          priority: 'MEDIUM',    status: 'In Progress', cost: '$7,800',  due: '7d' },
+  { id: 'WO-2026-0820', equipment: 'K-301 Air Cooler',           site: 'Houston, USA',         priority: 'MEDIUM',    status: 'Scheduled',   cost: '$11,200', due: '22d' },
+  { id: 'WO-2026-0819', equipment: 'C-501 Turbocharger',         site: 'Rotterdam, NL',        priority: 'MEDIUM',    status: 'Scheduled',   cost: '$24,800', due: '16d' },
+  { id: 'WO-2026-0818', equipment: 'E-601 Pre-heater',           site: 'Gelsenkirchen, DE',    priority: 'MEDIUM',    status: 'Scheduled',   cost: '$16,300', due: '19d' },
+  // Completed
+  { id: 'WO-2026-0817', equipment: 'P-601 Lube Oil Pump',        site: 'Whiting, USA',         priority: 'LOW',       status: 'Completed',   cost: '$4,200',  due: '—' },
+  { id: 'WO-2026-0816', equipment: 'V-202 Drum Separator',       site: 'Cherry Point, USA',    priority: 'LOW',       status: 'Completed',   cost: '$8,900',  due: '—' },
+  { id: 'WO-2026-0815', equipment: 'E-201 Shell & Tube HX',      site: 'Castellon, ES',        priority: 'LOW',       status: 'Completed',   cost: '$12,600', due: '—' },
+  { id: 'WO-2026-0814', equipment: 'G-401 Gas Compressor',       site: 'Ras Tanura, KSA',      priority: 'HIGH',      status: 'Completed',   cost: '$31,400', due: '—' },
+  { id: 'WO-2026-0813', equipment: 'T-301 Distillation Column',  site: 'Rotterdam, NL',        priority: 'HIGH',      status: 'Completed',   cost: '$48,700', due: '—' },
+  { id: 'WO-2026-0812', equipment: 'P-401B Feed Pump',           site: 'Ruwais, UAE',          priority: 'MEDIUM',    status: 'Completed',   cost: '$7,100',  due: '—' },
+  { id: 'WO-2026-0811', equipment: 'C-102 Centrifugal Comp.',    site: 'Houston, USA',         priority: 'EMERGENCY', status: 'Completed',   cost: '$34,200', due: '—' },
+  { id: 'WO-2026-0810', equipment: 'F-301 Reformer Furnace',     site: 'Gelsenkirchen, DE',    priority: 'HIGH',      status: 'Completed',   cost: '$62,800', due: '—' },
+  { id: 'WO-2026-0809', equipment: 'R-301 Hydrocracker',         site: 'Whiting, USA',         priority: 'MEDIUM',    status: 'Completed',   cost: '$91,500', due: '—' },
+  { id: 'WO-2026-0808', equipment: 'K-101 Air Separation Unit',  site: 'Cherry Point, USA',    priority: 'LOW',       status: 'Completed',   cost: '$18,300', due: '—' },
+  { id: 'WO-2026-0807', equipment: 'P-201 Condensate Pump',      site: 'Castellon, ES',        priority: 'LOW',       status: 'Completed',   cost: '$5,600',  due: '—' },
+];
+
+const PRI_COLOR: Record<string, string> = { EMERGENCY: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#60a5fa', LOW: '#9ca3af' };
+const ST_COLOR:  Record<string, string> = { Open: '#f87171', 'In Progress': '#fbbf24', Scheduled: '#818cf8', Completed: '#4ade80' };
+
+const WorkOrdersTab: React.FC = () => {
+  const [wos, setWos] = useState<WO[]>(INITIAL_WOS);
+  const [toast, setToast] = useState<string | null>(null);
+  const [prCounter, setPrCounter] = useState(1);
+
+  const featuredWO = wos.find(w => w.priority === 'EMERGENCY' && w.status === 'Open') ?? null;
+
+  const handleApprove = (wo: WO) => {
+    const prId = `PR-2026-${String(prCounter).padStart(4, '0')}`;
+    setPrCounter(c => c + 1);
+    setWos(prev => [
+      // Transition approved WO → In Progress
+      ...prev.map(w => w.id === wo.id ? { ...w, status: 'In Progress' as const } : w),
+      // Auto-generated PR → immediately Completed
+      {
+        id: prId,
+        equipment: `${wo.equipment} [PR: Parts & Services]`,
+        site: wo.site,
+        priority: wo.priority,
+        status: 'Completed' as const,
+        cost: wo.cost,
+        due: '—',
+        isPR: true,
+      },
+    ]);
+    setToast(`✓ ${wo.id} dispatched — ${prId} auto-completed`);
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const counts = {
+    emergency: wos.filter(w => w.priority === 'EMERGENCY' && w.status !== 'Completed').length,
+    inProgress: wos.filter(w => w.status === 'In Progress').length,
+    scheduled:  wos.filter(w => w.status === 'Scheduled').length,
+    completed:  wos.filter(w => w.status === 'Completed').length,
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Toast */}
+      {toast && (
+        <div className="bg-green-950 border border-green-700 text-green-300 text-sm px-4 py-3 rounded-xl flex items-center gap-3">
+          <span className="text-green-400 font-bold">✓</span>{toast}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-red-400 font-mono">AI Generated · 2 hours ago</span>
-          <button className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded font-semibold transition-colors">Approve & Dispatch</button>
+      )}
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          [String(counts.emergency), 'EMERGENCY',    'text-red-400',   'border-red-900/50'],
+          [String(counts.inProgress),'IN PROGRESS',  'text-amber-400', 'border-amber-900/50'],
+          [String(counts.scheduled), 'SCHEDULED',    'text-blue-400',  'border-blue-900/50'],
+          [String(counts.completed), 'COMPLETED 30D','text-green-400', 'border-green-900/50'],
+        ].map(([v, l, t, b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Featured emergency WO detail */}
+      {featuredWO && (
+        <div className="bg-gray-900 border border-red-900/60 rounded-xl overflow-hidden">
+          <div className="bg-red-950/50 border-b border-red-900/50 px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold bg-red-500 text-white px-2 py-0.5 rounded">EMERGENCY</span>
+              <span className="text-white font-semibold">{featuredWO.id} · Bearing Replacement — {featuredWO.equipment}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-red-400 font-mono">AI Generated · 2 hours ago</span>
+              <button
+                onClick={() => handleApprove(featuredWO)}
+                className="text-xs bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded font-semibold transition-colors"
+              >
+                Approve & Dispatch
+              </button>
+            </div>
+          </div>
+          <div className="p-5 grid grid-cols-3 gap-6">
+            <div>
+              <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">OEM Instructions</p>
+              <div className="space-y-2">
+                {['1. Isolate drive power — LOTO procedure MAN-C101-LO01','2. Drain lube oil system — capture for analysis','3. Remove coupling guard and flexible coupling','4. Extract bearing housing — OEM puller tool #PT-7B','5. Clean seating surfaces — inspect shaft journal','6. Install new bearings — torque: 340 Nm','7. Refill lube oil — 22L Shell Tellus T46','8. Commission — vibration baseline < 2.5 mm/s'].map(s => (
+                  <div key={s} className="flex gap-2">
+                    <span className="text-purple-500 text-xs flex-shrink-0">▸</span>
+                    <p className="text-gray-400 text-xs">{s}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Required Resources</p>
+              <p className="text-gray-600 text-xs mb-2">PERSONNEL</p>
+              {[['Lead Rotating Equipment Engineer','1'],['Mechanical Technician (Level 3)','2'],['Safety Officer','1'],['OEM Specialist (MAN)','1']].map(([r,n]) => (
+                <div key={r} className="flex justify-between text-xs py-1 border-b border-gray-800">
+                  <span className="text-gray-400">{r}</span><span className="text-white font-semibold">{n}</span>
+                </div>
+              ))}
+              <p className="text-gray-600 text-xs mt-3 mb-2">PARTS & TOOLS</p>
+              {[['Bearing Assembly 7B-2241-ZZ','2 units'],['OEM Puller Kit PT-7B','1 set'],['Torque Wrench 340 Nm','1'],['Shell Tellus T46 Lube Oil','22 L']].map(([r,n]) => (
+                <div key={r} className="flex justify-between text-xs py-1 border-b border-gray-800">
+                  <span className="text-gray-400">{r}</span><span className="text-white font-semibold">{n}</span>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Cost & Timeline</p>
+              <div className="space-y-3 mb-4">
+                {[['Estimated Duration','6 hours','text-white'],['Shutdown Window','12h from now','text-amber-400'],['Labour Cost','$9,400','text-white'],['Parts Cost','$8,400 × 2','text-white'],['OEM Specialist','$1,200','text-white'],['Total WO Cost','$28,400','text-white font-bold']].map(([l,v,c]) => (
+                  <div key={l} className="flex justify-between text-xs">
+                    <span className="text-gray-500">{l}</span><span className={c}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-green-950/40 border border-green-900/40 rounded-lg p-3">
+                <p className="text-green-400 text-xs font-semibold mb-1">Cost vs Failure</p>
+                {[['WO cost (planned)','$28,400','text-white'],['Failure cost (avoided)','$2,100,000','text-green-400'],['Net savings','$2,071,600','text-green-400 font-bold']].map(([l,v,c]) => (
+                  <div key={l} className="flex justify-between text-xs mb-1">
+                    <span className="text-gray-500">{l}</span><span className={c}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Work Orders table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h3 className="text-white font-semibold text-sm">All Work Orders ({wos.length})</h3>
+          <span className="text-gray-500 text-xs">{wos.filter(w => w.isPR).length} PR orders auto-completed</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead><tr className="border-b border-gray-800">
+              {['WO / PR Number','Equipment','Site','Priority','Status','Est. Cost','Due'].map(h => (
+                <th key={h} className="py-3 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {wos.map(wo => (
+                <tr key={wo.id} className="border-b border-gray-800 hover:bg-gray-800/40 transition-colors">
+                  <td className="py-2.5 px-4 whitespace-nowrap">
+                    <span className={`text-sm font-mono ${wo.isPR ? 'text-green-400' : 'text-purple-400'}`}>{wo.id}</span>
+                    {wo.aiGenerated && <span className="ml-2 text-xs text-purple-500/70">AI</span>}
+                    {wo.isPR && <span className="ml-2 text-xs bg-green-900/50 text-green-400 px-1.5 py-0.5 rounded">PR</span>}
+                  </td>
+                  <td className="py-2.5 px-4 text-white text-sm">{wo.equipment}</td>
+                  <td className="py-2.5 px-4 text-gray-400 text-sm whitespace-nowrap">{wo.site}</td>
+                  <td className="py-2.5 px-4">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded whitespace-nowrap"
+                      style={{ background: `${PRI_COLOR[wo.priority]}22`, color: PRI_COLOR[wo.priority] }}>
+                      {wo.priority}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-4">
+                    <span className="text-xs font-semibold" style={{ color: ST_COLOR[wo.status] }}>{wo.status}</span>
+                  </td>
+                  <td className="py-2.5 px-4 text-gray-300 text-sm whitespace-nowrap">{wo.cost}</td>
+                  <td className="py-2.5 px-4 text-gray-400 text-sm whitespace-nowrap">{wo.due}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      <div className="p-5 grid grid-cols-3 gap-6">
-        {/* OEM Instructions */}
-        <div>
-          <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">OEM Instructions</p>
-          <div className="space-y-2">
-            {['1. Isolate drive power — LOTO procedure MAN-C101-LO01','2. Drain lube oil system — capture for analysis','3. Remove coupling guard and flexible coupling','4. Extract bearing housing — OEM puller tool #PT-7B','5. Clean seating surfaces — inspect shaft journal','6. Install new bearings — torque: 340 Nm','7. Refill lube oil — 22L Shell Tellus T46','8. Commission — vibration baseline < 2.5 mm/s'].map(s => (
-              <div key={s} className="flex gap-2">
-                <span className="text-purple-500 text-xs flex-shrink-0">▸</span>
-                <p className="text-gray-400 text-xs">{s}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Resources */}
-        <div>
-          <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Required Resources</p>
-          <div className="mb-4">
-            <p className="text-gray-600 text-xs mb-2">PERSONNEL</p>
-            {[['Lead Rotating Equipment Engineer','1'],['Mechanical Technician (Level 3)','2'],['Safety Officer','1'],['OEM Specialist (MAN)','1']].map(([r,n]) => (
-              <div key={r} className="flex justify-between text-xs py-1 border-b border-gray-800">
-                <span className="text-gray-400">{r}</span>
-                <span className="text-white font-semibold">{n}</span>
-              </div>
-            ))}
-          </div>
-          <p className="text-gray-600 text-xs mb-2">PARTS & TOOLS</p>
-          {[['Bearing Assembly 7B-2241-ZZ','2 units'],['OEM Puller Kit PT-7B','1 set'],['Torque Wrench 340Nm','1'],['Shell Tellus T46 Lube Oil','22 L']].map(([r,n]) => (
-            <div key={r} className="flex justify-between text-xs py-1 border-b border-gray-800">
-              <span className="text-gray-400">{r}</span>
-              <span className="text-white font-semibold">{n}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Cost & Timeline */}
-        <div>
-          <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">Cost & Timeline</p>
-          <div className="space-y-3 mb-4">
-            {[['Estimated Duration','6 hours','text-white'],['Shutdown Window','12h from now','text-amber-400'],['Labour Cost','$9,400','text-white'],['Parts Cost','$8,400 × 2','text-white'],['OEM Specialist','$1,200','text-white'],['Total WO Cost','$28,400','text-white font-bold']].map(([l,v,c]) => (
-              <div key={l} className="flex justify-between text-xs">
-                <span className="text-gray-500">{l}</span>
-                <span className={c}>{v}</span>
-              </div>
-            ))}
-          </div>
-          <div className="bg-green-950/40 border border-green-900/40 rounded-lg p-3">
-            <p className="text-green-400 text-xs font-semibold mb-1">Cost vs Failure</p>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500">WO cost (planned)</span>
-              <span className="text-white">$28,400</span>
-            </div>
-            <div className="flex justify-between text-xs mb-2">
-              <span className="text-gray-500">Failure cost (avoided)</span>
-              <span className="text-green-400">$2,100,000</span>
-            </div>
-            <div className="flex justify-between text-xs font-bold">
-              <span className="text-green-400">Net savings</span>
-              <span className="text-green-400">$2,071,600</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-
-    {/* Other WOs table */}
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-gray-800">
-        <h3 className="text-white font-semibold text-sm">All Active Work Orders</h3>
-      </div>
-      <table className="w-full">
-        <thead><tr className="border-b border-gray-800">
-          {['WO Number','Equipment','Site','Priority','Status','Est. Cost','Due'].map(h => (
-            <th key={h} className="py-3 px-4 text-left text-xs text-gray-500 uppercase tracking-wider">{h}</th>
-          ))}
-        </tr></thead>
-        <tbody>
-          {[
-            ['WO-2026-0847','C-101 Compressor','Ruwais, UAE','EMERGENCY','Open','$28,400','Now'],
-            ['WO-2026-0841','E-212 Heat Exchanger','Houston, USA','HIGH','In Progress','$14,200','3d'],
-            ['WO-2026-0835','P-205 Pump','Houston, USA','MEDIUM','Scheduled','$6,800','8d'],
-            ['WO-2026-0829','T-405 Turbine','Ras Tanura, KSA','MEDIUM','Scheduled','$41,000','14d'],
-          ].map(([wo,eq,site,pri,st,cost,due]) => {
-            const priColor: Record<string,string> = { EMERGENCY:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#60a5fa' };
-            const stColor: Record<string,string> = { Open:'#f87171','In Progress':'#fbbf24',Scheduled:'#818cf8' };
-            return (
-              <tr key={wo} className="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
-                <td className="py-3 px-4 text-purple-400 text-sm font-mono">{wo}</td>
-                <td className="py-3 px-4 text-white text-sm">{eq}</td>
-                <td className="py-3 px-4 text-gray-400 text-sm">{site}</td>
-                <td className="py-3 px-4"><span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: `${priColor[pri]}22`, color: priColor[pri] }}>{pri}</span></td>
-                <td className="py-3 px-4"><span className="text-xs" style={{ color: stColor[st] }}>{st}</span></td>
-                <td className="py-3 px-4 text-gray-300 text-sm">{cost}</td>
-                <td className="py-3 px-4 text-gray-400 text-sm">{due}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  </div>
-);
+  );
+};
 
 // ── ROI & 40% Target Tab ──────────────────────────────────────────────────────
 const ROI_BARS = [
