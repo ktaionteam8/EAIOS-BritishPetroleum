@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -271,15 +271,93 @@ const DigitalTwinTab: React.FC = () => (
 );
 
 // ── AI Advisor Tab ────────────────────────────────────────────────────────────
-const AI_MESSAGES = [
+const API_BASE = process.env.REACT_APP_API_URL ?? '';
+
+interface AdvisorMessage {
+  role: 'user' | 'ai';
+  text: string;
+}
+
+const INITIAL_ADVISOR_MESSAGES: AdvisorMessage[] = [
   { role: 'user', text: 'What is the recommended action for Compressor C-101 at Ruwais?' },
-  { role: 'ai', text: 'Based on LSTM vibration analysis and bearing temperature trends, C-101 shows a 97.3% probability of inner-race bearing failure within 48 hours.\n\n**Recommended immediate actions:**\n1. Dispatch maintenance crew — Level 3 rotating equipment specialists\n2. Source MAN Turbomachinery bearing assembly Part #7B-2241-ZZ (2 units)\n3. Schedule 6-hour planned shutdown window within next 12 hours\n4. Prepare alignment tools and lube oil flush kit\n\n**Cost of action:** ~$18,400 labour + parts\n**Cost of failure:** ~$2.1M unplanned shutdown + secondary damage', sources: ['LSTM Model v4.2','OEM Manual MAN-7B','Historical Failure DB (143 cases)'] },
+  { role: 'ai', text: 'Based on LSTM vibration analysis and bearing temperature trends, C-101 shows a 97.3% probability of inner-race bearing failure within 48 hours.\n\n**Recommended immediate actions:**\n1. Dispatch maintenance crew — Level 3 rotating equipment specialists\n2. Source MAN Turbomachinery bearing assembly Part #7B-2241-ZZ (2 units)\n3. Schedule 6-hour planned shutdown window within next 12 hours\n4. Prepare alignment tools and lube oil flush kit\n\n**Cost of action:** ~$18,400 labour + parts\n**Cost of failure:** ~$2.1M unplanned shutdown + secondary damage' },
   { role: 'user', text: 'What spare parts should we pre-order for the next 30 days?' },
-  { role: 'ai', text: 'Based on predictive failure probabilities across all 40 refineries, here are the **top 5 parts to pre-order in the next 30 days:**\n\n| Part | Equipment | Prob. | Lead Time |\n|------|-----------|-------|-----------|\n| Bearing 7B-2241-ZZ | C-101, C-204 | 97% | 3 days |\n| Mechanical Seal Kit MS-400 | P-205, P-301 | 78% | 5 days |\n| Impeller Set IP-100-8 | P-205 | 64% | 14 days |\n| Lube Oil Filter LF-7A | K-302 | 42% | 2 days |\n| Coupling Half CH-SGT8 | K-302 | 38% | 21 days |\n\nEstimated total procurement: $284,000 · Potential downtime avoided: $6.8M', sources: ['XGBoost Failure Classifier','Inventory DB','CMMS Oracle'] },
+  { role: 'ai', text: 'Based on predictive failure probabilities across all 40 refineries, here are the **top 5 parts to pre-order in the next 30 days:**\n\n| Part | Equipment | Prob. | Lead Time |\n|------|-----------|-------|-----------|\n| Bearing 7B-2241-ZZ | C-101, C-204 | 97% | 3 days |\n| Mechanical Seal Kit MS-400 | P-205, P-301 | 78% | 5 days |\n| Impeller Set IP-100-8 | P-205 | 64% | 14 days |\n| Lube Oil Filter LF-7A | K-302 | 42% | 2 days |\n| Coupling Half CH-SGT8 | K-302 | 38% | 21 days |\n\nEstimated total procurement: $284,000 · Potential downtime avoided: $6.8M' },
+];
+
+const QUICK_PROMPTS = [
+  'Analyse C-101 bearing failure risk',
+  'Top 5 at-risk equipment this week',
+  'Generate work order for P-205',
+  'What is RUL for T-405?',
 ];
 
 const AiAdvisorTab: React.FC = () => {
-  const [input, setInput] = React.useState('');
+  const [messages, setMessages] = useState<AdvisorMessage[]>(INITIAL_ADVISOR_MESSAGES);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async (text: string) => {
+    const userText = text.trim();
+    if (!userText || isLoading) return;
+
+    setInput('');
+    setError(null);
+
+    const history = [...messages, { role: 'user' as const, text: userText }];
+    setMessages([...history, { role: 'ai', text: '' }]);
+    setIsLoading(true);
+
+    try {
+      const apiMessages = history.map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
+
+      const response = await fetch(`${API_BASE}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error ${response.status}`);
+      }
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        const currentText = accumulated;
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'ai', text: currentText };
+          return updated;
+        });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to reach AI service: ${msg}. Check that REACT_APP_API_URL is set to your backend URL.`);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'ai', text: '⚠️ Unable to reach the AI service. Please try again.' };
+        return updated;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* AI Model Stack Banner */}
@@ -287,24 +365,32 @@ const AiAdvisorTab: React.FC = () => {
         <div className="flex items-center gap-3">
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🧠</div>
           <div>
-            <p className="text-white font-semibold text-sm">RefinerAI Advisor — RAG-Augmented Maintenance Intelligence</p>
-            <p className="text-gray-500 text-xs">Powered by LSTM · XGBoost · Prophet · OEM Manuals · 143K historical failure records</p>
+            <p className="text-white font-semibold text-sm">RefinerAI Advisor — Claude-Powered Maintenance Intelligence</p>
+            <p className="text-gray-500 text-xs">Powered by Claude Opus 4.6 · Adaptive Thinking · Refinery domain expertise</p>
           </div>
         </div>
-        <span className="text-xs bg-green-900/40 text-green-400 px-3 py-1 rounded-full border border-green-900">● Online</span>
+        <span className={`text-xs px-3 py-1 rounded-full border ${isLoading ? 'bg-amber-900/40 text-amber-400 border-amber-900' : 'bg-green-900/40 text-green-400 border-green-900'}`}>
+          {isLoading ? '● Thinking…' : '● Online'}
+        </span>
       </div>
+
+      {error && (
+        <div className="bg-red-900/20 border border-red-900/50 rounded-xl px-4 py-3 text-red-400 text-xs">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         {/* Chat panel */}
         <div className="col-span-2 bg-gray-900 border border-gray-800 rounded-xl flex flex-col" style={{ height: 520 }}>
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
             <h3 className="text-white font-semibold text-sm">AI Chat — Ask anything about your equipment</h3>
-            <span className="text-xs text-gray-500 font-mono">GPT-4o + RAG · 143K docs indexed</span>
+            <span className="text-xs text-gray-500 font-mono">Claude Opus 4.6 · Adaptive thinking</span>
           </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {AI_MESSAGES.map((m, i) => (
+            {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div style={{ maxWidth: '85%' }}>
                   {m.role === 'ai' && (
@@ -314,18 +400,18 @@ const AiAdvisorTab: React.FC = () => {
                     </div>
                   )}
                   <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line ${m.role === 'user' ? 'bg-purple-900/50 text-white' : 'bg-gray-800 text-gray-200'}`}>
-                    {m.text}
+                    {m.text || (
+                      <span className="inline-flex gap-1 items-center text-gray-500">
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                    )}
                   </div>
-                  {m.role === 'ai' && m.sources && (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {m.sources.map(s => (
-                        <span key={s} className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full">📎 {s}</span>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
+            <div ref={bottomRef} />
           </div>
 
           {/* Input */}
@@ -334,14 +420,29 @@ const AiAdvisorTab: React.FC = () => {
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
                 placeholder="Ask about equipment health, failure risk, spare parts, work orders..."
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-purple-700"
+                disabled={isLoading}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-purple-700 disabled:opacity-50"
               />
-              <button className="bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">Send</button>
+              <button
+                onClick={() => sendMessage(input)}
+                disabled={isLoading || !input.trim()}
+                className="bg-purple-700 hover:bg-purple-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                {isLoading ? '…' : 'Send'}
+              </button>
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
-              {['Analyse C-101 bearing failure', 'Top 5 at-risk equipment this week', 'Generate work order for P-205', 'What is RUL for T-405?'].map(q => (
-                <button key={q} onClick={() => setInput(q)} className="text-xs text-purple-400 border border-purple-900/50 px-2 py-1 rounded-full hover:bg-purple-900/20 transition-colors">{q}</button>
+              {QUICK_PROMPTS.map(q => (
+                <button
+                  key={q}
+                  onClick={() => sendMessage(q)}
+                  disabled={isLoading}
+                  className="text-xs text-purple-400 border border-purple-900/50 px-2 py-1 rounded-full hover:bg-purple-900/20 transition-colors disabled:opacity-40"
+                >
+                  {q}
+                </button>
               ))}
             </div>
           </div>
@@ -372,9 +473,9 @@ const AiAdvisorTab: React.FC = () => {
             </div>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">AI Model Stack</p>
+            <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-3">AI Model</p>
             <div className="space-y-2">
-              {[['LSTM','Vibration anomaly detection'],['XGBoost','Failure classification'],['Prophet','RUL time-series forecast'],['CNN','Thermography analysis']].map(([m,d]) => (
+              {[['Claude Opus 4.6','Primary reasoning model'],['Adaptive Thinking','Dynamic reasoning depth'],['Streaming','Real-time response delivery'],['Context window','200K tokens']].map(([m,d]) => (
                 <div key={m}>
                   <div className="flex items-center justify-between">
                     <span className="text-purple-400 text-xs font-semibold font-mono">{m}</span>
