@@ -2079,6 +2079,340 @@ const ComplianceTab: React.FC = () => (
   </div>
 );
 
+// ── REQ-23: Live Demo / Guided Tour Mode ─────────────────────────────────────
+const TOUR_STEPS: { tab: TabId; title: string; desc: string }[] = [
+  { tab:'dashboard',        title:'Global Operations Dashboard',        desc:'Monitor all 40 BP refineries worldwide. The AI Failure Prediction Gantt shows 90-day predicted failures for 14 critical assets, and Multi-Site Benchmarking ranks sites by OEE, MTBF, and MTTR.' },
+  { tab:'live-alerts',      title:'Live Alert Intelligence',            desc:'AI-prioritised alerts powered by LSTM + XGBoost. The Anomaly Heatmap shows 7-day rolling scores for 8 assets, while the Escalation Matrix defines who to call, when, and how for every severity level.' },
+  { tab:'equipment-health', title:'Equipment Health Centre',            desc:'Vibration FFT Spectrum Analyser (ISO 13373-3), Health Degradation Forecast with AI RUL projection, Oil Analysis & Lubrication Tracker, and the 5×5 Risk Matrix — all per asset.' },
+  { tab:'ai-advisor',       title:'RefinerAI Advisor — Claude Opus 4.6',desc:'Chat with Claude Opus 4.6 about any equipment, failure, spare part, or work order. Streaming responses, adaptive thinking, and full refinery domain expertise built in.' },
+  { tab:'work-orders',      title:'AI Work Orders, RCA & Crew Planner', desc:'Auto-generated work orders with OEM procedures. Root Cause Analysis runs 5-Why on top failures. Crew Planner shows live roster, certifications, and WO assignments across all sites.' },
+  { tab:'spare-parts',      title:'Spare Parts — Criticality Matrix',   desc:'AI-prioritised parts inventory with stock levels, reorder urgency, and supplier lead times. The Criticality Matrix plots every part by criticality vs lead time for strategic stockholding decisions.' },
+  { tab:'roi',              title:'ROI Analytics & Budget Tracker',     desc:'Track BP\'s 40% unplanned downtime reduction target (currently 38.2%). MTBF/MTTR/OEE fleet KPIs, Maintenance Budget vs Actuals across all sites, and quarterly savings trend.' },
+  { tab:'ml-models',        title:'ML Models & AI Feedback Loop',       desc:'Six production models — LSTM, XGBoost, Prophet, Random Forest, CNN, Isolation Forest. The AI Feedback Loop tracks confirmed predictions, false positives, and missed failures for continuous model improvement.' },
+  { tab:'reliability',      title:'FMEA Failure Mode Library',          desc:'IEC 60812 FMEA table with RPN scoring (Severity × Occurrence × Detection). All critical failure modes, causes, current controls, and recommended corrective actions across equipment types.' },
+  { tab:'compliance',       title:'Regulatory Compliance Tracker',      desc:'API 510/570, ASME B31.3, ISO 13374, PSM, and ISO 45001 compliance status for every site. Real-time compliance scores, next inspection dates, and overdue alerts.' },
+  { tab:'energy',           title:'Energy Consumption Monitor',         desc:'GJ/tonne energy intensity and carbon footprint per site. Bar chart vs targets, YTD reduction tracking, and steam/power consumption — aligned with BP\'s net-zero decarbonisation roadmap.' },
+  { tab:'field-ops',        title:'Inspection Route Optimiser',         desc:'AI-optimised inspection routes minimise travel distance and maximise coverage. Live status per route, inspector assignments, and a digital inspection checklist with CMMS upload.' },
+  { tab:'tar',              title:'TAR Shutdown Planning',              desc:'Turnaround schedule for 2026: three planned shutdowns totalling $29.4M. Gantt view with month gridlines, plus work scope count, duration, and budget per event.' },
+];
+
+interface TourOverlayProps { onClose: () => void; onTabChange: (tab: TabId) => void; }
+
+const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange }) => {
+  const [step, setStep] = useState(0);
+  const current = TOUR_STEPS[step];
+
+  useEffect(() => { onTabChange(current.tab); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const go = (next: number) => { setStep(next); };
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'flex-end', justifyContent:'center', paddingBottom:36 }}>
+      <div style={{ background:'#0f172a', border:'1px solid #3730a3', borderRadius:16, padding:'28px 32px', maxWidth:580, width:'90%', boxShadow:'0 0 60px #7c3aed33' }}>
+        {/* Header */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+          <div>
+            <p style={{ fontSize:10, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.12em', fontWeight:700, marginBottom:6 }}>
+              Live Tour · Step {step + 1} of {TOUR_STEPS.length}
+            </p>
+            <p style={{ color:'#fff', fontSize:17, fontWeight:700, lineHeight:1.3 }}>{current.title}</p>
+          </div>
+          <button onClick={onClose} style={{ color:'#6b7280', fontSize:20, background:'none', border:'none', cursor:'pointer', marginLeft:16, lineHeight:1 }}>✕</button>
+        </div>
+        {/* Description */}
+        <p style={{ color:'#9ca3af', fontSize:13, lineHeight:1.65, marginBottom:20 }}>{current.desc}</p>
+        {/* Progress bar */}
+        <div style={{ display:'flex', gap:3, marginBottom:20 }}>
+          {TOUR_STEPS.map((_, i) => (
+            <div key={i} style={{ height:3, flex:1, borderRadius:2, background: i <= step ? '#7c3aed' : '#1f2937', cursor:'pointer', transition:'background .2s' }} onClick={() => go(i)}/>
+          ))}
+        </div>
+        {/* Buttons */}
+        <div style={{ display:'flex', gap:10 }}>
+          {step > 0 && (
+            <button onClick={() => go(step - 1)} style={{ flex:1, padding:'10px', borderRadius:8, background:'#1f2937', border:'1px solid #374151', color:'#9ca3af', cursor:'pointer', fontSize:13 }}>← Previous</button>
+          )}
+          <button
+            onClick={() => step < TOUR_STEPS.length - 1 ? go(step + 1) : onClose()}
+            style={{ flex:2, padding:'10px', borderRadius:8, background:'#7c3aed', border:'none', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}
+          >
+            {step < TOUR_STEPS.length - 1 ? 'Next →' : '✓ Finish Tour'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-22: TAR Shutdown Planning ────────────────────────────────────────────
+const TAR_ITEMS = [
+  { id:'TAR-2026-01', site:'Ruwais, UAE',     unit:'CDU-1',      start:'2026-06-01', end:'2026-06-28', days:28, status:'planned',   cost:'$8.4M',  scope:124 },
+  { id:'TAR-2026-02', site:'Houston, USA',    unit:'VDU + HDS',  start:'2026-08-10', end:'2026-09-15', days:36, status:'planned',   cost:'$14.2M', scope:218 },
+  { id:'TAR-2026-03', site:'Rotterdam, NL',   unit:'Reformer-2', start:'2026-09-20', end:'2026-10-12', days:22, status:'planned',   cost:'$6.8M',  scope:87  },
+  { id:'TAR-2025-04', site:'Ras Tanura, KSA', unit:'PFCC Unit',  start:'2025-11-01', end:'2025-11-30', days:30, status:'completed', cost:'$11.1M', scope:196 },
+  { id:'TAR-2025-03', site:'Jamnagar, India', unit:'Coker Unit', start:'2025-09-15', end:'2025-10-08', days:23, status:'completed', cost:'$9.3M',  scope:143 },
+];
+
+const TARTab: React.FC = () => {
+  const upcoming = TAR_ITEMS.filter(t => t.status === 'planned');
+  const W = 640, HDR = 32, ROW_H = 36;
+  const H = HDR + upcoming.length * ROW_H + 8;
+  const rangeStart = new Date('2026-05-01').getTime();
+  const rangeEnd   = new Date('2026-10-31').getTime();
+  const totalMs    = rangeEnd - rangeStart;
+  const xPct = (d: string) => Math.max(0, Math.min(100, (new Date(d).getTime() - rangeStart) / totalMs * 100));
+  const MONTHS = ['May','Jun','Jul','Aug','Sep','Oct'];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          [String(upcoming.length),                                         'PLANNED 2026',       'text-blue-400',  'border-blue-900/50'  ],
+          ['$29.4M',                                                        'PLANNED BUDGET',     'text-white',     'border-gray-800'     ],
+          [String(upcoming.reduce((s,t) => s+t.scope, 0)),                  'WORK SCOPES',        'text-purple-400','border-purple-900/50'],
+          [String(TAR_ITEMS.filter(t => t.status==='completed').length),    'COMPLETED 2025',     'text-green-400', 'border-green-900/50' ],
+        ].map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Gantt */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold">REQ-22 · TAR Shutdown Planning — 2026 Schedule</h3>
+          <p className="text-gray-500 text-xs mt-0.5">May–Oct 2026 horizon · Planned turnarounds</p>
+        </div>
+        <div className="p-5">
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+            {/* Month labels + gridlines */}
+            {MONTHS.map((m, i) => {
+              const x = (i / (MONTHS.length - 1)) * W;
+              return (
+                <g key={m}>
+                  <line x1={x} y1={HDR} x2={x} y2={H} stroke="#1f2937" strokeWidth="1"/>
+                  <text x={x+4} y={18} fill="#4b5563" fontSize="9">{m} 2026</text>
+                </g>
+              );
+            })}
+            {/* TAR bars */}
+            {upcoming.map((tar, i) => {
+              const x1 = xPct(tar.start) / 100 * W;
+              const x2 = xPct(tar.end)   / 100 * W;
+              const y  = HDR + i * ROW_H + 4;
+              return (
+                <g key={tar.id}>
+                  <rect x={x1} y={y} width={Math.max(6, x2-x1)} height={ROW_H-8} fill="#1e3a5f" stroke="#3b82f6" strokeWidth="1" rx="4"/>
+                  <text x={x1+6} y={y+11} fill="#93c5fd" fontSize="8" fontWeight="bold">{tar.id}</text>
+                  <text x={x1+6} y={y+22} fill="#60a5fa" fontSize="7">{tar.site} · {tar.unit} · {tar.days}d · {tar.cost}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {/* Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        {TAR_ITEMS.map(t => (
+          <div key={t.id} className={`bg-gray-900 border ${t.status==='completed' ? 'border-green-900/40' : 'border-blue-900/40'} rounded-xl p-4`}>
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-white font-semibold text-sm">{t.id}</p>
+                <p className="text-gray-500 text-xs">{t.site} · {t.unit}</p>
+              </div>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${t.status==='completed' ? 'bg-green-900/40 text-green-400' : 'bg-blue-900/40 text-blue-400'}`}>
+                {t.status.toUpperCase()}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-xs mb-2">
+              <div><p className="text-gray-600">Duration</p><p className="text-white font-semibold">{t.days} days</p></div>
+              <div><p className="text-gray-600">Budget</p><p className="text-white font-semibold">{t.cost}</p></div>
+              <div><p className="text-gray-600">Work Scopes</p><p className="text-white font-semibold">{t.scope}</p></div>
+            </div>
+            <p className="text-gray-600 text-xs">{t.start} → {t.end}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── REQ-21: Energy Consumption Monitor ───────────────────────────────────────
+const ENERGY_SITES = [
+  { site:'Ruwais, UAE',     gjt:4.82, carbon:0.28, target:4.50, power:842,  steam:1240, trend:+0.12 },
+  { site:'Houston, USA',    gjt:4.21, carbon:0.24, target:4.00, power:612,  steam:980,  trend:-0.08 },
+  { site:'Rotterdam, NL',   gjt:3.98, carbon:0.21, target:4.00, power:541,  steam:820,  trend:-0.15 },
+  { site:'Ras Tanura, KSA', gjt:4.44, carbon:0.26, target:4.20, power:720,  steam:1100, trend:+0.04 },
+  { site:'Jamnagar, India', gjt:3.76, carbon:0.19, target:3.80, power:498,  steam:760,  trend:-0.18 },
+];
+
+const EnergyTab: React.FC = () => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-4 gap-3">
+      {[
+        ['4.24 GJ/t',  'Fleet Energy Intensity',    'YTD 2026 average',          'text-blue-400',  'border-blue-900/50'  ],
+        ['0.24 tCO₂',  'Carbon Intensity',          'tCO₂ per tonne processed',  'text-green-400', 'border-green-900/50' ],
+        ['−8.2%',      'YTD Reduction',             'vs 2025 baseline',          'text-purple-400','border-purple-900/50'],
+        ['$12.4M',     'Energy Cost Savings',       'vs unoptimised baseline',   'text-amber-400', 'border-amber-900/50' ],
+      ].map(([v,l,s,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-white text-xs font-semibold mt-0.5">{l}</p>
+          <p className="text-gray-600 text-xs">{s}</p>
+        </div>
+      ))}
+    </div>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold">REQ-21 · Energy Consumption Monitor — Per Site</h3>
+        <p className="text-gray-500 text-xs mt-0.5">GJ/tonne · Carbon intensity · Power & steam · BP decarbonisation tracking</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead><tr className="border-b border-gray-800">
+            {['Site','GJ / Tonne','Target','vs Target','Carbon (tCO₂/t)','Power (MW)','Steam (t/h)','Trend'].map(h => (
+              <th key={h} className="py-2.5 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {ENERGY_SITES.map(s => {
+              const vs  = ((s.gjt - s.target) / s.target * 100).toFixed(1);
+              const over = s.gjt > s.target;
+              return (
+                <tr key={s.site} className="border-b border-gray-800 hover:bg-gray-800/30">
+                  <td className="py-3 px-4 text-white text-sm whitespace-nowrap">{s.site}</td>
+                  <td className="py-3 px-4 text-blue-400 text-sm font-bold font-mono">{s.gjt}</td>
+                  <td className="py-3 px-4 text-gray-500 text-sm font-mono">{s.target}</td>
+                  <td className="py-3 px-4">
+                    <span className={`text-xs font-bold ${over ? 'text-red-400' : 'text-green-400'}`}>
+                      {over ? '↑' : '↓'} {Math.abs(Number(vs))}%
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-green-400 text-sm font-mono">{s.carbon}</td>
+                  <td className="py-3 px-4 text-gray-300 text-sm">{s.power} MW</td>
+                  <td className="py-3 px-4 text-gray-300 text-sm">{s.steam} t/h</td>
+                  <td className="py-3 px-4">
+                    <span className={`text-xs font-semibold ${s.trend < 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {s.trend < 0 ? '↓' : '↑'} {Math.abs(s.trend)} GJ/t
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {/* Energy bar chart */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h4 className="text-white font-semibold text-sm mb-4">GJ/Tonne vs Target — All Sites</h4>
+      <div className="space-y-3">
+        {ENERGY_SITES.map(s => {
+          const over = s.gjt > s.target;
+          const maxVal = 5.5;
+          return (
+            <div key={s.site} className="flex items-center gap-3">
+              <span className="text-gray-400 text-xs w-36 truncate flex-shrink-0">{s.site}</span>
+              <div className="flex-1 bg-gray-800 rounded-full h-3 overflow-hidden relative">
+                <div className="h-3 rounded-full" style={{ width:`${(s.gjt/maxVal)*100}%`, background: over ? '#ef4444aa' : '#3b82f6' }}/>
+                <div className="absolute top-0 bottom-0 border-r-2 border-amber-400" style={{ left:`${(s.target/maxVal)*100}%` }}/>
+              </div>
+              <span className={`text-xs font-bold w-14 text-right ${over ? 'text-red-400' : 'text-blue-400'}`}>{s.gjt} GJ/t</span>
+              <span className="text-gray-600 text-xs w-14 text-right">tgt {s.target}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-gray-600 text-xs mt-3">│ amber line = site target</p>
+    </div>
+  </div>
+);
+
+// ── REQ-20: Inspection Route Optimiser (Field Ops tab) ───────────────────────
+const INSPECTION_ROUTES = [
+  { id:'RT-01', name:'North Unit Rotating Equipment', assets:['C-101','P-205','K-302'], inspector:'Ahmed Al-Rashid', duration:'4h', distance:'2.4 km', status:'In Progress', priority:'critical' },
+  { id:'RT-02', name:'South Heat Exchanger Loop',     assets:['E-212','E-501','E-314'], inspector:'Maria Santos',    duration:'3h', distance:'1.8 km', status:'Scheduled',   priority:'high'     },
+  { id:'RT-03', name:'Gas Turbine & Compressor Train',assets:['T-405','G-302','K-201'], inspector:'Li Wei',          duration:'5h', distance:'3.1 km', status:'Scheduled',   priority:'high'     },
+  { id:'RT-04', name:'Vessel & Storage Tank Circuit', assets:['V-305','T-103','F-101'], inspector:'James Okafor',    duration:'2h', distance:'1.2 km', status:'Completed',   priority:'medium'   },
+];
+const ROUTE_PRI: Record<string,{bg:string;color:string}> = {
+  critical:{bg:'#450a0a',color:'#f87171'}, high:{bg:'#431407',color:'#fb923c'}, medium:{bg:'#1a2e05',color:'#4ade80'},
+};
+const ROUTE_ST: Record<string,string> = { 'In Progress':'#fbbf24', Scheduled:'#60a5fa', Completed:'#4ade80' };
+
+const FieldOpsTab: React.FC = () => (
+  <div className="space-y-4">
+    <div className="grid grid-cols-4 gap-3">
+      {[
+        [String(INSPECTION_ROUTES.length),                                              'ROUTES TODAY',  'text-white',   'border-gray-800'],
+        [String(INSPECTION_ROUTES.filter(r => r.status==='In Progress').length),        'IN PROGRESS',   'text-amber-400','border-amber-900/50'],
+        [String(INSPECTION_ROUTES.filter(r => r.status==='Scheduled').length),          'SCHEDULED',     'text-blue-400', 'border-blue-900/50'],
+        [String(INSPECTION_ROUTES.filter(r => r.status==='Completed').length),          'COMPLETED',     'text-green-400','border-green-900/50'],
+      ].map(([v,l,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+        </div>
+      ))}
+    </div>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold">REQ-20 · Inspection Route Optimiser</h3>
+        <p className="text-gray-500 text-xs mt-0.5">AI-optimised inspection sequences · Shortest path · Priority weighted</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {INSPECTION_ROUTES.map(route => (
+          <div key={route.id} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-purple-400 font-mono text-xs font-bold">{route.id}</span>
+                  <p className="text-white font-semibold text-sm">{route.name}</p>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background:ROUTE_PRI[route.priority].bg, color:ROUTE_PRI[route.priority].color }}>{route.priority.toUpperCase()}</span>
+                </div>
+                <div className="flex items-center gap-5 text-xs text-gray-500">
+                  <span>Inspector: <span className="text-gray-300">{route.inspector}</span></span>
+                  <span>Route: <span className="text-purple-400 font-mono">{route.assets.join(' → ')}</span></span>
+                  <span>Distance: <span className="text-white">{route.distance}</span></span>
+                  <span>Est. time: <span className="text-white">{route.duration}</span></span>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-2 py-1 rounded flex-shrink-0"
+                style={{ background:`${ROUTE_ST[route.status]}22`, color:ROUTE_ST[route.status] }}>
+                {route.status}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    {/* Inspection checklist for active route */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h4 className="text-white font-semibold text-sm mb-3">Active Route RT-01 · Inspection Checklist</h4>
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          ['✓','C-101 · Vibration check (ISO 13373-3)','text-green-400'],
+          ['✓','C-101 · Bearing temperature reading','text-green-400'],
+          ['✓','C-101 · Lube oil pressure & level','text-green-400'],
+          ['○','P-205 · Seal flush pressure check','text-gray-500'],
+          ['○','P-205 · Motor current reading','text-gray-500'],
+          ['○','K-302 · Inlet filter ΔP reading','text-gray-500'],
+          ['○','K-302 · Discharge temperature','text-gray-500'],
+          ['○','Route sign-off & CMMS upload','text-gray-500'],
+        ].map(([icon, task, col]) => (
+          <div key={task} className="flex items-center gap-2 bg-gray-800/40 rounded-lg px-3 py-2">
+            <span className={`font-bold flex-shrink-0 ${col}`}>{icon}</span>
+            <span className="text-gray-300 text-xs">{task}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // ── REQ-08: FMEA Failure Mode Library ────────────────────────────────────────
 const FMEA_DATA = [
   { type:'Centrifugal Compressor', mode:'Bearing Failure',   effect:'Compressor shutdown, production loss',  cause:'Lube oil starvation / fatigue',        control:'Vibration monitoring, oil analysis',  s:5, o:5, d:3, action:'Increase PM frequency, add backup lube circuit' },
@@ -2159,6 +2493,9 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'roi':              return <ROITab />;
     case 'reliability':      return <FMEATab />;
     case 'compliance':       return <ComplianceTab />;
+    case 'field-ops':        return <FieldOpsTab />;
+    case 'energy':           return <EnergyTab />;
+    case 'tar':              return <TARTab />;
     default:                 return null;
   }
 };
@@ -2167,9 +2504,11 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
 const RefinerAIPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [tourOpen, setTourOpen] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: '#f9fafb', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} onTabChange={tab => setActiveTab(tab)} />}
 
       {/* ── App Header ──────────────────────────────────────────────────────── */}
       <header style={{ background: '#0f0f1a', borderBottom: '1px solid #1f2937' }}>
@@ -2192,6 +2531,12 @@ const RefinerAIPage: React.FC = () => {
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}/>
                 LIVE
               </span>
+              <button
+                onClick={() => setTourOpen(true)}
+                style={{ fontSize: 12, color: '#a78bfa', background: '#1e1b4b', border: '1px solid #3730a3', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+              >
+                ▶ Live Tour
+              </button>
               <button
                 onClick={() => navigate('/dashboard')}
                 style={{ fontSize: 12, color: '#9ca3af', background: '#1f2937', border: '1px solid #374151', padding: '6px 14px', borderRadius: 6, cursor: 'pointer' }}
@@ -2257,6 +2602,25 @@ const RefinerAIPage: React.FC = () => {
             {[
               { id: 'reliability', label: 'FMEA Library',  icon: '⊞' },
               { id: 'compliance',  label: 'Compliance',    icon: '✓' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
+                style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', gap: 8, transition: 'all .15s',
+                  background: activeTab === item.id ? '#1e1b4b' : 'transparent',
+                  color: activeTab === item.id ? '#a78bfa' : '#9ca3af',
+                  border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
+                }}>
+                <span>{item.icon}</span>{item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Field & Sustainability */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 8 }}>Field & Sustainability</p>
+            {[
+              { id: 'field-ops', label: 'Field Ops',  icon: '⊕' },
+              { id: 'energy',    label: 'Energy',     icon: '⚡' },
+              { id: 'tar',       label: 'TAR Planning',icon: '⌛' },
             ].map(item => (
               <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
                 style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', gap: 8, transition: 'all .15s',
