@@ -2093,6 +2093,142 @@ const SHAPPanel: React.FC = () => {
   );
 };
 
+// ── Block L: Continuous Learning Loop ────────────────────────────────────────
+
+// L-01: Active learning queue (uncertain predictions sent for labelling)
+const ACTIVE_LEARNING_QUEUE = [
+  { id:'AL-2026-0441', asset:'K-302 Compressor', site:'Jamnagar', modelConf:0.51, predictedClass:'Bearing Fault', requestedBy:'LSTM v3.2.1', age:'2h' },
+  { id:'AL-2026-0440', asset:'P-415 Pump',       site:'Rotterdam', modelConf:0.54, predictedClass:'Cavitation',   requestedBy:'CNN v1.4.2',   age:'4h' },
+  { id:'AL-2026-0439', asset:'E-304 Exchanger',  site:'Houston',   modelConf:0.48, predictedClass:'Fouling',       requestedBy:'XGBoost v2.8', age:'6h' },
+];
+
+// L-02: Retraining pipeline status
+const RETRAIN_PIPELINE = [
+  { step:'Data collection',     status:'done',    detail:'12,840 new labeled events added',   elapsed:'2h 14m' },
+  { step:'Feature engineering', status:'done',    detail:'48 features computed, 3 new added', elapsed:'22m'    },
+  { step:'Model training',      status:'running', detail:'Epoch 47/100 · Loss: 0.082',         elapsed:'38m'    },
+  { step:'Validation',          status:'pending', detail:'Hold-out set evaluation',             elapsed:'—'      },
+  { step:'A/B shadow testing',  status:'pending', detail:'Parallel production shadow run',      elapsed:'—'      },
+  { step:'Production promotion',status:'pending', detail:'Pending approval from ML Lead',       elapsed:'—'      },
+];
+
+// L-04: Performance history (8 model versions)
+const MODEL_PERF_HISTORY = [
+  { version:'v2.8', accuracy:89.1, f1:0.881 },
+  { version:'v2.9', accuracy:90.4, f1:0.896 },
+  { version:'v3.0', accuracy:91.8, f1:0.912 },
+  { version:'v3.1', accuracy:92.3, f1:0.918 },
+  { version:'v3.2', accuracy:94.7, f1:0.941 },
+];
+
+// L-05: Feedback integration log
+const FEEDBACK_LOG = [
+  { ts:'11 Apr 14:22', type:'override',  alert:'C-101 Bearing Alert', feedback:'Confirmed — Bearing replaced, failure verified', impact:'+0.4% recall' },
+  { ts:'10 Apr 09:15', type:'override',  alert:'P-205 Cavitation',    feedback:'False alarm — Normal flow variation', impact:'-0.2% FPR'   },
+  { ts:'09 Apr 16:40', type:'label',     alert:'AL-2026-0435 K-302',  feedback:'Expert labelled: No fault detected',  impact:'Queued for retrain' },
+];
+
+const ContinuousLearningPanel: React.FC = () => {
+  const W = 400, H = 80, PL = 8, PR = 24;
+  const cW = W - PL - PR;
+  const accs = MODEL_PERF_HISTORY.map(p => p.accuracy);
+  const minA = Math.min(...accs) - 2, maxA = Math.max(...accs) + 2;
+  const xA = (i:number) => PL + (i/(accs.length-1))*cW;
+  const yA = (v:number) => H - 8 - ((v-minA)/(maxA-minA))*(H-16);
+  const accPts = accs.map((v,i) => `${xA(i).toFixed(1)},${yA(v).toFixed(1)}`).join(' ');
+
+  const stepC = { done:'text-green-400', running:'text-blue-400', pending:'text-gray-600' };
+  const stepDot = { done:'#22c55e', running:'#60a5fa', pending:'#374151' };
+
+  return (
+    <div className="space-y-4">
+      {/* L-04: Performance history sparkline */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-white font-semibold text-sm">L-04 · Model Accuracy — Version History</h3>
+            <p className="text-gray-500 text-xs">Bearing Fault LSTM continuous improvement trajectory</p>
+          </div>
+          <div className="text-right">
+            <p className="text-green-400 font-bold text-xl">{accs[accs.length-1]}%</p>
+            <p className="text-gray-500 text-xs">Latest ({MODEL_PERF_HISTORY[MODEL_PERF_HISTORY.length-1].version})</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height:H }}>
+          <polyline points={accPts} fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinejoin="round" />
+          {accs.map((v,i) => (
+            <g key={i}>
+              <circle cx={xA(i)} cy={yA(v)} r="4" fill={i===accs.length-1?'#a78bfa':'#7c3aed'} opacity={i===accs.length-1?1:0.6} />
+              <text x={xA(i)} y={H-1} fill="#4b5563" fontSize="8" textAnchor="middle">{MODEL_PERF_HISTORY[i].version}</text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {/* L-02: Retraining pipeline */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">L-02 · Retraining Pipeline — Bearing Fault LSTM</h3>
+        <div className="space-y-3">
+          {RETRAIN_PIPELINE.map((s,i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-1.5" style={{ background:stepDot[s.status as keyof typeof stepDot] }} />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className={`text-xs font-semibold ${stepC[s.status as keyof typeof stepC]}`}>{s.step}</p>
+                  {s.status === 'running' && <span className="text-xs bg-blue-900/40 text-blue-400 rounded px-1.5 py-0.5 animate-pulse">RUNNING</span>}
+                </div>
+                <p className="text-gray-500 text-xs">{s.detail}</p>
+              </div>
+              <span className="text-gray-600 text-xs flex-shrink-0">{s.elapsed}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* L-01: Active learning queue */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">L-01 · Active Learning Queue</h3>
+            <p className="text-gray-500 text-xs">Low-confidence predictions awaiting expert labelling</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {ACTIVE_LEARNING_QUEUE.map(q => (
+              <div key={q.id} className="px-4 py-3 flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-white text-xs font-semibold">{q.asset} <span className="text-gray-500">· {q.site}</span></p>
+                  <p className="text-gray-500 text-xs">{q.predictedClass} · Conf: <span className="text-amber-400 font-bold">{Math.round(q.modelConf*100)}%</span></p>
+                </div>
+                <span className="text-gray-600 text-xs flex-shrink-0">{q.age}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* L-05: Feedback integration log */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">L-05 · Feedback Integration Log</h3>
+            <p className="text-gray-500 text-xs">Override / label feedback → model improvement</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {FEEDBACK_LOG.map((f,i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-white text-xs font-semibold">{f.alert}</p>
+                  <span className={`text-xs ${f.type==='override'?'text-amber-400':'text-blue-400'}`}>{f.type}</span>
+                </div>
+                <p className="text-gray-500 text-xs">{f.feedback}</p>
+                <p className="text-green-400 text-xs font-semibold">{f.impact} · {f.ts}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MLModelsTab: React.FC = () => (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
@@ -2128,6 +2264,9 @@ const MLModelsTab: React.FC = () => (
 
     {/* Block I: SHAP Explainability */}
     <SHAPPanel />
+
+    {/* Block L: Continuous Learning Loop */}
+    <ContinuousLearningPanel />
 
     {/* Model cards */}
     <div className="grid grid-cols-3 gap-4">
