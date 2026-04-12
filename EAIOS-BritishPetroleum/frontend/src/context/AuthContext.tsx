@@ -12,17 +12,19 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function loadUserFromStorage(): User | null {
+const GUEST_USER: User = { email: 'guest@bp.com', loginTime: new Date().toISOString() };
+
+function loadUserFromStorage(): User {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
+    return raw ? (JSON.parse(raw) as User) : GUEST_USER;
   } catch {
-    return null;
+    return GUEST_USER;
   }
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(loadUserFromStorage);
+  const [user, setUser] = useState<User>(loadUserFromStorage);
 
   const login = useCallback((email: string) => {
     const newUser: User = { email, loginTime: new Date().toISOString() };

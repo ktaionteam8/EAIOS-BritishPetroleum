@@ -28,8 +28,8 @@ const App: React.FC = () => {
             <Route path="/login"           element={<LoginRoute />} />
             <Route path="/dashboard"       element={<DashboardRoute />} />
             <Route path="/apps/refiner-ai" element={<RefinerAIRoute />} />
-            <Route path="/"                element={<Navigate to="/login" replace />} />
-            <Route path="*"                element={<Navigate to="/login" replace />} />
+            <Route path="/"                element={<Navigate to="/dashboard" replace />} />
+            <Route path="*"                element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
