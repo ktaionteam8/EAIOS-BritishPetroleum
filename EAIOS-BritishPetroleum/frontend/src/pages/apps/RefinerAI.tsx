@@ -1770,6 +1770,224 @@ const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   retraining: { bg: '#1c1917', text: '#f59e0b' },
 };
 
+// ── Block H: AI Governance & Model Lifecycle ─────────────────────────────────
+
+// H-01: Model registry
+const MODEL_REGISTRY = [
+  { id:'MDL-001', name:'Bearing Fault LSTM',     version:'v3.2.1', status:'production', trainedOn:'01 Apr 2026', drift:'OK',      approval:'approved', champion:true  },
+  { id:'MDL-002', name:'Heat Exchanger XGBoost', version:'v2.8.0', status:'production', trainedOn:'15 Mar 2026', drift:'WARNING', approval:'approved', champion:true  },
+  { id:'MDL-003', name:'Pump Cavitation CNN',     version:'v1.4.2', status:'staging',   trainedOn:'08 Apr 2026', drift:'OK',      approval:'pending',  champion:false },
+  { id:'MDL-004', name:'Turbine Efficiency GBM',  version:'v4.0.0', status:'production', trainedOn:'22 Feb 2026', drift:'OK',      approval:'approved', champion:true  },
+  { id:'MDL-005', name:'Anomaly Isolation Forest',version:'v2.1.3', status:'retired',   trainedOn:'10 Jan 2026', drift:'CRITICAL',approval:'revoked',  champion:false },
+];
+
+// H-02: Drift detection metrics
+const DRIFT_METRICS = [
+  { model:'Bearing Fault LSTM',     featureDrift:0.04, conceptDrift:0.02, psiScore:0.08, alert:false },
+  { model:'Heat Exchanger XGBoost', featureDrift:0.18, conceptDrift:0.11, psiScore:0.22, alert:true  },
+  { model:'Turbine Efficiency GBM', featureDrift:0.06, conceptDrift:0.03, psiScore:0.09, alert:false },
+];
+
+// H-05: Bias detection
+const BIAS_METRICS = [
+  { group:'Offshore Platforms',     fpr:0.08, tpr:0.91, disparity:'low',    ok:true  },
+  { group:'Onshore Refineries',     fpr:0.07, tpr:0.94, disparity:'low',    ok:true  },
+  { group:'Small Assets (<50kW)',   fpr:0.14, tpr:0.82, disparity:'medium', ok:false },
+  { group:'High-temp Environment',  fpr:0.09, tpr:0.88, disparity:'low',    ok:true  },
+];
+
+// ── Block I: SHAP Explainability ─────────────────────────────────────────────
+
+// I-01: Global SHAP feature importance
+const SHAP_GLOBAL = [
+  { feature: 'Bearing Temp (°C)',     importance: 0.31, direction: 'positive' },
+  { feature: 'Vibration RMS (mm/s)',  importance: 0.27, direction: 'positive' },
+  { feature: 'Lube Oil Viscosity',    importance: 0.18, direction: 'negative' },
+  { feature: 'Speed Delta (RPM)',     importance: 0.12, direction: 'positive' },
+  { feature: 'Discharge Pressure',   importance: 0.07, direction: 'positive' },
+  { feature: 'Oil Particle Count',   importance: 0.05, direction: 'positive' },
+];
+
+// I-02: Individual prediction SHAP waterfall (C-101 latest prediction)
+const SHAP_WATERFALL = [
+  { feature: 'Baseline',             value:  0.14, cumulative:  0.14, isBase:true },
+  { feature: 'Bearing Temp +94°C',   value: +0.31, cumulative:  0.45, isBase:false },
+  { feature: 'Vibration 8.4mm/s',    value: +0.27, cumulative:  0.72, isBase:false },
+  { feature: 'Oil Visc low 38cSt',   value: +0.18, cumulative:  0.90, isBase:false },
+  { feature: 'Speed 580 RPM over',   value: +0.07, cumulative:  0.97, isBase:false },
+  { feature: 'Oil particles 28/mL',  value: +0.00, cumulative:  0.97, isBase:false },
+];
+
+// I-06: Counterfactuals
+const COUNTERFACTUALS = [
+  { scenario:'If bearing temp → 78°C',   probChange: -0.34, feasibility: 'achievable', action: 'Increase cooling water flow 15%' },
+  { scenario:'If vibration → 4.2mm/s',   probChange: -0.22, feasibility: 'achievable', action: 'Balance rotor at next window' },
+  { scenario:'If oil changed to spec',    probChange: -0.19, feasibility: 'immediate',  action: 'Emergency oil flush procedure' },
+];
+
+const AIGovernancePanel: React.FC = () => {
+  const driftC = { OK:'text-green-400', WARNING:'text-amber-400', CRITICAL:'text-red-400' };
+  const statusC = { production:'bg-green-900/40 text-green-400', staging:'bg-blue-900/40 text-blue-400', retired:'bg-gray-800 text-gray-500' };
+  return (
+    <div className="space-y-4">
+      {/* H-01: Model Registry */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-01 · AI Model Registry & Lifecycle</h3>
+          <p className="text-gray-500 text-xs">Version tracking · Drift monitoring · Approval status</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['ID','Model','Version','Status','Trained','Drift','Approval','Champion'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {MODEL_REGISTRY.map(m => (
+              <tr key={m.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-purple-400 font-mono">{m.id}</td>
+                <td className="px-3 py-2 text-white">{m.name}</td>
+                <td className="px-3 py-2 text-gray-400 font-mono">{m.version}</td>
+                <td className="px-3 py-2"><span className={`text-xs font-bold px-2 py-0.5 rounded ${statusC[m.status as keyof typeof statusC]}`}>{m.status.toUpperCase()}</span></td>
+                <td className="px-3 py-2 text-gray-400">{m.trainedOn}</td>
+                <td className="px-3 py-2 font-bold"><span className={driftC[m.drift as keyof typeof driftC]}>{m.drift}</span></td>
+                <td className="px-3 py-2">
+                  <span className={`text-xs ${m.approval==='approved'?'text-green-400':m.approval==='pending'?'text-amber-400':'text-red-400'}`}>{m.approval.toUpperCase()}</span>
+                </td>
+                <td className="px-3 py-2">{m.champion ? <span className="text-yellow-400">★ Yes</span> : <span className="text-gray-600">—</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* H-02: Drift Detection */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-02 · Model Drift Detection</h3>
+          <p className="text-gray-500 text-xs">PSI / Feature drift / Concept drift — alert threshold PSI &gt; 0.2</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Model','Feature Drift','Concept Drift','PSI Score','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {DRIFT_METRICS.map(d => (
+              <tr key={d.model} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-white">{d.model}</td>
+                <td className="px-4 py-2 font-mono" style={{ color: d.featureDrift>0.15?'#f59e0b':'#4ade80' }}>{d.featureDrift.toFixed(2)}</td>
+                <td className="px-4 py-2 font-mono" style={{ color: d.conceptDrift>0.10?'#f59e0b':'#4ade80' }}>{d.conceptDrift.toFixed(2)}</td>
+                <td className="px-4 py-2 font-mono font-bold" style={{ color: d.psiScore>0.20?'#ef4444':d.psiScore>0.10?'#f59e0b':'#4ade80' }}>{d.psiScore.toFixed(2)}</td>
+                <td className="px-4 py-2">{d.alert ? <span className="text-amber-400 font-bold">⚠ RETRAIN REQUIRED</span> : <span className="text-green-400">✓ Stable</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* H-05: Bias detection */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-05 · Bias Detection by Equipment Group</h3>
+          <p className="text-gray-500 text-xs">Equal opportunity check · FPR / TPR across asset segments</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Equipment Group','FPR','TPR','Disparity','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {BIAS_METRICS.map(b => (
+              <tr key={b.group} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-gray-300">{b.group}</td>
+                <td className="px-4 py-2 font-mono text-white">{(b.fpr*100).toFixed(1)}%</td>
+                <td className="px-4 py-2 font-mono text-white">{(b.tpr*100).toFixed(1)}%</td>
+                <td className="px-4 py-2"><span className={`font-semibold ${b.disparity==='low'?'text-green-400':'text-amber-400'}`}>{b.disparity.toUpperCase()}</span></td>
+                <td className="px-4 py-2">{b.ok ? <span className="text-green-400">✓ Pass</span> : <span className="text-amber-400">⚠ Review</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const SHAPPanel: React.FC = () => {
+  const maxI = Math.max(...SHAP_GLOBAL.map(f=>f.importance));
+  return (
+    <div className="space-y-4">
+      {/* I-01: Global feature importance */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">I-01 · Global SHAP Feature Importance — Bearing Fault LSTM</h3>
+        <div className="space-y-2">
+          {SHAP_GLOBAL.map(f => (
+            <div key={f.feature} className="flex items-center gap-3">
+              <span className="text-gray-400 text-xs w-44 flex-shrink-0">{f.feature}</span>
+              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width:`${(f.importance/maxI)*100}%`, background: f.direction==='positive'?'#3b82f6':'#f59e0b' }} />
+              </div>
+              <span className="text-white text-xs font-mono w-10 text-right">{(f.importance*100).toFixed(0)}%</span>
+            </div>
+          ))}
+          <p className="text-gray-600 text-xs mt-1">Blue = pushes probability up · Orange = pushes probability down</p>
+        </div>
+      </div>
+
+      {/* I-02: SHAP Waterfall for C-101 */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="mb-3">
+          <h3 className="text-white font-semibold text-sm">I-02 · SHAP Waterfall — C-101 Latest Prediction</h3>
+          <p className="text-gray-500 text-xs">Individual feature contributions → failure probability {(SHAP_WATERFALL[SHAP_WATERFALL.length-1].cumulative*100).toFixed(0)}%</p>
+        </div>
+        <div className="space-y-1.5">
+          {SHAP_WATERFALL.map((s,i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 w-40 flex-shrink-0">{s.feature}</span>
+              <div className="flex-1 relative h-5 bg-gray-800 rounded">
+                <div className="absolute inset-y-0 rounded" style={{
+                  left: s.isBase ? '0%' : `${(SHAP_WATERFALL[i-1]?.cumulative??0)*85}%`,
+                  width: `${Math.abs(s.value)*85}%`,
+                  background: s.isBase ? '#6b7280' : s.value > 0 ? '#ef4444' : '#22c55e',
+                }} />
+              </div>
+              <span className="text-xs font-mono w-16 text-right" style={{ color: s.isBase?'#9ca3af':s.value>0?'#f87171':'#4ade80' }}>
+                {s.isBase ? `${(s.value*100).toFixed(0)}%` : `${s.value>=0?'+':''}${(s.value*100).toFixed(0)}%`}
+              </span>
+              <span className="text-xs font-mono text-gray-500 w-12 text-right">{(s.cumulative*100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* I-06: Counterfactuals */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">I-06 · Counterfactual Explanations</h3>
+          <p className="text-gray-500 text-xs">What would need to change to reduce failure probability?</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {COUNTERFACTUALS.map(c => (
+            <div key={c.scenario} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{c.scenario}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Action: {c.action}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-green-400 font-bold text-sm">{(c.probChange*100).toFixed(0)}%</p>
+                <span className={`text-xs ${c.feasibility==='immediate'?'text-green-400':c.feasibility==='achievable'?'text-blue-400':'text-amber-400'}`}>{c.feasibility}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MLModelsTab: React.FC = () => (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
@@ -1799,6 +2017,12 @@ const MLModelsTab: React.FC = () => (
 
     {/* REQ-19 — AI Feedback Loop */}
     <AIFeedbackPanel />
+
+    {/* Block H: AI Governance */}
+    <AIGovernancePanel />
+
+    {/* Block I: SHAP Explainability */}
+    <SHAPPanel />
 
     {/* Model cards */}
     <div className="grid grid-cols-3 gap-4">
