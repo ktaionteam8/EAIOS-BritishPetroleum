@@ -129,44 +129,6 @@ export const LandingPage: React.FC = () => {
             </div>
           )}
         </section>
-
-        {/* All domains overview */}
-        <section className="mt-12">
-          <h2 className="text-lg font-semibold text-white mb-5">All Business Domains</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {DOMAINS.map((domain) => {
-              const isSelected = domain.id === selectedDomain.id;
-              const appCount = APPLICATIONS.filter((a) => a.domainId === domain.id).length;
-              const accent = DOMAIN_ACCENT[domain.id];
-              return (
-                <button
-                  key={domain.id}
-                  onClick={() => setSelectedDomain(domain)}
-                  className={`text-left bg-bp-card border rounded-xl p-5 transition-all duration-200 hover:border-bp-border/80 ${
-                    isSelected ? 'border-bp-blue/40 shadow-lg shadow-bp-blue/5' : 'border-bp-border'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-xs font-semibold uppercase tracking-widest ${accent}`}>
-                      {domain.id.split('-')[0]}
-                    </span>
-                    {isSelected && (
-                      <span className="text-xs text-bp-blue bg-bp-blue/10 border border-bp-blue/30 px-2 py-0.5 rounded-full">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-white font-semibold text-sm mb-1">{domain.name}</h3>
-                  <div className="flex items-center gap-3 mt-3 text-xs text-gray-500">
-                    <span>{domain.agentCount} agents</span>
-                    <span>·</span>
-                    <span>{appCount} app{appCount !== 1 ? 's' : ''}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
       </main>
     </div>
   );
