@@ -827,28 +827,6 @@ const RefinerAIPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Tab bar ───────────────────────────────────────────────────── */}
-          <div style={{ display: 'flex', gap: 2, paddingBottom: 0, overflowX: 'auto' }}>
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '10px 14px',
-                  fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
-                  color: activeTab === tab.id ? '#a78bfa' : '#6b7280',
-                  background: 'transparent', border: 'none', borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
-                  cursor: 'pointer', transition: 'color .15s',
-                }}
-              >
-                <span style={{ width: 18, height: 18, borderRadius: 4, background: activeTab === tab.id ? '#4c1d95' : '#1f2937', color: activeTab === tab.id ? '#a78bfa' : '#6b7280', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                  {tab.num}
-                </span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
         </div>
       </header>
 
