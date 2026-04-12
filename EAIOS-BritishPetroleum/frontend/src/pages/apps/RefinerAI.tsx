@@ -837,7 +837,6 @@ const RefinerAIPage: React.FC = () => {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '10px 14px',
                   fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
-                  borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
                   color: activeTab === tab.id ? '#a78bfa' : '#6b7280',
                   background: 'transparent', border: 'none', borderBottom: activeTab === tab.id ? '2px solid #7c3aed' : '2px solid transparent',
                   cursor: 'pointer', transition: 'color .15s',
