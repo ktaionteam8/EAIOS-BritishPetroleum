@@ -1,0 +1,68 @@
+name: Auto-create PR
+
+on:
+  push:
+    branches:
+      - '**'
+      - '!main'
+      - '!develop'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create PR if one doesn't exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+
+          # Check if a PR already exists for this branch
+          EXISTING=$(gh pr list --head "$BRANCH" --base main --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists for branch $BRANCH — skipping."
+            exit 0
+          fi
+
+          # Build a title from the branch name
+          # e.g. feat/add-dashboard → feat: add dashboard
+          TITLE=$(echo "$BRANCH" \
+            | sed 's|.*/||'       \
+            | sed 's/[-_]/ /g'    \
+            | sed 's/  */ /g'     \
+            | sed 's/^ //'        \
+          )
+
+          # Count commits ahead of main
+          COMMITS=$(git log origin/main..HEAD --oneline 2>/dev/null || echo "")
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body "$(cat <<EOF
+## Auto-generated PR
+
+**Branch:** \`$BRANCH\`
+
+### Commits in this PR
+\`\`\`
+$COMMITS
+\`\`\`
+
+### Checklist
+- [ ] PR gate passed (security, code review, debug verify)
+- [ ] Tested locally
+- [ ] Ready to merge
+EOF
+)"
+          echo "PR created for branch $BRANCH"
