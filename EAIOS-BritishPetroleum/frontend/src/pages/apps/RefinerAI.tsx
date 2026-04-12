@@ -13,18 +13,6 @@ type TabId =
   | 'work-orders'
   | 'roi';
 
-const TABS: { id: TabId; label: string; num: number }[] = [
-  { id: 'dashboard',        label: 'Dashboard',       num: 1 },
-  { id: 'live-alerts',      label: 'Live Alerts',     num: 2 },
-  { id: 'equipment-health', label: 'Equipment Health',num: 3 },
-  { id: 'digital-twin',     label: 'Digital Twin',    num: 4 },
-  { id: 'ai-advisor',       label: 'AI Advisor',      num: 5 },
-  { id: 'ml-models',        label: 'ML Models',       num: 6 },
-  { id: 'spare-parts',      label: 'Spare Parts',     num: 7 },
-  { id: 'work-orders',      label: 'AI Work Orders',  num: 8 },
-  { id: 'roi',              label: 'ROI & 40% Target',num: 9 },
-];
-
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 interface KPICardProps {
   label: string;
