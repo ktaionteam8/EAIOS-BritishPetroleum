@@ -4185,6 +4185,7 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'offshore':         return <OffshoreTab />;
     case 'ot-data':          return <OTDataTab />;
     case 'adoption':         return <AdoptionTab />;
+    case 'wave-tracker':     return <WaveTrackerTab />;
     default:                 return null;
   }
 };
@@ -5020,6 +5021,143 @@ const AdoptionTab: React.FC = () => (
     </div>
   </div>
 );
+
+// ── Block O: Implementation Wave Tracker ─────────────────────────────────────
+
+// O-01: Wave plan
+const WAVE_PLAN = [
+  { wave:'Wave 1 — Foundation',      period:'Jan–Jun 2026', sites:['Ras Tanura','Jamnagar'],       status:'in-progress', pctDone:78, budget:'$4.2M', modules:['Equipment Health','Live Alerts','AI Advisor','Work Orders'] },
+  { wave:'Wave 2 — Scale',           period:'Jul–Dec 2026', sites:['Houston','Rotterdam'],          status:'planned',     pctDone:0,  budget:'$6.8M', modules:['Offshore Ops','Castrol Blending','OT Data','Compliance'] },
+  { wave:'Wave 3 — Optimise',        period:'Jan–Jun 2027', sites:['Ruwais + all remaining sites'], status:'planned',     pctDone:0,  budget:'$9.1M', modules:['Edge AI','Digital Twin v2','Continuous Learning','Full ML Gov.'] },
+];
+
+// O-02: Milestone tracker
+const MILESTONES = [
+  { id:'MS-01', wave:1, milestone:'OSIsoft PI integration — Ras Tanura + Jamnagar', due:'28 Feb 2026', status:'done',        owner:'Data Engineering' },
+  { id:'MS-02', wave:1, milestone:'Live Alerts + Alert-to-Action go-live',           due:'31 Mar 2026', status:'done',        owner:'Product' },
+  { id:'MS-03', wave:1, milestone:'SAP PM/MM BAPI integration',                      due:'15 Apr 2026', status:'in-progress', owner:'ERP Integration' },
+  { id:'MS-04', wave:1, milestone:'Wave 1 UAT + hypercare complete',                  due:'30 Jun 2026', status:'pending',     owner:'Delivery Lead' },
+  { id:'MS-05', wave:2, milestone:'Houston + Rotterdam OT data onboarding',           due:'31 Aug 2026', status:'pending',     owner:'Data Engineering' },
+  { id:'MS-06', wave:2, milestone:'Castrol blending quality go-live',                 due:'30 Sep 2026', status:'pending',     owner:'Product' },
+];
+
+// O-03: Risk register
+const WAVE_RISKS = [
+  { id:'R-01', risk:'SAP BTP integration complexity underestimated',       impact:'Schedule delay 4–6 weeks',     prob:'high',   mitigation:'Dedicated SAP architect engaged',       status:'open'     },
+  { id:'R-02', risk:'OT network firewalls block PI tag data at Houston',   impact:'Wave 2 data quality issues',   prob:'medium', mitigation:'IT/OT network architecture review',      status:'in-progress' },
+  { id:'R-03', risk:'Operator adoption below 70% at Ruwais',               impact:'Value realisation shortfall',  prob:'medium', mitigation:'Change champion programme accelerated',   status:'open'     },
+  { id:'R-04', risk:'GDPR constraints on personal data in AI training',     impact:'Model retraining blocked EU',  prob:'low',    mitigation:'Legal review + anonymisation pipeline',   status:'closed'   },
+];
+
+// O-04: Budget vs actuals
+const BUDGET_ACTUALS = [
+  { wave:'Wave 1', budget:4.2, actual:3.6, forecast:4.4 },
+  { wave:'Wave 2', budget:6.8, actual:0,   forecast:7.1 },
+  { wave:'Wave 3', budget:9.1, actual:0,   forecast:9.1 },
+];
+
+const WaveTrackerTab: React.FC = () => {
+  const msC = { done:'text-green-400', 'in-progress':'text-blue-400', pending:'text-gray-500' };
+  const msDot = { done:'#22c55e', 'in-progress':'#60a5fa', pending:'#374151' };
+  const probC = { high:'text-red-400 bg-red-900/40', medium:'text-amber-400 bg-amber-900/30', low:'text-gray-500 bg-gray-800' };
+
+  return (
+    <div className="space-y-5">
+      {/* O-04: Budget summary KPIs */}
+      <div className="grid grid-cols-3 gap-3">
+        {BUDGET_ACTUALS.map(b => (
+          <div key={b.wave} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">{b.wave}</p>
+            <p className="text-white text-2xl font-bold">${b.budget}M</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-green-400 text-xs">Actual: ${b.actual}M</span>
+              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-amber-400 text-xs">Forecast: ${b.forecast}M</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* O-01: Wave cards */}
+      <div className="space-y-4">
+        {WAVE_PLAN.map(w => (
+          <div key={w.wave} className={`bg-gray-900 border rounded-xl p-5 ${w.status==='in-progress'?'border-blue-800':'border-gray-800'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-white font-semibold">{w.wave}</h3>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${w.status==='in-progress'?'bg-blue-900/40 text-blue-400':'bg-gray-800 text-gray-500'}`}>{w.status.toUpperCase()}</span>
+                </div>
+                <p className="text-gray-500 text-xs">{w.period} · Budget: {w.budget} · Sites: {w.sites.join(', ')}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white font-bold text-xl">{w.pctDone}%</p>
+                <p className="text-gray-500 text-xs">complete</p>
+              </div>
+            </div>
+            {w.status === 'in-progress' && (
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden mb-3">
+                <div className="h-full rounded-full bg-blue-500" style={{ width:`${w.pctDone}%` }} />
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {w.modules.map(m => <span key={m} className="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">{m}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* O-02: Milestone tracker */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">O-02 · Milestone Tracker</h3>
+          <p className="text-gray-500 text-xs">Cross-wave delivery milestones · Owner accountability</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {MILESTONES.map(m => (
+            <div key={m.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-1.5" style={{ background:msDot[m.status as keyof typeof msDot] }} />
+              <div className="flex-1">
+                <p className={`text-xs font-semibold ${msC[m.status as keyof typeof msC]}`}>{m.milestone}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Wave {m.wave} · Owner: {m.owner} · Due: {m.due}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${msC[m.status as keyof typeof msC]}`}>{m.status.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* O-03: Risk register */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">O-03 · Delivery Risk Register</h3>
+          <p className="text-gray-500 text-xs">Programme risks · Probability · Mitigation status</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['ID','Risk','Impact','Prob','Mitigation','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {WAVE_RISKS.map(r => (
+              <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-gray-500 font-mono">{r.id}</td>
+                <td className="px-4 py-2 text-white">{r.risk}</td>
+                <td className="px-4 py-2 text-gray-400">{r.impact}</td>
+                <td className="px-4 py-2"><span className={`text-xs font-bold px-1.5 py-0.5 rounded ${probC[r.prob as keyof typeof probC]}`}>{r.prob.toUpperCase()}</span></td>
+                <td className="px-4 py-2 text-gray-400">{r.mitigation}</td>
+                <td className="px-4 py-2">
+                  <span className={r.status==='closed'?'text-green-400':r.status==='in-progress'?'text-amber-400':'text-red-400'} style={{ fontWeight:600 }}>{r.status.toUpperCase()}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const RefinerAIPage: React.FC = () => {
