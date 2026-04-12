@@ -183,8 +183,152 @@ const LiveAlertsTab: React.FC = () => (
   </div>
 );
 
+// ── REQ-03: FFT Spectrum data & panel ─────────────────────────────────────────
+interface FFTPoint { freq: number; amp: number; label?: string; fault?: 'critical' | 'warning' | 'normal'; }
+interface FFTAsset { name: string; rpm: number; alarm: number; bars: FFTPoint[]; t90: number; t60: number; t30: number; }
+
+const FFT_ASSETS: Record<string, FFTAsset> = {
+  'C-101': { name: 'Compressor C-101 · Ruwais', rpm: 3580, alarm: 7.1, t90: 1.1, t60: 2.8, t30: 4.2,
+    bars: [
+      { freq: 20, amp: 0.4 }, { freq: 35, amp: 0.6 },
+      { freq: 42, amp: 2.1, label: 'BSF',    fault: 'warning'  },
+      { freq: 50, amp: 1.2, label: '1×RPM',  fault: 'normal'   },
+      { freq: 62, amp: 1.8, label: 'BPFO',   fault: 'warning'  },
+      { freq: 75, amp: 0.5 },
+      { freq: 87, amp: 8.4, label: 'BPFI ▲', fault: 'critical' },
+      { freq: 100,amp: 0.7, label: '2×RPM',  fault: 'normal'   },
+      { freq: 130,amp: 0.5 },
+      { freq: 175,amp: 3.1, label: 'BPFI×2', fault: 'warning'  },
+    ],
+  },
+  'E-212': { name: 'Exchanger E-212 · Houston', rpm: 1450, alarm: 5.0, t90: 0.9, t60: 1.4, t30: 2.1,
+    bars: [
+      { freq: 24, amp: 0.3 },
+      { freq: 48, amp: 2.8, label: '2×RPM', fault: 'warning' },
+      { freq: 72, amp: 0.6 },
+      { freq: 96, amp: 0.8 },
+      { freq: 144,amp: 0.4 },
+    ],
+  },
+  'P-205': { name: 'Pump P-205 · Houston', rpm: 2950, alarm: 5.0, t90: 0.7, t60: 1.1, t30: 1.9,
+    bars: [
+      { freq: 15, amp: 0.4 },
+      { freq: 49, amp: 1.6, label: '1×RPM', fault: 'normal' },
+      { freq: 65, amp: 2.2, label: 'Impeller BPF', fault: 'warning' },
+      { freq: 98, amp: 0.9 },
+      { freq: 130,amp: 0.5 },
+    ],
+  },
+  'T-405': { name: 'Turbine T-405 · Ras Tanura', rpm: 3000, alarm: 6.0, t90: 0.8, t60: 1.2, t30: 1.6,
+    bars: [
+      { freq: 25, amp: 0.4 },
+      { freq: 50, amp: 1.0, label: '1×RPM', fault: 'normal' },
+      { freq: 75, amp: 1.9, label: 'Blade pass', fault: 'warning' },
+      { freq: 100,amp: 0.6 },
+      { freq: 150,amp: 0.3 },
+    ],
+  },
+  'K-302': { name: 'Compressor K-302 · Jamnagar', rpm: 8200, alarm: 7.1, t90: 0.3, t60: 0.4, t30: 0.5,
+    bars: [
+      { freq: 30, amp: 0.3 },
+      { freq: 60, amp: 0.5, label: '1×RPM', fault: 'normal' },
+      { freq: 90, amp: 0.4 },
+      { freq: 120,amp: 0.6 },
+      { freq: 180,amp: 0.3 },
+    ],
+  },
+};
+
+const FFT_FAULT_COLOR: Record<string, string> = { critical: '#ef4444', warning: '#f59e0b', normal: '#60a5fa', none: '#374151' };
+
+const VibrationSpectrumPanel: React.FC<{ assetId: string }> = ({ assetId }) => {
+  const d = FFT_ASSETS[assetId];
+  if (!d) return null;
+  const W = 700, H = 180, PL = 36, PR = 30, PT = 20, PB = 28;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const maxAmp = 10, maxFreq = 200;
+  const nowAmp = Math.max(...d.bars.map(b => b.amp));
+  const growth = nowAmp > 0 && d.t90 > 0 ? (((nowAmp - d.t90) / d.t90) * 100).toFixed(0) : '—';
+
+  return (
+    <div className="bg-gray-900 border border-purple-900/40 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h4 className="text-white font-semibold text-sm">FFT Vibration Spectrum — {d.name}</h4>
+          <p className="text-gray-500 text-xs mt-0.5">{d.rpm.toLocaleString()} RPM · Alarm: {d.alarm} mm/s · ISO 13373-3</p>
+        </div>
+        <div className="flex items-center gap-5 text-xs">
+          {[['BPFI','Inner Race','text-red-400'],['BPFO','Outer Race','text-amber-400'],['BSF','Ball Spin','text-amber-400'],['1×RPM','Imbalance','text-blue-400']].map(([k,v,c]) => (
+            <div key={k} className="text-center">
+              <p className={`font-mono font-bold ${c}`}>{k}</p>
+              <p className="text-gray-600" style={{ fontSize: 10 }}>{v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+          {/* Grid + Y labels */}
+          {[0, 2.5, 5, 7.5, 10].map(v => {
+            const y = PT + cH - (v / maxAmp) * cH;
+            return (
+              <g key={v}>
+                <line x1={PL} y1={y} x2={W - PR} y2={y} stroke="#1f2937" strokeWidth="1" />
+                <text x={PL - 4} y={y + 3} fill="#6b7280" fontSize="8" textAnchor="end">{v}</text>
+              </g>
+            );
+          })}
+          {/* Alarm line */}
+          {(() => { const y = PT + cH - (d.alarm / maxAmp) * cH; return (
+            <g>
+              <line x1={PL} y1={y} x2={W - PR} y2={y} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="6,4" />
+              <text x={W - PR + 3} y={y + 3} fill="#ef4444" fontSize="8">Alarm {d.alarm}</text>
+            </g>
+          ); })()}
+          {/* Bars */}
+          {d.bars.map((b, i) => {
+            const x = PL + (b.freq / maxFreq) * cW;
+            const bH = (b.amp / maxAmp) * cH;
+            const y = PT + cH - bH;
+            const col = FFT_FAULT_COLOR[b.fault ?? 'none'];
+            return (
+              <g key={i}>
+                <rect x={x - 5} y={y} width={10} height={bH} fill={col} opacity={0.85} rx="2" />
+                {b.label && <text x={x} y={y - 4} fill={col} fontSize="7" textAnchor="middle" fontWeight="bold">{b.label}</text>}
+              </g>
+            );
+          })}
+          {/* X axis labels */}
+          {[0, 50, 100, 150, 200].map(v => (
+            <text key={v} x={PL + (v / maxFreq) * cW} y={H - 4} fill="#6b7280" fontSize="8" textAnchor="middle">{v} Hz</text>
+          ))}
+          <text x={10} y={H / 2} fill="#6b7280" fontSize="8" textAnchor="middle" transform={`rotate(-90, 10, ${H / 2})`}>mm/s</text>
+        </svg>
+
+        {/* Trend strip */}
+        <div className="flex items-center gap-6 mt-2 pt-3 border-t border-gray-800">
+          <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Peak Growth:</p>
+          {([['90d ago', d.t90, 'text-green-400'], ['60d ago', d.t60, 'text-yellow-400'], ['30d ago', d.t30, 'text-orange-400'], ['Now', nowAmp, 'text-red-400']] as [string, number, string][]).map(([l, v, c]) => (
+            <div key={l} className="text-center">
+              <p className={`text-sm font-bold font-mono ${c}`}>{v.toFixed(1)}</p>
+              <p className="text-gray-600 text-xs">{l}</p>
+            </div>
+          ))}
+          <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-gray-800">
+            <div className="h-full rounded-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500" style={{ width: '100%' }} />
+          </div>
+          <span className="text-red-400 text-xs font-bold">↑ {growth}% in 90d</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Equipment Health Tab ──────────────────────────────────────────────────────
-const EquipmentHealthTab: React.FC = () => (
+const EquipmentHealthTab: React.FC = () => {
+  const [fftAsset, setFftAsset] = useState('C-101');
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[['6,321','HEALTHY','text-green-400','border-green-900/50'],['387','WARNING','text-amber-400','border-amber-900/50'],['134','ACTION REQUIRED','text-red-400','border-red-900/50'],['6,842','TOTAL ASSETS','text-white','border-gray-800']].map(([v,l,t,b]) => (
@@ -216,8 +360,23 @@ const EquipmentHealthTab: React.FC = () => (
         </tbody>
       </table>
     </div>
+
+    {/* REQ-03 — Vibration FFT Spectrum Analyser */}
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest">Spectrum Analysis — Select Asset:</p>
+        {Object.keys(FFT_ASSETS).map(id => (
+          <button key={id} onClick={() => setFftAsset(id)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors font-mono ${fftAsset === id ? 'bg-purple-900/50 text-purple-300 border-purple-700' : 'text-gray-500 border-gray-700 hover:border-gray-500'}`}>
+            {id}
+          </button>
+        ))}
+      </div>
+      <VibrationSpectrumPanel assetId={fftAsset} />
+    </div>
   </div>
-);
+  );
+};
 
 // ── Digital Twin Tab ──────────────────────────────────────────────────────────
 const DigitalTwinTab: React.FC = () => (
