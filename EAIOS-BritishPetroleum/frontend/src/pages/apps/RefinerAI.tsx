@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -80,6 +80,373 @@ const AlertRow: React.FC<AlertRowProps> = ({ severity, title, site, details, rul
     </div>
   </div>
 );
+
+// ── A-01: Alert-to-Action Data Structures ────────────────────────────────────
+interface ShapSignal {
+  name: string;
+  values: number[];
+  contribution: number;
+  unit: string;
+}
+interface HistoricalAnalogue {
+  site: string;
+  date: string;
+  outcome: string;
+  daysToFailure: number;
+  match: number;
+}
+interface AlertData {
+  id: string;
+  severity: 'critical' | 'warning' | 'advisory';
+  title: string;
+  site: string;
+  details: string;
+  failureMode: string;
+  probability: number;
+  etfDays: number;
+  etfMin: number;
+  etfMax: number;
+  recommendation: 'replace' | 'inspect' | 'monitor';
+  shapSignals: ShapSignal[];
+  analogues: HistoricalAnalogue[];
+  time: string;
+}
+type AlertDecision = 'active' | 'accepted' | 'modified' | 'overridden';
+interface AuditEntry {
+  id: string;
+  alertId: string;
+  alertTitle: string;
+  decision: 'accepted' | 'modified' | 'overridden';
+  timestamp: string;
+  user: string;
+  reasonCode: string;
+  woNumber: string;
+}
+
+const SEV_BG:     Record<string, string> = { critical: '#3b0a0a', warning: '#2d1400', advisory: '#0c1a2e' };
+const SEV_BORDER: Record<string, string> = { critical: '#7f1d1d', warning: '#78350f', advisory: '#1e3a5f' };
+const RECOMMEND_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  replace: { label: '⚡ REPLACE IMMEDIATELY', color: '#ef4444', bg: '#3b0a0a' },
+  inspect: { label: '🔍 INSPECT WITHIN 24H',  color: '#f59e0b', bg: '#2d1400' },
+  monitor: { label: '📡 MONITOR CLOSELY',      color: '#60a5fa', bg: '#0c1a2e' },
+};
+const OVERRIDE_REASONS = [
+  'False alarm — normal operating variation',
+  'Already actioned by another engineer',
+  'Scheduled at upcoming TAR',
+  'Duplicate of existing work order',
+  'Equipment taken offline',
+  'Other',
+];
+
+const ALERT_DATA: AlertData[] = [
+  {
+    id: 'ALT-001', severity: 'critical',
+    title: 'Bearing Failure Predicted — Compressor C-101',
+    site: 'Ruwais, UAE', details: 'Loop 4A · Vibration 8.4 mm/s',
+    failureMode: 'Inner Race Bearing Fatigue (BPFI)',
+    probability: 97, etfDays: 2, etfMin: 1, etfMax: 3, recommendation: 'replace',
+    shapSignals: [
+      { name: 'BPFI Vibration (87 Hz)', values: [1.2,1.4,1.6,2.1,2.8,3.4,4.1,5.2,6.3,7.1,7.8,8.4], contribution: 0.68, unit: 'mm/s' },
+      { name: 'Bearing Temperature',    values: [72,73,74,76,79,83,89,95,101,108,114,119],           contribution: 0.21, unit: '°C'   },
+      { name: 'Lube Oil Pressure',      values: [4.8,4.8,4.7,4.7,4.6,4.5,4.4,4.3,4.2,4.1,4.0,3.9], contribution: 0.11, unit: 'bar'  },
+    ],
+    analogues: [
+      { site: 'Rotterdam, NL',   date: 'Mar 2024', outcome: 'Bearing replaced, 6h downtime',      daysToFailure: 1, match: 94 },
+      { site: 'Whiting, USA',    date: 'Sep 2023', outcome: 'Catastrophic failure, 4d downtime',   daysToFailure: 2, match: 87 },
+      { site: 'Ras Tanura, KSA', date: 'Jan 2024', outcome: 'Early replacement, 2h downtime',      daysToFailure: 3, match: 81 },
+    ],
+    time: '2m ago',
+  },
+  {
+    id: 'ALT-002', severity: 'warning',
+    title: 'Fouling Shutdown Risk — Heat Exchanger E-212',
+    site: 'Houston, USA', details: 'VDU Train B · Efficiency -18%',
+    failureMode: 'Shell-Side Fouling (Crude Deposit)',
+    probability: 92, etfDays: 3, etfMin: 2, etfMax: 5, recommendation: 'inspect',
+    shapSignals: [
+      { name: 'Fouling Factor',  values: [0.8,0.9,1.0,1.2,1.5,1.8,2.1,2.5,2.9,3.3,3.6,3.9], contribution: 0.59, unit: 'm²K/W' },
+      { name: 'Efficiency Loss', values: [4,5,6,7,9,11,12,13,15,16,17,18],                   contribution: 0.28, unit: '%'     },
+      { name: 'Shell ΔT',        values: [18,19,20,21,23,24,25,26,27,28,29,30],               contribution: 0.13, unit: '°C'    },
+    ],
+    analogues: [
+      { site: 'Gelsenkirchen, DE', date: 'Jun 2024', outcome: 'Chemical clean, 8h offline',   daysToFailure: 3, match: 91 },
+      { site: 'Castellon, ES',     date: 'Nov 2023', outcome: 'Mechanical clean, 12h offline', daysToFailure: 4, match: 79 },
+      { site: 'Cherry Point, USA', date: 'Feb 2024', outcome: 'Emergency clean, 24h offline',  daysToFailure: 2, match: 73 },
+    ],
+    time: '15m ago',
+  },
+  {
+    id: 'ALT-003', severity: 'warning',
+    title: 'Vibration Anomaly — Pump P-205',
+    site: 'Houston, USA', details: 'CDU Train B · Impeller imbalance',
+    failureMode: 'Impeller Cavitation / Imbalance',
+    probability: 78, etfDays: 8, etfMin: 6, etfMax: 12, recommendation: 'monitor',
+    shapSignals: [
+      { name: 'Impeller BPF (65 Hz)', values: [0.8,0.9,1.0,1.1,1.3,1.5,1.6,1.7,1.8,1.9,2.1,2.2], contribution: 0.52, unit: 'mm/s' },
+      { name: 'Sub-sync Vibration',   values: [0.2,0.3,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2], contribution: 0.31, unit: 'mm/s' },
+      { name: 'Discharge Pressure',   values: [6.2,6.1,6.1,6.0,5.9,5.8,5.7,5.7,5.6,5.5,5.4,5.3], contribution: 0.17, unit: 'bar'  },
+    ],
+    analogues: [
+      { site: 'Jamnagar, India', date: 'Aug 2024', outcome: 'Impeller trimmed, 4h downtime',   daysToFailure: 7,  match: 85 },
+      { site: 'Ruwais, UAE',     date: 'Apr 2023', outcome: 'Bearings replaced, monitored',     daysToFailure: 10, match: 78 },
+      { site: 'Houston, USA',    date: 'Dec 2023', outcome: 'Process adjustment resolved',       daysToFailure: 14, match: 71 },
+    ],
+    time: '1h ago',
+  },
+  {
+    id: 'ALT-004', severity: 'advisory',
+    title: 'Blade Erosion Detected — Turbine T-405',
+    site: 'Ras Tanura, KSA', details: 'Power Gen Unit 3 · IR signature anomaly',
+    failureMode: 'Compressor Blade Erosion (Stage 3)',
+    probability: 72, etfDays: 14, etfMin: 10, etfMax: 21, recommendation: 'inspect',
+    shapSignals: [
+      { name: 'IR Blade Temp (Stage 3)', values: [680,685,691,698,705,712,719,726,733,740,746,751], contribution: 0.61, unit: '°C' },
+      { name: 'Compressor Efficiency',   values: [88,87,87,86,86,85,85,84,83,83,82,82],             contribution: 0.24, unit: '%'  },
+      { name: 'Acoustic Emission',       values: [12,13,13,14,15,16,17,18,19,21,23,25],              contribution: 0.15, unit: 'dB' },
+    ],
+    analogues: [
+      { site: 'Rotterdam, NL',   date: 'Jan 2025', outcome: 'Blade cleaning, 12h offline',    daysToFailure: 12, match: 88 },
+      { site: 'Ras Tanura, KSA', date: 'Jul 2023', outcome: 'Full overhaul, 5d offline',       daysToFailure: 11, match: 82 },
+      { site: 'Whiting, USA',    date: 'Oct 2024', outcome: 'Borescope inspection, no action', daysToFailure: 18, match: 76 },
+    ],
+    time: '2h ago',
+  },
+];
+
+// ── A-01: SHAP Sparkline mini-chart ──────────────────────────────────────────
+const ShapSparkline: React.FC<{ values: number[]; color: string }> = ({ values, color }) => {
+  const W = 88, H = 28;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W;
+    const y = H - 4 - ((v - min) / range) * (H - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const lastX = W;
+  const lastY = H - 4 - ((values[values.length - 1] - min) / range) * (H - 8);
+  return (
+    <svg width={W} height={H} style={{ display: 'block', overflow: 'visible', flexShrink: 0 }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" opacity="0.75" />
+      <circle cx={lastX} cy={lastY} r="2.5" fill={color} />
+    </svg>
+  );
+};
+
+// ── A-01/02/03/04/06: Alert-to-Action Card ───────────────────────────────────
+interface AlertCardProps {
+  alert: AlertData;
+  decision: AlertDecision;
+  onAccept:  (id: string) => void;
+  onModify:  (id: string, action: string, timing: string) => void;
+  onOverride:(id: string, reason: string) => void;
+  woNumber:  string;
+}
+
+const AlertCard: React.FC<AlertCardProps> = ({ alert, decision, onAccept, onModify, onOverride, woNumber }) => {
+  const [showAnalogues, setShowAnalogues] = useState(false);
+  const [overrideOpen,  setOverrideOpen]  = useState(false);
+  const [modifyOpen,    setModifyOpen]    = useState(false);
+  const [overrideReason, setOverrideReason] = useState(OVERRIDE_REASONS[0]);
+  const [modifyAction,   setModifyAction]   = useState<'replace' | 'inspect' | 'monitor'>(alert.recommendation);
+  const [modifyTiming,   setModifyTiming]   = useState('Within 24 hours');
+
+  const sevColor  = SEV_COLOR[alert.severity];
+  const sevBg     = SEV_BG[alert.severity];
+  const sevBorder = SEV_BORDER[alert.severity];
+  const rec       = RECOMMEND_STYLE[alert.recommendation];
+  const isDone    = decision !== 'active';
+  const shapColors = ['#a78bfa', '#60a5fa', '#34d399'];
+
+  return (
+    <div className={`rounded-xl border overflow-hidden transition-opacity ${isDone ? 'opacity-60' : ''}`}
+         style={{ borderColor: sevBorder, background: sevBg }}>
+
+      {/* Decision status banner */}
+      {isDone && (
+        <div className="flex items-center gap-2 px-5 py-2 text-xs font-semibold border-b" style={{ borderColor: sevBorder }}>
+          {decision === 'accepted'   && <><span className="text-green-400">✓ ACCEPTED</span><span className="text-gray-500 mx-1">→</span><span className="text-gray-400">SAP WO created: {woNumber}</span></>}
+          {decision === 'modified'   && <><span className="text-blue-400">✎ MODIFIED & ACCEPTED</span><span className="text-gray-500 mx-1">→</span><span className="text-gray-400">SAP WO: {woNumber}</span></>}
+          {decision === 'overridden' && <><span className="text-gray-400">✕ OVERRIDDEN</span><span className="text-gray-500 ml-2">— reason logged as negative training example</span></>}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-2">
+        <div className="flex items-start gap-3 min-w-0">
+          <span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:sevColor, boxShadow:`0 0 6px ${sevColor}`, flexShrink:0, marginTop:5 }} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: sevColor }}>{alert.severity}</span>
+              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-gray-500 text-xs font-mono">{alert.id}</span>
+            </div>
+            <p className="text-white font-semibold text-sm leading-tight mt-0.5">{alert.title}</p>
+            <p className="text-gray-400 text-xs mt-0.5">{alert.site} · {alert.details}</p>
+          </div>
+        </div>
+        <span className="text-gray-600 text-xs whitespace-nowrap flex-shrink-0 pt-1">{alert.time}</span>
+      </div>
+
+      {/* A-01: Failure mode + probability + ETF */}
+      <div className="px-5 pb-3 grid grid-cols-3 gap-3">
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Failure Mode</p>
+          <p className="text-white text-xs font-semibold leading-snug">{alert.failureMode}</p>
+        </div>
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Failure Probability</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width:`${alert.probability}%`, background:sevColor }} />
+            </div>
+            <span className="text-white text-sm font-bold">{alert.probability}%</span>
+          </div>
+        </div>
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Est. Time to Failure</p>
+          <p className="text-white text-sm font-bold">{alert.etfDays}d</p>
+          <p className="text-gray-500 text-xs">[{alert.etfMin}–{alert.etfMax}d, 80% CI]</p>
+        </div>
+      </div>
+
+      {/* Recommendation badge */}
+      <div className="px-5 pb-3">
+        <span className="inline-flex items-center text-xs font-bold px-3 py-1.5 rounded-lg" style={{ color:rec.color, background:rec.bg }}>
+          {rec.label}
+        </span>
+      </div>
+
+      {/* A-01: SHAP Evidence */}
+      <div className="px-5 pb-4 border-t border-white/5 pt-3">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">SHAP Evidence — Top 3 Sensor Signals</p>
+        <div className="space-y-2.5">
+          {alert.shapSignals.map((sig, idx) => {
+            const col = shapColors[idx];
+            const pct = Math.round(sig.contribution * 100);
+            const current = sig.values[sig.values.length - 1];
+            return (
+              <div key={sig.name} className="flex items-center gap-3">
+                <div className="w-44 flex-shrink-0">
+                  <p className="text-xs text-gray-300 leading-tight truncate">{sig.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width:`${pct}%`, background:col }} />
+                    </div>
+                    <span className="text-xs font-mono font-bold" style={{ color:col }}>{pct}%</span>
+                  </div>
+                </div>
+                <ShapSparkline values={sig.values} color={col} />
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs font-bold font-mono" style={{ color:col }}>
+                    {current > 100 ? current.toFixed(0) : current.toFixed(1)} {sig.unit}
+                  </p>
+                  <p className="text-gray-600 text-xs">now</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* A-02: Decision gate buttons */}
+      {!isDone && !overrideOpen && !modifyOpen && (
+        <div className="px-5 pb-4 flex items-center gap-2 flex-wrap border-t border-white/5 pt-3">
+          <button onClick={() => onAccept(alert.id)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-green-900/50 text-green-400 border border-green-800 hover:bg-green-800/60 transition-colors">
+            ✓ Accept → SAP WO
+          </button>
+          <button onClick={() => setModifyOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800 hover:bg-blue-800/40 transition-colors">
+            ✎ Modify
+          </button>
+          <button onClick={() => setOverrideOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 transition-colors">
+            ✕ Override
+          </button>
+          <button onClick={() => setShowAnalogues(v => !v)}
+            className="ml-auto text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            {showAnalogues ? '▲' : '▼'} {alert.analogues.length} analogues
+          </button>
+        </div>
+      )}
+
+      {/* A-03: Override reason code */}
+      {overrideOpen && !isDone && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-400 font-semibold mb-2">Override Reason (required — recorded as negative training example)</p>
+          <select value={overrideReason} onChange={e => setOverrideReason(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-gray-500">
+            {OVERRIDE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { onOverride(alert.id, overrideReason); setOverrideOpen(false); }}
+              className="text-xs font-semibold px-4 py-2 rounded-lg bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 transition-colors">
+              Confirm Override
+            </button>
+            <button onClick={() => setOverrideOpen(false)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* A-04: Modify workflow */}
+      {modifyOpen && !isDone && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-400 font-semibold mb-2">Modify Recommendation</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Action</p>
+              <select value={modifyAction} onChange={e => setModifyAction(e.target.value as 'replace' | 'inspect' | 'monitor')}
+                className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500">
+                <option value="replace">Replace Component</option>
+                <option value="inspect">Inspect &amp; Assess</option>
+                <option value="monitor">Monitor Closely</option>
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Timing</p>
+              <select value={modifyTiming} onChange={e => setModifyTiming(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500">
+                {['Within 4 hours','Within 24 hours','Within 48 hours','Within 7 days','Within 14 days','At next planned outage'].map(t => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { onModify(alert.id, modifyAction, modifyTiming); setModifyOpen(false); }}
+              className="text-xs font-semibold px-4 py-2 rounded-lg bg-blue-900/40 text-blue-400 border border-blue-800 hover:bg-blue-800/50 transition-colors">
+              ✓ Confirm &amp; Create SAP WO
+            </button>
+            <button onClick={() => setModifyOpen(false)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* A-06: Historical Analogues */}
+      {showAnalogues && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">Historical Analogues — Similar Failures in BP History</p>
+          <div className="space-y-2">
+            {alert.analogues.map((a, i) => (
+              <div key={i} className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-xs text-white font-semibold">{a.site} · {a.date}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{a.outcome}</p>
+                </div>
+                <div className="text-right flex-shrink-0 ml-4">
+                  <p className="text-xs font-bold" style={{ color: a.daysToFailure <= 3 ? '#ef4444' : '#f59e0b' }}>{a.daysToFailure}d to failure</p>
+                  <p className="text-xs text-gray-500">{a.match}% match</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ── Equipment Row ─────────────────────────────────────────────────────────────
 interface EquipmentRowProps {
@@ -272,36 +639,259 @@ const DashboardTab: React.FC = () => (
 );
 
 // ── Live Alerts Tab ───────────────────────────────────────────────────────────
-const LiveAlertsTab: React.FC = () => (
-  <div className="space-y-4">
-    <div className="grid grid-cols-5 gap-3">
-      {[['4','CRITICAL','text-red-400','border-red-900/50'],['7','WARNING','text-amber-400','border-amber-900/50'],['3','ADVISORY','text-blue-400','border-blue-900/50'],['48','RESOLVED 24H','text-gray-400','border-gray-800'],['94.7%','AI CONFIDENCE AVG','text-purple-400','border-purple-900/50']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+const LiveAlertsTab: React.FC = () => {
+  const [decisions,  setDecisions]  = useState<Record<string, AlertDecision>>({});
+  const [woNumbers,  setWoNumbers]  = useState<Record<string, string>>({});
+  const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([]);
+  const [pushNotifs, setPushNotifs] = useState<PushNotification[]>([]);
+  const [showAudit,  setShowAudit]  = useState(false);
+
+  // A-07: fire push banners on mount for alerts with probability > 80%
+  useEffect(() => {
+    setPushNotifs(
+      ALERT_DATA
+        .filter(a => a.probability > 80)
+        .map(a => ({ id: `push-${a.id}`, title: a.title, probability: a.probability, etfDays: a.etfDays, site: a.site, severity: a.severity }))
+    );
+  }, []);
+
+  const dismissNotif = useCallback((id: string) => {
+    setPushNotifs(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const genWO  = () => `WO-${Date.now().toString().slice(-6)}`;
+  const nowStr = () => new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  const handleAccept = (id: string) => {
+    const wo  = genWO();
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'accepted' }));
+    setWoNumbers(p => ({ ...p, [id]: wo }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'accepted',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:'',    woNumber:wo }]);
+  };
+
+  const handleModify = (id: string, action: string, timing: string) => {
+    const wo  = genWO();
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'modified' }));
+    setWoNumbers(p => ({ ...p, [id]: wo }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'modified',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:`${action} — ${timing}`, woNumber:wo }]);
+  };
+
+  const handleOverride = (id: string, reason: string) => {
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'overridden' }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'overridden', timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:reason, woNumber:'' }]);
+  };
+
+  const accepted   = auditTrail.filter(e => e.decision === 'accepted').length;
+  const modified   = auditTrail.filter(e => e.decision === 'modified').length;
+  const overridden = auditTrail.filter(e => e.decision === 'overridden').length;
+
+  return (
+    <div className="space-y-4">
+
+      {/* A-07: Push notification banners */}
+      {pushNotifs.length > 0 && (
+        <div className="space-y-2">
+          {pushNotifs.map(n => (
+            <PushNotificationBanner key={n.id} notif={n} onDismiss={dismissNotif} />
+          ))}
         </div>
-      ))}
-    </div>
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-semibold">Active Alerts — AI Prioritised</h3>
-        <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
-      </div>
-      <div className="space-y-3">
-        <AlertRow severity="critical" title="Bearing Failure Predicted — Compressor C-101" site="Ruwais, UAE" details="Loop 4A · Vibration 8.4 mm/s" rul="48h" confidence={97.3} time="2m ago" />
-        <AlertRow severity="warning"  title="Fouling Shutdown Risk — Heat Exchanger E-212" site="Houston, USA" details="VDU Train B · Efficiency -18%" rul="72h" confidence={91.8} time="15m ago" />
-        <AlertRow severity="warning"  title="Vibration Anomaly — Pump P-205"               site="Houston, USA" details="CDU Train B · Impeller imbalance" rul="8d" confidence={78.3} time="1h ago" />
-        <AlertRow severity="advisory" title="Blade Erosion Detected — Turbine T-405"        site="Ras Tanura, KSA" details="Power Gen Unit 3 · IR signature anomaly" rul="14d" confidence={71.6} time="2h ago" />
-      </div>
-    </div>
+      )}
 
-    {/* REQ-12 — Anomaly Detection Heatmap */}
-    <AnomalyHeatmap />
+      {/* KPI strip — live counters */}
+      <div className="grid grid-cols-5 gap-3">
+        {([
+          [String(ALERT_DATA.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
+          [String(ALERT_DATA.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
+          [String(ALERT_DATA.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
+          [String(accepted + modified),                                       'ACTIONED TODAY','text-green-400',  'border-green-900/50' ],
+          [String(overridden),                                                'OVERRIDDEN',    'text-gray-400',   'border-gray-800'     ],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
 
-    {/* REQ-16 — Alert Escalation Matrix */}
-    <EscalationMatrix />
-  </div>
-);
+      {/* A-08: Alert fatigue meter */}
+      <AlertFatigueMeter total={ALERT_DATA.length} accepted={accepted} modified={modified} overridden={overridden} />
+
+      {/* A-01/02/03/04/06: Alert-to-Action Cards */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Active Alerts — Alert-to-Action</h3>
+            <p className="text-gray-500 text-xs">SHAP-explained predictions · Accept / Modify / Override · Tier 1 Human Safety Gate</p>
+          </div>
+          <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
+        </div>
+        <div className="space-y-4">
+          {ALERT_DATA.map(alert => (
+            <AlertCard
+              key={alert.id}
+              alert={alert}
+              decision={decisions[alert.id] ?? 'active'}
+              onAccept={handleAccept}
+              onModify={handleModify}
+              onOverride={handleOverride}
+              woNumber={woNumbers[alert.id] ?? ''}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* A-05: Audit Trail */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Alert-to-Action Audit Trail</h3>
+            <p className="text-gray-500 text-xs">{auditTrail.length} decision{auditTrail.length !== 1 ? 's' : ''} logged · BSEE / HSE / EU AI Act compliant</p>
+          </div>
+          <button onClick={() => setShowAudit(v => !v)} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            {showAudit ? '▲ Hide' : '▼ Show'}
+          </button>
+        </div>
+        {showAudit && (
+          auditTrail.length === 0
+            ? <p className="text-gray-600 text-xs text-center py-8">No decisions logged yet — accept, modify, or override an alert above to populate the trail</p>
+            : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      {['Audit ID','Time','User','Alert','Decision','Reason / WO'].map(h => (
+                        <th key={h} className="px-4 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditTrail.map(entry => (
+                      <tr key={entry.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td className="px-4 py-2 text-gray-600 font-mono">{entry.id.slice(-10)}</td>
+                        <td className="px-4 py-2 text-gray-400 font-mono">{entry.timestamp}</td>
+                        <td className="px-4 py-2 text-gray-300">{entry.user}</td>
+                        <td className="px-4 py-2 text-gray-300 max-w-xs truncate">{entry.alertTitle.split('—')[0].trim()}</td>
+                        <td className="px-4 py-2">
+                          <span className={`font-bold ${entry.decision === 'accepted' ? 'text-green-400' : entry.decision === 'modified' ? 'text-blue-400' : 'text-gray-500'}`}>
+                            {entry.decision.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-gray-400 max-w-xs truncate">
+                          {entry.woNumber
+                            ? <span className="text-purple-400 font-mono">{entry.woNumber}</span>
+                            : <span className="text-gray-500">{entry.reasonCode}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+        )}
+      </div>
+
+      {/* REQ-12 — Anomaly Detection Heatmap (existing) */}
+      <AnomalyHeatmap />
+
+      {/* REQ-16 — Alert Escalation Matrix (existing) */}
+      <EscalationMatrix />
+    </div>
+  );
+};
+
+// ── A-07: Push Notification Banner ───────────────────────────────────────────
+interface PushNotification {
+  id: string;
+  title: string;
+  probability: number;
+  etfDays: number;
+  site: string;
+  severity: 'critical' | 'warning' | 'advisory';
+}
+
+const PushNotificationBanner: React.FC<{
+  notif: PushNotification;
+  onDismiss: (id: string) => void;
+}> = ({ notif, onDismiss }) => {
+  useEffect(() => {
+    const t = setTimeout(() => onDismiss(notif.id), 8000);
+    return () => clearTimeout(t);
+  }, [notif.id, onDismiss]);
+
+  const col = SEV_COLOR[notif.severity];
+  return (
+    <div className="flex items-start gap-3 rounded-xl p-4 border animate-pulse"
+         style={{ background: SEV_BG[notif.severity], borderColor: SEV_BORDER[notif.severity] }}>
+      <div className="w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0"
+           style={{ background: `${col}22`, borderColor: col }}>
+        <span style={{ fontSize: 14 }}>🔔</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: col }}>
+          PUSH — {notif.probability}% PROBABILITY · ETF: {notif.etfDays}d
+        </p>
+        <p className="text-white text-sm font-semibold mt-0.5 leading-tight">{notif.title}</p>
+        <p className="text-gray-400 text-xs mt-0.5">{notif.site} · Auto-dismisses in 8s</p>
+      </div>
+      <button onClick={() => onDismiss(notif.id)} className="text-gray-600 hover:text-gray-300 text-xl leading-none flex-shrink-0">×</button>
+    </div>
+  );
+};
+
+// ── A-08: Alert Fatigue Meter ─────────────────────────────────────────────────
+interface AlertFatigueMeterProps {
+  total: number;
+  accepted: number;
+  modified: number;
+  overridden: number;
+}
+
+const AlertFatigueMeter: React.FC<AlertFatigueMeterProps> = ({ total, accepted, modified, overridden }) => {
+  const actioned    = accepted + modified;
+  const actionRate  = total > 0 ? Math.round((actioned    / total) * 100) : 0;
+  const dismissRate = total > 0 ? Math.round((overridden  / total) * 100) : 0;
+  const fatigued    = dismissRate > 40;
+  return (
+    <div className={`bg-gray-900 border rounded-xl p-5 ${fatigued ? 'border-red-900/60' : 'border-gray-800'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-white font-semibold text-sm">Alert Fatigue Monitor</h3>
+          <p className="text-gray-500 text-xs">Today · Engineer decision-rate tracking · flags if dismiss rate &gt;40%</p>
+        </div>
+        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${fatigued ? 'bg-red-900/40 text-red-400 border-red-800' : 'bg-green-900/40 text-green-400 border-green-800'}`}>
+          {fatigued ? '⚠ HIGH FATIGUE' : '✓ OK'}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-3 mb-4">
+        {([['Total Alerts', total, 'text-gray-300'], ['Accepted', actioned, 'text-green-400'], ['Overridden', overridden, 'text-gray-400'], ['Pending', Math.max(0, total - actioned - overridden), 'text-amber-400']] as [string,number,string][]).map(([l, v, c]) => (
+          <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+            <p className={`text-xl font-bold ${c}`}>{v}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {([['Action Rate', actionRate, fatigued ? '#9ca3af' : '#22c55e', 'text-green-400'], ['Dismiss Rate', dismissRate, dismissRate > 40 ? '#ef4444' : '#9ca3af', dismissRate > 40 ? 'text-red-400' : 'text-gray-400']] as [string,number,string,string][]).map(([label, pct, barColor, textColor]) => (
+          <div key={label} className="flex items-center gap-3">
+            <p className="text-xs text-gray-500 w-24 flex-shrink-0">{label}</p>
+            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width:`${pct}%`, background: barColor }} />
+            </div>
+            <p className={`text-xs font-mono w-10 text-right ${textColor}`}>{pct}%</p>
+          </div>
+        ))}
+      </div>
+      {fatigued && (
+        <p className="text-red-400 text-xs mt-3 bg-red-900/20 rounded-lg px-3 py-2">
+          ⚠ Dismiss rate exceeds 40% — review alert sensitivity settings or model false-positive rate
+        </p>
+      )}
+    </div>
+  );
+};
 
 // ── REQ-03: FFT Spectrum data & panel ─────────────────────────────────────────
 interface FFTPoint { freq: number; amp: number; label?: string; fault?: 'critical' | 'warning' | 'normal'; }
