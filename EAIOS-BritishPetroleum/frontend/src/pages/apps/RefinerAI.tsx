@@ -1156,6 +1156,108 @@ const RiskMatrix5x5: React.FC = () => {
   );
 };
 
+// ── Block E: Predictive Maintenance Enhancements ─────────────────────────────
+
+// E-03: RUL confidence interval data per asset
+const RUL_CONFIDENCE: Record<string, { low: number; mid: number; high: number; unit: string }> = {
+  'C-101': { low: 36,  mid: 48,  high: 62,  unit: 'h' },
+  'E-212': { low: 54,  mid: 72,  high: 96,  unit: 'h' },
+  'P-205': { low: 5,   mid: 8,   high: 11,  unit: 'd' },
+  'T-405': { low: 10,  mid: 14,  high: 19,  unit: 'd' },
+  'K-302': { low: 38,  mid: 45,  high: 55,  unit: 'd' },
+};
+
+// E-04: Fleet-wide health heatmap (site vs asset class)
+const FLEET_HEATMAP: { site: string; compressors: number; pumps: number; exchangers: number; turbines: number }[] = [
+  { site: 'Ruwais, UAE',     compressors: 38, pumps: 76, exchangers: 82, turbines: 91 },
+  { site: 'Houston, USA',    compressors: 72, pumps: 52, exchangers: 64, turbines: 88 },
+  { site: 'Ras Tanura, KSA', compressors: 91, pumps: 89, exchangers: 94, turbines: 95 },
+  { site: 'Jamnagar, India', compressors: 87, pumps: 83, exchangers: 78, turbines: 91 },
+  { site: 'Rotterdam, NL',   compressors: 63, pumps: 71, exchangers: 69, turbines: 84 },
+];
+
+// E-01: Failure signature library
+const FAILURE_SIGS = [
+  { mode: 'Inner Race Bearing Fault', signals: ['Vibration 3× BPFI', 'Temp +12°C above baseline', 'Oil metallic particles ↑'], assets: ['C-101','C-204'], status: 'ACTIVE' },
+  { mode: 'Pump Cavitation',          signals: ['Broadband vibration noise floor ↑', 'Flow pulsation >5%', 'Suction pressure variance'], assets: ['P-205','P-301'], status: 'ACTIVE' },
+  { mode: 'Heat Exchanger Fouling',   signals: ['ΔP across tubes +18%', 'HTC degradation 15%/month', 'Outlet temp rising'], assets: ['E-212'], status: 'ACTIVE' },
+  { mode: 'Turbine Blade Erosion',    signals: ['Exhaust temp spread >40°C', 'Efficiency drop 3%', 'Blade resonance peak'], assets: ['T-405'], status: 'MONITOR' },
+];
+
+// E-08: PM KPI scorecard
+const PM_KPIS = [
+  { kpi: 'Mean Time Between Failures',   value: '847h',   target: '720h',  trend: '+18%', ok: true },
+  { kpi: 'Mean Time to Repair',          value: '6.2h',   target: '8h',    trend: '-22%', ok: true },
+  { kpi: 'Planned Maintenance %',        value: '78%',    target: '85%',   trend: '+5pp', ok: false },
+  { kpi: 'PdM Coverage (asset pool)',    value: '89%',    target: '95%',   trend: '+4pp', ok: false },
+  { kpi: 'False Positive Rate',          value: '8.1%',   target: '<10%',  trend: '-1.4pp', ok: true },
+  { kpi: 'Avoidable Downtime Prevented', value: '14,820h',target: '12,000h',trend: '+23%', ok: true },
+];
+
+const RulConfidenceBar: React.FC<{ assetId: string }> = ({ assetId }) => {
+  const rul = RUL_CONFIDENCE[assetId];
+  if (!rul) return null;
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">E-03 · RUL Confidence Interval — {assetId}</p>
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="relative h-6 bg-gray-800 rounded-full overflow-hidden">
+            <div className="absolute inset-y-0 rounded-full bg-indigo-900/50"
+              style={{ left:`${(rul.low/rul.high)*100 - 10}%`, right:`${100-(rul.high/rul.high)*100}%` }} />
+            <div className="absolute inset-y-0 w-1 bg-indigo-400 rounded"
+              style={{ left: `${(rul.mid/rul.high)*100 - 1}%` }} />
+          </div>
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>Pessimistic: {rul.low}{rul.unit}</span>
+            <span className="text-indigo-400 font-bold">Median: {rul.mid}{rul.unit}</span>
+            <span>Optimistic: {rul.high}{rul.unit}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-indigo-400 font-mono">{rul.mid}{rul.unit}</p>
+          <p className="text-gray-500 text-xs">P50 RUL estimate</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FleetHeatmap: React.FC = () => {
+  const cols = ['compressors','pumps','exchangers','turbines'] as const;
+  const heatColor = (v: number) => v >= 85 ? '#22c55e' : v >= 65 ? '#f59e0b' : '#ef4444';
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-04 · Fleet-Wide Health Heatmap</h3>
+        <p className="text-gray-500 text-xs">Average health index by site × asset class</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          <th className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide">Site</th>
+          {cols.map(c => <th key={c} className="px-4 py-2 text-center text-gray-500 uppercase tracking-wide">{c}</th>)}
+        </tr></thead>
+        <tbody>
+          {FLEET_HEATMAP.map(row => (
+            <tr key={row.site} className="border-b border-gray-800/50">
+              <td className="px-4 py-2 text-gray-300">{row.site}</td>
+              {cols.map(c => {
+                const v = row[c];
+                return (
+                  <td key={c} className="px-4 py-2 text-center">
+                    <span className="inline-block rounded px-2 py-1 font-mono font-bold text-xs"
+                      style={{ background: heatColor(v)+'22', color: heatColor(v) }}>{v}</span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 // ── Equipment Health Tab ──────────────────────────────────────────────────────
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset,    setFftAsset]    = useState('C-101');
@@ -1226,6 +1328,53 @@ const EquipmentHealthTab: React.FC = () => {
 
     {/* REQ-06 — Risk Matrix 5×5 */}
     <RiskMatrix5x5 />
+
+    {/* E-03: RUL Confidence Interval */}
+    <RulConfidenceBar assetId={healthAsset} />
+
+    {/* E-04: Fleet Health Heatmap */}
+    <FleetHeatmap />
+
+    {/* E-01: Failure Signature Library */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-01 · Multi-Modal Failure Signature Library</h3>
+        <p className="text-gray-500 text-xs">Active failure modes matched across vibration, thermal, oil, and process signals</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {FAILURE_SIGS.map(f => (
+          <div key={f.mode} className="px-5 py-4 flex items-start gap-4">
+            <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${f.status==='ACTIVE'?'bg-red-900/40 text-red-400':'bg-amber-900/40 text-amber-400'}`}>{f.status}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">{f.mode}</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {f.signals.map(s => <span key={s} className="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">{s}</span>)}
+              </div>
+            </div>
+            <div className="flex gap-1 flex-wrap justify-end">
+              {f.assets.map(a => <span key={a} className="text-xs font-mono text-purple-400 bg-purple-900/20 border border-purple-800/30 rounded px-2 py-0.5">{a}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* E-08: PM KPI Scorecard */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-08 · Predictive Maintenance KPI Scorecard</h3>
+        <p className="text-gray-500 text-xs">Programme performance vs targets · Rolling 90-day period</p>
+      </div>
+      <div className="grid grid-cols-3 gap-0 divide-x divide-y divide-gray-800 border-t border-gray-800">
+        {PM_KPIS.map(k => (
+          <div key={k.kpi} className="px-4 py-3">
+            <p className="text-gray-500 text-xs">{k.kpi}</p>
+            <p className={`text-xl font-bold font-mono mt-0.5 ${k.ok ? 'text-green-400' : 'text-amber-400'}`}>{k.value}</p>
+            <p className="text-gray-600 text-xs">Target: {k.target} · <span className={k.ok?'text-green-500':'text-amber-500'}>{k.trend}</span></p>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
   );
 };
