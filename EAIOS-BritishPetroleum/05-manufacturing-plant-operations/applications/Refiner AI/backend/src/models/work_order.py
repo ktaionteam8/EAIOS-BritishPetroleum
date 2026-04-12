@@ -16,12 +16,12 @@ class WorkOrder(Base):
     equipment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("refiner_ai_equipment.id"), nullable=False)
     priority: Mapped[str]           = mapped_column(SAEnum("critical", "high", "medium", "low", name="wo_priority"), nullable=False)
     status: Mapped[str]             = mapped_column(SAEnum("open", "in-progress", "completed", "cancelled", name="wo_status"), nullable=False, default="open")
-    assigned_to: Mapped[str]        = mapped_column(String(255), nullable=True)
-    estimated_hours: Mapped[int]    = mapped_column(Integer, nullable=True)
+    assigned_to: Mapped[str | None]      = mapped_column(String(255), nullable=True)
+    estimated_hours: Mapped[int | None]  = mapped_column(Integer, nullable=True)
     ai_generated: Mapped[bool]      = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at: Mapped[datetime]    = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
-    due_date: Mapped[datetime]      = mapped_column(DateTime(timezone=True), nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     equipment = relationship("Equipment", lazy="selectin")
 

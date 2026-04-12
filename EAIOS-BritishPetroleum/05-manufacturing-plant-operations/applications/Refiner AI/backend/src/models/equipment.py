@@ -18,7 +18,7 @@ class Equipment(Base):
     model: Mapped[str]          = mapped_column(String(255), nullable=False)
     site_id: Mapped[uuid.UUID]  = mapped_column(UUID(as_uuid=True), ForeignKey("refiner_ai_refineries.id"), nullable=False)
     health_score: Mapped[float] = mapped_column(Float, nullable=False, default=100.0)
-    rul_hours: Mapped[int]      = mapped_column(Integer, nullable=True)  # Remaining Useful Life in hours
+    rul_hours: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Remaining Useful Life in hours
     ai_status: Mapped[str]      = mapped_column(
         SAEnum("CRITICAL", "WARNING", "ADVISORY", "HEALTHY", "MONITORING", name="ai_status"),
         nullable=False, default="HEALTHY"

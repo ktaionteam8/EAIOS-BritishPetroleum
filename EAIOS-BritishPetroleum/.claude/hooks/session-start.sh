@@ -36,9 +36,8 @@ if ! command -v gh &>/dev/null; then
   fi
 fi
 
-if command -v gh &>/dev/null && [ -n "${GITHUB_TOKEN:-}" ]; then
-  echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null || true
-  export GH_TOKEN="$GITHUB_TOKEN"   # gh CLI also reads GH_TOKEN
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  export GH_TOKEN="$GITHUB_TOKEN"   # gh CLI reads GH_TOKEN natively — no login command needed
 fi
 SKILLS_DIR="$PROJECT_DIR/.claude/skills"
 TIMESTAMP_FILE="$PROJECT_DIR/.claude/.skills-last-updated"

@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# EAIOS-BP — Post-Deploy Health Check
+#
+# Runs after every push to main.
+# Waits 3 minutes for Vercel and Render to finish deploying,
+# then hits the health endpoints to confirm the deploy succeeded.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Deploy Health Check
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  health-check:
+    name: Verify live endpoints
+    runs-on: ubuntu-latest
+    # Give Vercel (~60s) and Render (~120s) time to deploy
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Wait for deploys
+        run: sleep 180
+
+      - name: Check backend health (Render)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            https://eaios-bp-api.onrender.com/health --max-time 30)
+          echo "Backend status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Backend health check FAILED" && exit 1)
+        continue-on-error: true   # Render free tier sleeps — don't fail CI on cold start
+
+      - name: Check frontend (Vercel)
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            ${{ vars.VERCEL_URL || 'https://eaios-bp.vercel.app' }} --max-time 30)
+          echo "Frontend status: $STATUS"
+          [ "$STATUS" = "200" ] || (echo "Frontend health check FAILED" && exit 1)
+        continue-on-error: true
