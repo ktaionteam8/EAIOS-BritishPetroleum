@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -16,7 +16,13 @@ type TabId =
   | 'compliance'
   | 'field-ops'
   | 'energy'
-  | 'tar';
+  | 'tar'
+  | 'castrol'
+  | 'offshore'
+  | 'ot-data'
+  | 'adoption'
+  | 'wave-tracker'
+  | 'edge-ai';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 interface KPICardProps {
@@ -80,6 +86,373 @@ const AlertRow: React.FC<AlertRowProps> = ({ severity, title, site, details, rul
     </div>
   </div>
 );
+
+// ── A-01: Alert-to-Action Data Structures ────────────────────────────────────
+interface ShapSignal {
+  name: string;
+  values: number[];
+  contribution: number;
+  unit: string;
+}
+interface HistoricalAnalogue {
+  site: string;
+  date: string;
+  outcome: string;
+  daysToFailure: number;
+  match: number;
+}
+interface AlertData {
+  id: string;
+  severity: 'critical' | 'warning' | 'advisory';
+  title: string;
+  site: string;
+  details: string;
+  failureMode: string;
+  probability: number;
+  etfDays: number;
+  etfMin: number;
+  etfMax: number;
+  recommendation: 'replace' | 'inspect' | 'monitor';
+  shapSignals: ShapSignal[];
+  analogues: HistoricalAnalogue[];
+  time: string;
+}
+type AlertDecision = 'active' | 'accepted' | 'modified' | 'overridden';
+interface AuditEntry {
+  id: string;
+  alertId: string;
+  alertTitle: string;
+  decision: 'accepted' | 'modified' | 'overridden';
+  timestamp: string;
+  user: string;
+  reasonCode: string;
+  woNumber: string;
+}
+
+const SEV_BG:     Record<string, string> = { critical: '#3b0a0a', warning: '#2d1400', advisory: '#0c1a2e' };
+const SEV_BORDER: Record<string, string> = { critical: '#7f1d1d', warning: '#78350f', advisory: '#1e3a5f' };
+const RECOMMEND_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+  replace: { label: '⚡ REPLACE IMMEDIATELY', color: '#ef4444', bg: '#3b0a0a' },
+  inspect: { label: '🔍 INSPECT WITHIN 24H',  color: '#f59e0b', bg: '#2d1400' },
+  monitor: { label: '📡 MONITOR CLOSELY',      color: '#60a5fa', bg: '#0c1a2e' },
+};
+const OVERRIDE_REASONS = [
+  'False alarm — normal operating variation',
+  'Already actioned by another engineer',
+  'Scheduled at upcoming TAR',
+  'Duplicate of existing work order',
+  'Equipment taken offline',
+  'Other',
+];
+
+const ALERT_DATA: AlertData[] = [
+  {
+    id: 'ALT-001', severity: 'critical',
+    title: 'Bearing Failure Predicted — Compressor C-101',
+    site: 'Ruwais, UAE', details: 'Loop 4A · Vibration 8.4 mm/s',
+    failureMode: 'Inner Race Bearing Fatigue (BPFI)',
+    probability: 97, etfDays: 2, etfMin: 1, etfMax: 3, recommendation: 'replace',
+    shapSignals: [
+      { name: 'BPFI Vibration (87 Hz)', values: [1.2,1.4,1.6,2.1,2.8,3.4,4.1,5.2,6.3,7.1,7.8,8.4], contribution: 0.68, unit: 'mm/s' },
+      { name: 'Bearing Temperature',    values: [72,73,74,76,79,83,89,95,101,108,114,119],           contribution: 0.21, unit: '°C'   },
+      { name: 'Lube Oil Pressure',      values: [4.8,4.8,4.7,4.7,4.6,4.5,4.4,4.3,4.2,4.1,4.0,3.9], contribution: 0.11, unit: 'bar'  },
+    ],
+    analogues: [
+      { site: 'Rotterdam, NL',   date: 'Mar 2024', outcome: 'Bearing replaced, 6h downtime',      daysToFailure: 1, match: 94 },
+      { site: 'Whiting, USA',    date: 'Sep 2023', outcome: 'Catastrophic failure, 4d downtime',   daysToFailure: 2, match: 87 },
+      { site: 'Ras Tanura, KSA', date: 'Jan 2024', outcome: 'Early replacement, 2h downtime',      daysToFailure: 3, match: 81 },
+    ],
+    time: '2m ago',
+  },
+  {
+    id: 'ALT-002', severity: 'warning',
+    title: 'Fouling Shutdown Risk — Heat Exchanger E-212',
+    site: 'Houston, USA', details: 'VDU Train B · Efficiency -18%',
+    failureMode: 'Shell-Side Fouling (Crude Deposit)',
+    probability: 92, etfDays: 3, etfMin: 2, etfMax: 5, recommendation: 'inspect',
+    shapSignals: [
+      { name: 'Fouling Factor',  values: [0.8,0.9,1.0,1.2,1.5,1.8,2.1,2.5,2.9,3.3,3.6,3.9], contribution: 0.59, unit: 'm²K/W' },
+      { name: 'Efficiency Loss', values: [4,5,6,7,9,11,12,13,15,16,17,18],                   contribution: 0.28, unit: '%'     },
+      { name: 'Shell ΔT',        values: [18,19,20,21,23,24,25,26,27,28,29,30],               contribution: 0.13, unit: '°C'    },
+    ],
+    analogues: [
+      { site: 'Gelsenkirchen, DE', date: 'Jun 2024', outcome: 'Chemical clean, 8h offline',   daysToFailure: 3, match: 91 },
+      { site: 'Castellon, ES',     date: 'Nov 2023', outcome: 'Mechanical clean, 12h offline', daysToFailure: 4, match: 79 },
+      { site: 'Cherry Point, USA', date: 'Feb 2024', outcome: 'Emergency clean, 24h offline',  daysToFailure: 2, match: 73 },
+    ],
+    time: '15m ago',
+  },
+  {
+    id: 'ALT-003', severity: 'warning',
+    title: 'Vibration Anomaly — Pump P-205',
+    site: 'Houston, USA', details: 'CDU Train B · Impeller imbalance',
+    failureMode: 'Impeller Cavitation / Imbalance',
+    probability: 78, etfDays: 8, etfMin: 6, etfMax: 12, recommendation: 'monitor',
+    shapSignals: [
+      { name: 'Impeller BPF (65 Hz)', values: [0.8,0.9,1.0,1.1,1.3,1.5,1.6,1.7,1.8,1.9,2.1,2.2], contribution: 0.52, unit: 'mm/s' },
+      { name: 'Sub-sync Vibration',   values: [0.2,0.3,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2], contribution: 0.31, unit: 'mm/s' },
+      { name: 'Discharge Pressure',   values: [6.2,6.1,6.1,6.0,5.9,5.8,5.7,5.7,5.6,5.5,5.4,5.3], contribution: 0.17, unit: 'bar'  },
+    ],
+    analogues: [
+      { site: 'Jamnagar, India', date: 'Aug 2024', outcome: 'Impeller trimmed, 4h downtime',   daysToFailure: 7,  match: 85 },
+      { site: 'Ruwais, UAE',     date: 'Apr 2023', outcome: 'Bearings replaced, monitored',     daysToFailure: 10, match: 78 },
+      { site: 'Houston, USA',    date: 'Dec 2023', outcome: 'Process adjustment resolved',       daysToFailure: 14, match: 71 },
+    ],
+    time: '1h ago',
+  },
+  {
+    id: 'ALT-004', severity: 'advisory',
+    title: 'Blade Erosion Detected — Turbine T-405',
+    site: 'Ras Tanura, KSA', details: 'Power Gen Unit 3 · IR signature anomaly',
+    failureMode: 'Compressor Blade Erosion (Stage 3)',
+    probability: 72, etfDays: 14, etfMin: 10, etfMax: 21, recommendation: 'inspect',
+    shapSignals: [
+      { name: 'IR Blade Temp (Stage 3)', values: [680,685,691,698,705,712,719,726,733,740,746,751], contribution: 0.61, unit: '°C' },
+      { name: 'Compressor Efficiency',   values: [88,87,87,86,86,85,85,84,83,83,82,82],             contribution: 0.24, unit: '%'  },
+      { name: 'Acoustic Emission',       values: [12,13,13,14,15,16,17,18,19,21,23,25],              contribution: 0.15, unit: 'dB' },
+    ],
+    analogues: [
+      { site: 'Rotterdam, NL',   date: 'Jan 2025', outcome: 'Blade cleaning, 12h offline',    daysToFailure: 12, match: 88 },
+      { site: 'Ras Tanura, KSA', date: 'Jul 2023', outcome: 'Full overhaul, 5d offline',       daysToFailure: 11, match: 82 },
+      { site: 'Whiting, USA',    date: 'Oct 2024', outcome: 'Borescope inspection, no action', daysToFailure: 18, match: 76 },
+    ],
+    time: '2h ago',
+  },
+];
+
+// ── A-01: SHAP Sparkline mini-chart ──────────────────────────────────────────
+const ShapSparkline: React.FC<{ values: number[]; color: string }> = ({ values, color }) => {
+  const W = 88, H = 28;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W;
+    const y = H - 4 - ((v - min) / range) * (H - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const lastX = W;
+  const lastY = H - 4 - ((values[values.length - 1] - min) / range) * (H - 8);
+  return (
+    <svg width={W} height={H} style={{ display: 'block', overflow: 'visible', flexShrink: 0 }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" opacity="0.75" />
+      <circle cx={lastX} cy={lastY} r="2.5" fill={color} />
+    </svg>
+  );
+};
+
+// ── A-01/02/03/04/06: Alert-to-Action Card ───────────────────────────────────
+interface AlertCardProps {
+  alert: AlertData;
+  decision: AlertDecision;
+  onAccept:  (id: string) => void;
+  onModify:  (id: string, action: string, timing: string) => void;
+  onOverride:(id: string, reason: string) => void;
+  woNumber:  string;
+}
+
+const AlertCard: React.FC<AlertCardProps> = ({ alert, decision, onAccept, onModify, onOverride, woNumber }) => {
+  const [showAnalogues, setShowAnalogues] = useState(false);
+  const [overrideOpen,  setOverrideOpen]  = useState(false);
+  const [modifyOpen,    setModifyOpen]    = useState(false);
+  const [overrideReason, setOverrideReason] = useState(OVERRIDE_REASONS[0]);
+  const [modifyAction,   setModifyAction]   = useState<'replace' | 'inspect' | 'monitor'>(alert.recommendation);
+  const [modifyTiming,   setModifyTiming]   = useState('Within 24 hours');
+
+  const sevColor  = SEV_COLOR[alert.severity];
+  const sevBg     = SEV_BG[alert.severity];
+  const sevBorder = SEV_BORDER[alert.severity];
+  const rec       = RECOMMEND_STYLE[alert.recommendation];
+  const isDone    = decision !== 'active';
+  const shapColors = ['#a78bfa', '#60a5fa', '#34d399'];
+
+  return (
+    <div className={`rounded-xl border overflow-hidden transition-opacity ${isDone ? 'opacity-60' : ''}`}
+         style={{ borderColor: sevBorder, background: sevBg }}>
+
+      {/* Decision status banner */}
+      {isDone && (
+        <div className="flex items-center gap-2 px-5 py-2 text-xs font-semibold border-b" style={{ borderColor: sevBorder }}>
+          {decision === 'accepted'   && <><span className="text-green-400">✓ ACCEPTED</span><span className="text-gray-500 mx-1">→</span><span className="text-gray-400">SAP WO created: {woNumber}</span></>}
+          {decision === 'modified'   && <><span className="text-blue-400">✎ MODIFIED & ACCEPTED</span><span className="text-gray-500 mx-1">→</span><span className="text-gray-400">SAP WO: {woNumber}</span></>}
+          {decision === 'overridden' && <><span className="text-gray-400">✕ OVERRIDDEN</span><span className="text-gray-500 ml-2">— reason logged as negative training example</span></>}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-2">
+        <div className="flex items-start gap-3 min-w-0">
+          <span style={{ display:'inline-block', width:10, height:10, borderRadius:'50%', background:sevColor, boxShadow:`0 0 6px ${sevColor}`, flexShrink:0, marginTop:5 }} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold uppercase tracking-widest" style={{ color: sevColor }}>{alert.severity}</span>
+              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-gray-500 text-xs font-mono">{alert.id}</span>
+            </div>
+            <p className="text-white font-semibold text-sm leading-tight mt-0.5">{alert.title}</p>
+            <p className="text-gray-400 text-xs mt-0.5">{alert.site} · {alert.details}</p>
+          </div>
+        </div>
+        <span className="text-gray-600 text-xs whitespace-nowrap flex-shrink-0 pt-1">{alert.time}</span>
+      </div>
+
+      {/* A-01: Failure mode + probability + ETF */}
+      <div className="px-5 pb-3 grid grid-cols-3 gap-3">
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Failure Mode</p>
+          <p className="text-white text-xs font-semibold leading-snug">{alert.failureMode}</p>
+        </div>
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Failure Probability</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width:`${alert.probability}%`, background:sevColor }} />
+            </div>
+            <span className="text-white text-sm font-bold">{alert.probability}%</span>
+          </div>
+        </div>
+        <div className="bg-black/30 rounded-lg px-3 py-2">
+          <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Est. Time to Failure</p>
+          <p className="text-white text-sm font-bold">{alert.etfDays}d</p>
+          <p className="text-gray-500 text-xs">[{alert.etfMin}–{alert.etfMax}d, 80% CI]</p>
+        </div>
+      </div>
+
+      {/* Recommendation badge */}
+      <div className="px-5 pb-3">
+        <span className="inline-flex items-center text-xs font-bold px-3 py-1.5 rounded-lg" style={{ color:rec.color, background:rec.bg }}>
+          {rec.label}
+        </span>
+      </div>
+
+      {/* A-01: SHAP Evidence */}
+      <div className="px-5 pb-4 border-t border-white/5 pt-3">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">SHAP Evidence — Top 3 Sensor Signals</p>
+        <div className="space-y-2.5">
+          {alert.shapSignals.map((sig, idx) => {
+            const col = shapColors[idx];
+            const pct = Math.round(sig.contribution * 100);
+            const current = sig.values[sig.values.length - 1];
+            return (
+              <div key={sig.name} className="flex items-center gap-3">
+                <div className="w-44 flex-shrink-0">
+                  <p className="text-xs text-gray-300 leading-tight truncate">{sig.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width:`${pct}%`, background:col }} />
+                    </div>
+                    <span className="text-xs font-mono font-bold" style={{ color:col }}>{pct}%</span>
+                  </div>
+                </div>
+                <ShapSparkline values={sig.values} color={col} />
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs font-bold font-mono" style={{ color:col }}>
+                    {current > 100 ? current.toFixed(0) : current.toFixed(1)} {sig.unit}
+                  </p>
+                  <p className="text-gray-600 text-xs">now</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* A-02: Decision gate buttons */}
+      {!isDone && !overrideOpen && !modifyOpen && (
+        <div className="px-5 pb-4 flex items-center gap-2 flex-wrap border-t border-white/5 pt-3">
+          <button onClick={() => onAccept(alert.id)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-green-900/50 text-green-400 border border-green-800 hover:bg-green-800/60 transition-colors">
+            ✓ Accept → SAP WO
+          </button>
+          <button onClick={() => setModifyOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800 hover:bg-blue-800/40 transition-colors">
+            ✎ Modify
+          </button>
+          <button onClick={() => setOverrideOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700 transition-colors">
+            ✕ Override
+          </button>
+          <button onClick={() => setShowAnalogues(v => !v)}
+            className="ml-auto text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            {showAnalogues ? '▲' : '▼'} {alert.analogues.length} analogues
+          </button>
+        </div>
+      )}
+
+      {/* A-03: Override reason code */}
+      {overrideOpen && !isDone && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-400 font-semibold mb-2">Override Reason (required — recorded as negative training example)</p>
+          <select value={overrideReason} onChange={e => setOverrideReason(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-gray-500">
+            {OVERRIDE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { onOverride(alert.id, overrideReason); setOverrideOpen(false); }}
+              className="text-xs font-semibold px-4 py-2 rounded-lg bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700 transition-colors">
+              Confirm Override
+            </button>
+            <button onClick={() => setOverrideOpen(false)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* A-04: Modify workflow */}
+      {modifyOpen && !isDone && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-400 font-semibold mb-2">Modify Recommendation</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Action</p>
+              <select value={modifyAction} onChange={e => setModifyAction(e.target.value as 'replace' | 'inspect' | 'monitor')}
+                className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500">
+                <option value="replace">Replace Component</option>
+                <option value="inspect">Inspect &amp; Assess</option>
+                <option value="monitor">Monitor Closely</option>
+              </select>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Timing</p>
+              <select value={modifyTiming} onChange={e => setModifyTiming(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 text-gray-300 text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-gray-500">
+                {['Within 4 hours','Within 24 hours','Within 48 hours','Within 7 days','Within 14 days','At next planned outage'].map(t => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { onModify(alert.id, modifyAction, modifyTiming); setModifyOpen(false); }}
+              className="text-xs font-semibold px-4 py-2 rounded-lg bg-blue-900/40 text-blue-400 border border-blue-800 hover:bg-blue-800/50 transition-colors">
+              ✓ Confirm &amp; Create SAP WO
+            </button>
+            <button onClick={() => setModifyOpen(false)} className="text-xs text-gray-600 hover:text-gray-400 transition-colors">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* A-06: Historical Analogues */}
+      {showAnalogues && (
+        <div className="px-5 pb-4 border-t border-white/5 pt-3">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">Historical Analogues — Similar Failures in BP History</p>
+          <div className="space-y-2">
+            {alert.analogues.map((a, i) => (
+              <div key={i} className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-xs text-white font-semibold">{a.site} · {a.date}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{a.outcome}</p>
+                </div>
+                <div className="text-right flex-shrink-0 ml-4">
+                  <p className="text-xs font-bold" style={{ color: a.daysToFailure <= 3 ? '#ef4444' : '#f59e0b' }}>{a.daysToFailure}d to failure</p>
+                  <p className="text-xs text-gray-500">{a.match}% match</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ── Equipment Row ─────────────────────────────────────────────────────────────
 interface EquipmentRowProps {
@@ -219,6 +592,106 @@ const FailurePredictionGantt: React.FC = () => {
 };
 
 // ── Dashboard Tab ─────────────────────────────────────────────────────────────
+// ── Block F: Multi-Site Enterprise Intelligence ───────────────────────────────
+
+// F-01/02/03/04: Site benchmark data
+const SITE_BENCHMARK = [
+  { site: 'Ras Tanura, KSA',  region:'MENA',  prod:410000, efficiency:94.2, energyInt:5.2, mCostBbl:0.38, aiScore:91, status:'healthy'  },
+  { site: 'Jamnagar, India',  region:'APAC',  prod:280000, efficiency:91.7, energyInt:6.1, mCostBbl:0.42, aiScore:87, status:'healthy'  },
+  { site: 'Rotterdam, NL',    region:'Europe',prod:195000, efficiency:88.3, energyInt:7.4, mCostBbl:0.61, aiScore:78, status:'warning'  },
+  { site: 'Houston, USA',     region:'NAM',   prod:172000, efficiency:85.1, energyInt:8.2, mCostBbl:0.74, aiScore:72, status:'warning'  },
+  { site: 'Ruwais, UAE',      region:'MENA',  prod:160000, efficiency:78.4, energyInt:9.8, mCostBbl:1.12, aiScore:61, status:'critical' },
+];
+
+// F-06: Enterprise reliability score trend (12-month rolling)
+const ENT_RELIABILITY = [82,83,84,83,85,86,87,88,89,90,91,92];
+
+const EnterpriseIntelligencePanel: React.FC = () => {
+  const W = 480, H = 60, PL = 8, PR = 8;
+  const cW = W - PL - PR;
+  const minR = Math.min(...ENT_RELIABILITY) - 2;
+  const maxR = Math.max(...ENT_RELIABILITY) + 2;
+  const xR = (i: number) => PL + (i / (ENT_RELIABILITY.length - 1)) * cW;
+  const yR = (v: number) => H - 8 - ((v - minR) / (maxR - minR)) * (H - 16);
+  const relPts = ENT_RELIABILITY.map((v,i) => `${xR(i).toFixed(1)},${yR(v).toFixed(1)}`).join(' ');
+
+  const statusColor = { healthy:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
+  const sorted = [...SITE_BENCHMARK].sort((a,b) => b.aiScore - a.aiScore);
+
+  return (
+    <div className="space-y-4">
+      {/* F-06: Enterprise reliability trend */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-white font-semibold text-sm">F-06 · Enterprise Reliability Score — 12-Month Trend</h3>
+            <p className="text-gray-500 text-xs">Fleet-weighted average · Target ≥ 90</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-green-400">{ENT_RELIABILITY[ENT_RELIABILITY.length-1]}</p>
+            <p className="text-gray-500 text-xs">Current score</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+          <line x1={PL} y1={yR(90)} x2={W-PR} y2={yR(90)} stroke="#22c55e" strokeWidth="1" strokeDasharray="4,3" />
+          <text x={W-PR+2} y={yR(90)+3} fill="#22c55e" fontSize="8">Target 90</text>
+          <polyline points={relPts} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" />
+          {ENT_RELIABILITY.map((v,i) => (
+            <circle key={i} cx={xR(i)} cy={yR(v)} r="3" fill={i === ENT_RELIABILITY.length-1 ? '#60a5fa' : '#60a5fa'} opacity={i === ENT_RELIABILITY.length-1 ? 1 : 0.4} />
+          ))}
+        </svg>
+      </div>
+
+      {/* F-01/02/03/04/05: Site comparison table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">F-01 · Multi-Site Performance Benchmark</h3>
+          <p className="text-gray-500 text-xs">Production efficiency · Energy intensity · Maintenance cost · AI adoption score</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Rank','Site','Region','Prod (BOPD)','Efficiency %','Energy Int (GJ/t)','Maint $/bbl','AI Score','Priority'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {sorted.map((s,i) => (
+              <tr key={s.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-gray-500 font-mono">#{i+1}</td>
+                <td className="px-3 py-2 text-white font-semibold">{s.site}</td>
+                <td className="px-3 py-2 text-gray-400">{s.region}</td>
+                <td className="px-3 py-2 text-white font-mono">{s.prod.toLocaleString()}</td>
+                <td className="px-3 py-2">
+                  <span className="font-mono font-bold" style={{ color: s.efficiency>=90 ? '#22c55e' : s.efficiency>=85 ? '#f59e0b' : '#ef4444' }}>{s.efficiency}%</span>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="font-mono" style={{ color: s.energyInt<=6 ? '#22c55e' : s.energyInt<=8 ? '#f59e0b' : '#ef4444' }}>{s.energyInt}</span>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="font-mono" style={{ color: s.mCostBbl<=0.5 ? '#22c55e' : s.mCostBbl<=0.8 ? '#f59e0b' : '#ef4444' }}>${s.mCostBbl.toFixed(2)}</span>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                      <div className="h-full rounded-full" style={{ width:`${s.aiScore}%`, background: statusColor[s.status as keyof typeof statusColor] }} />
+                    </div>
+                    <span className="font-mono font-bold" style={{ color: statusColor[s.status as keyof typeof statusColor] }}>{s.aiScore}</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2">
+                  {s.status === 'critical' && <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-0.5 font-bold">F-05 PRIORITY</span>}
+                  {s.status === 'warning'  && <span className="text-xs bg-amber-900/40 text-amber-400 border border-amber-800 rounded px-2 py-0.5">IMPROVE</span>}
+                  {s.status === 'healthy'  && <span className="text-xs text-gray-600">Maintain</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
 const DashboardTab: React.FC = () => (
   <div className="space-y-6">
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -268,40 +741,269 @@ const DashboardTab: React.FC = () => (
 
     {/* REQ-10 — Multi-Site Benchmarking */}
     <MultiSiteBenchmark />
+
+    {/* Block F — Enterprise Intelligence Panel */}
+    <EnterpriseIntelligencePanel />
+
+    {/* Block P — Cross-Domain Orchestration */}
+    <CrossDomainPanel />
   </div>
 );
 
 // ── Live Alerts Tab ───────────────────────────────────────────────────────────
-const LiveAlertsTab: React.FC = () => (
-  <div className="space-y-4">
-    <div className="grid grid-cols-5 gap-3">
-      {[['4','CRITICAL','text-red-400','border-red-900/50'],['7','WARNING','text-amber-400','border-amber-900/50'],['3','ADVISORY','text-blue-400','border-blue-900/50'],['48','RESOLVED 24H','text-gray-400','border-gray-800'],['94.7%','AI CONFIDENCE AVG','text-purple-400','border-purple-900/50']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+const LiveAlertsTab: React.FC = () => {
+  const [decisions,  setDecisions]  = useState<Record<string, AlertDecision>>({});
+  const [woNumbers,  setWoNumbers]  = useState<Record<string, string>>({});
+  const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([]);
+  const [pushNotifs, setPushNotifs] = useState<PushNotification[]>([]);
+  const [showAudit,  setShowAudit]  = useState(false);
+
+  // A-07: fire push banners on mount for alerts with probability > 80%
+  useEffect(() => {
+    setPushNotifs(
+      ALERT_DATA
+        .filter(a => a.probability > 80)
+        .map(a => ({ id: `push-${a.id}`, title: a.title, probability: a.probability, etfDays: a.etfDays, site: a.site, severity: a.severity }))
+    );
+  }, []);
+
+  const dismissNotif = useCallback((id: string) => {
+    setPushNotifs(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const genWO  = () => `WO-${Date.now().toString().slice(-6)}`;
+  const nowStr = () => new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  const handleAccept = (id: string) => {
+    const wo  = genWO();
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'accepted' }));
+    setWoNumbers(p => ({ ...p, [id]: wo }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'accepted',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:'',    woNumber:wo }]);
+  };
+
+  const handleModify = (id: string, action: string, timing: string) => {
+    const wo  = genWO();
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'modified' }));
+    setWoNumbers(p => ({ ...p, [id]: wo }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'modified',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:`${action} — ${timing}`, woNumber:wo }]);
+  };
+
+  const handleOverride = (id: string, reason: string) => {
+    const alr = ALERT_DATA.find(a => a.id === id);
+    setDecisions(p => ({ ...p, [id]: 'overridden' }));
+    setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'overridden', timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:reason, woNumber:'' }]);
+  };
+
+  const accepted   = auditTrail.filter(e => e.decision === 'accepted').length;
+  const modified   = auditTrail.filter(e => e.decision === 'modified').length;
+  const overridden = auditTrail.filter(e => e.decision === 'overridden').length;
+
+  return (
+    <div className="space-y-4">
+
+      {/* A-07: Push notification banners */}
+      {pushNotifs.length > 0 && (
+        <div className="space-y-2">
+          {pushNotifs.map(n => (
+            <PushNotificationBanner key={n.id} notif={n} onDismiss={dismissNotif} />
+          ))}
         </div>
-      ))}
-    </div>
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-semibold">Active Alerts — AI Prioritised</h3>
-        <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
-      </div>
-      <div className="space-y-3">
-        <AlertRow severity="critical" title="Bearing Failure Predicted — Compressor C-101" site="Ruwais, UAE" details="Loop 4A · Vibration 8.4 mm/s" rul="48h" confidence={97.3} time="2m ago" />
-        <AlertRow severity="warning"  title="Fouling Shutdown Risk — Heat Exchanger E-212" site="Houston, USA" details="VDU Train B · Efficiency -18%" rul="72h" confidence={91.8} time="15m ago" />
-        <AlertRow severity="warning"  title="Vibration Anomaly — Pump P-205"               site="Houston, USA" details="CDU Train B · Impeller imbalance" rul="8d" confidence={78.3} time="1h ago" />
-        <AlertRow severity="advisory" title="Blade Erosion Detected — Turbine T-405"        site="Ras Tanura, KSA" details="Power Gen Unit 3 · IR signature anomaly" rul="14d" confidence={71.6} time="2h ago" />
-      </div>
-    </div>
+      )}
 
-    {/* REQ-12 — Anomaly Detection Heatmap */}
-    <AnomalyHeatmap />
+      {/* KPI strip — live counters */}
+      <div className="grid grid-cols-5 gap-3">
+        {([
+          [String(ALERT_DATA.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
+          [String(ALERT_DATA.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
+          [String(ALERT_DATA.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
+          [String(accepted + modified),                                       'ACTIONED TODAY','text-green-400',  'border-green-900/50' ],
+          [String(overridden),                                                'OVERRIDDEN',    'text-gray-400',   'border-gray-800'     ],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
 
-    {/* REQ-16 — Alert Escalation Matrix */}
-    <EscalationMatrix />
-  </div>
-);
+      {/* A-08: Alert fatigue meter */}
+      <AlertFatigueMeter total={ALERT_DATA.length} accepted={accepted} modified={modified} overridden={overridden} />
+
+      {/* A-01/02/03/04/06: Alert-to-Action Cards */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Active Alerts — Alert-to-Action</h3>
+            <p className="text-gray-500 text-xs">SHAP-explained predictions · Accept / Modify / Override · Tier 1 Human Safety Gate</p>
+          </div>
+          <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
+        </div>
+        <div className="space-y-4">
+          {ALERT_DATA.map(alert => (
+            <AlertCard
+              key={alert.id}
+              alert={alert}
+              decision={decisions[alert.id] ?? 'active'}
+              onAccept={handleAccept}
+              onModify={handleModify}
+              onOverride={handleOverride}
+              woNumber={woNumbers[alert.id] ?? ''}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* A-05: Audit Trail */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Alert-to-Action Audit Trail</h3>
+            <p className="text-gray-500 text-xs">{auditTrail.length} decision{auditTrail.length !== 1 ? 's' : ''} logged · BSEE / HSE / EU AI Act compliant</p>
+          </div>
+          <button onClick={() => setShowAudit(v => !v)} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+            {showAudit ? '▲ Hide' : '▼ Show'}
+          </button>
+        </div>
+        {showAudit && (
+          auditTrail.length === 0
+            ? <p className="text-gray-600 text-xs text-center py-8">No decisions logged yet — accept, modify, or override an alert above to populate the trail</p>
+            : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-gray-800">
+                      {['Audit ID','Time','User','Alert','Decision','Reason / WO'].map(h => (
+                        <th key={h} className="px-4 py-2 text-left text-gray-500 font-semibold uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditTrail.map(entry => (
+                      <tr key={entry.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                        <td className="px-4 py-2 text-gray-600 font-mono">{entry.id.slice(-10)}</td>
+                        <td className="px-4 py-2 text-gray-400 font-mono">{entry.timestamp}</td>
+                        <td className="px-4 py-2 text-gray-300">{entry.user}</td>
+                        <td className="px-4 py-2 text-gray-300 max-w-xs truncate">{entry.alertTitle.split('—')[0].trim()}</td>
+                        <td className="px-4 py-2">
+                          <span className={`font-bold ${entry.decision === 'accepted' ? 'text-green-400' : entry.decision === 'modified' ? 'text-blue-400' : 'text-gray-500'}`}>
+                            {entry.decision.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-gray-400 max-w-xs truncate">
+                          {entry.woNumber
+                            ? <span className="text-purple-400 font-mono">{entry.woNumber}</span>
+                            : <span className="text-gray-500">{entry.reasonCode}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+        )}
+      </div>
+
+      {/* REQ-12 — Anomaly Detection Heatmap (existing) */}
+      <AnomalyHeatmap />
+
+      {/* REQ-16 — Alert Escalation Matrix (existing) */}
+      <EscalationMatrix />
+    </div>
+  );
+};
+
+// ── A-07: Push Notification Banner ───────────────────────────────────────────
+interface PushNotification {
+  id: string;
+  title: string;
+  probability: number;
+  etfDays: number;
+  site: string;
+  severity: 'critical' | 'warning' | 'advisory';
+}
+
+const PushNotificationBanner: React.FC<{
+  notif: PushNotification;
+  onDismiss: (id: string) => void;
+}> = ({ notif, onDismiss }) => {
+  useEffect(() => {
+    const t = setTimeout(() => onDismiss(notif.id), 8000);
+    return () => clearTimeout(t);
+  }, [notif.id, onDismiss]);
+
+  const col = SEV_COLOR[notif.severity];
+  return (
+    <div className="flex items-start gap-3 rounded-xl p-4 border animate-pulse"
+         style={{ background: SEV_BG[notif.severity], borderColor: SEV_BORDER[notif.severity] }}>
+      <div className="w-8 h-8 rounded-full border flex items-center justify-center flex-shrink-0"
+           style={{ background: `${col}22`, borderColor: col }}>
+        <span style={{ fontSize: 14 }}>🔔</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: col }}>
+          PUSH — {notif.probability}% PROBABILITY · ETF: {notif.etfDays}d
+        </p>
+        <p className="text-white text-sm font-semibold mt-0.5 leading-tight">{notif.title}</p>
+        <p className="text-gray-400 text-xs mt-0.5">{notif.site} · Auto-dismisses in 8s</p>
+      </div>
+      <button onClick={() => onDismiss(notif.id)} className="text-gray-600 hover:text-gray-300 text-xl leading-none flex-shrink-0">×</button>
+    </div>
+  );
+};
+
+// ── A-08: Alert Fatigue Meter ─────────────────────────────────────────────────
+interface AlertFatigueMeterProps {
+  total: number;
+  accepted: number;
+  modified: number;
+  overridden: number;
+}
+
+const AlertFatigueMeter: React.FC<AlertFatigueMeterProps> = ({ total, accepted, modified, overridden }) => {
+  const actioned    = accepted + modified;
+  const actionRate  = total > 0 ? Math.round((actioned    / total) * 100) : 0;
+  const dismissRate = total > 0 ? Math.round((overridden  / total) * 100) : 0;
+  const fatigued    = dismissRate > 40;
+  return (
+    <div className={`bg-gray-900 border rounded-xl p-5 ${fatigued ? 'border-red-900/60' : 'border-gray-800'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-white font-semibold text-sm">Alert Fatigue Monitor</h3>
+          <p className="text-gray-500 text-xs">Today · Engineer decision-rate tracking · flags if dismiss rate &gt;40%</p>
+        </div>
+        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${fatigued ? 'bg-red-900/40 text-red-400 border-red-800' : 'bg-green-900/40 text-green-400 border-green-800'}`}>
+          {fatigued ? '⚠ HIGH FATIGUE' : '✓ OK'}
+        </span>
+      </div>
+      <div className="grid grid-cols-4 gap-3 mb-4">
+        {([['Total Alerts', total, 'text-gray-300'], ['Accepted', actioned, 'text-green-400'], ['Overridden', overridden, 'text-gray-400'], ['Pending', Math.max(0, total - actioned - overridden), 'text-amber-400']] as [string,number,string][]).map(([l, v, c]) => (
+          <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+            <p className={`text-xl font-bold ${c}`}>{v}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {([['Action Rate', actionRate, fatigued ? '#9ca3af' : '#22c55e', 'text-green-400'], ['Dismiss Rate', dismissRate, dismissRate > 40 ? '#ef4444' : '#9ca3af', dismissRate > 40 ? 'text-red-400' : 'text-gray-400']] as [string,number,string,string][]).map(([label, pct, barColor, textColor]) => (
+          <div key={label} className="flex items-center gap-3">
+            <p className="text-xs text-gray-500 w-24 flex-shrink-0">{label}</p>
+            <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width:`${pct}%`, background: barColor }} />
+            </div>
+            <p className={`text-xs font-mono w-10 text-right ${textColor}`}>{pct}%</p>
+          </div>
+        ))}
+      </div>
+      {fatigued && (
+        <p className="text-red-400 text-xs mt-3 bg-red-900/20 rounded-lg px-3 py-2">
+          ⚠ Dismiss rate exceeds 40% — review alert sensitivity settings or model false-positive rate
+        </p>
+      )}
+    </div>
+  );
+};
 
 // ── REQ-03: FFT Spectrum data & panel ─────────────────────────────────────────
 interface FFTPoint { freq: number; amp: number; label?: string; fault?: 'critical' | 'warning' | 'normal'; }
@@ -560,6 +1262,108 @@ const RiskMatrix5x5: React.FC = () => {
   );
 };
 
+// ── Block E: Predictive Maintenance Enhancements ─────────────────────────────
+
+// E-03: RUL confidence interval data per asset
+const RUL_CONFIDENCE: Record<string, { low: number; mid: number; high: number; unit: string }> = {
+  'C-101': { low: 36,  mid: 48,  high: 62,  unit: 'h' },
+  'E-212': { low: 54,  mid: 72,  high: 96,  unit: 'h' },
+  'P-205': { low: 5,   mid: 8,   high: 11,  unit: 'd' },
+  'T-405': { low: 10,  mid: 14,  high: 19,  unit: 'd' },
+  'K-302': { low: 38,  mid: 45,  high: 55,  unit: 'd' },
+};
+
+// E-04: Fleet-wide health heatmap (site vs asset class)
+const FLEET_HEATMAP: { site: string; compressors: number; pumps: number; exchangers: number; turbines: number }[] = [
+  { site: 'Ruwais, UAE',     compressors: 38, pumps: 76, exchangers: 82, turbines: 91 },
+  { site: 'Houston, USA',    compressors: 72, pumps: 52, exchangers: 64, turbines: 88 },
+  { site: 'Ras Tanura, KSA', compressors: 91, pumps: 89, exchangers: 94, turbines: 95 },
+  { site: 'Jamnagar, India', compressors: 87, pumps: 83, exchangers: 78, turbines: 91 },
+  { site: 'Rotterdam, NL',   compressors: 63, pumps: 71, exchangers: 69, turbines: 84 },
+];
+
+// E-01: Failure signature library
+const FAILURE_SIGS = [
+  { mode: 'Inner Race Bearing Fault', signals: ['Vibration 3× BPFI', 'Temp +12°C above baseline', 'Oil metallic particles ↑'], assets: ['C-101','C-204'], status: 'ACTIVE' },
+  { mode: 'Pump Cavitation',          signals: ['Broadband vibration noise floor ↑', 'Flow pulsation >5%', 'Suction pressure variance'], assets: ['P-205','P-301'], status: 'ACTIVE' },
+  { mode: 'Heat Exchanger Fouling',   signals: ['ΔP across tubes +18%', 'HTC degradation 15%/month', 'Outlet temp rising'], assets: ['E-212'], status: 'ACTIVE' },
+  { mode: 'Turbine Blade Erosion',    signals: ['Exhaust temp spread >40°C', 'Efficiency drop 3%', 'Blade resonance peak'], assets: ['T-405'], status: 'MONITOR' },
+];
+
+// E-08: PM KPI scorecard
+const PM_KPIS = [
+  { kpi: 'Mean Time Between Failures',   value: '847h',   target: '720h',  trend: '+18%', ok: true },
+  { kpi: 'Mean Time to Repair',          value: '6.2h',   target: '8h',    trend: '-22%', ok: true },
+  { kpi: 'Planned Maintenance %',        value: '78%',    target: '85%',   trend: '+5pp', ok: false },
+  { kpi: 'PdM Coverage (asset pool)',    value: '89%',    target: '95%',   trend: '+4pp', ok: false },
+  { kpi: 'False Positive Rate',          value: '8.1%',   target: '<10%',  trend: '-1.4pp', ok: true },
+  { kpi: 'Avoidable Downtime Prevented', value: '14,820h',target: '12,000h',trend: '+23%', ok: true },
+];
+
+const RulConfidenceBar: React.FC<{ assetId: string }> = ({ assetId }) => {
+  const rul = RUL_CONFIDENCE[assetId];
+  if (!rul) return null;
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">E-03 · RUL Confidence Interval — {assetId}</p>
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="relative h-6 bg-gray-800 rounded-full overflow-hidden">
+            <div className="absolute inset-y-0 rounded-full bg-indigo-900/50"
+              style={{ left:`${(rul.low/rul.high)*100 - 10}%`, right:`${100-(rul.high/rul.high)*100}%` }} />
+            <div className="absolute inset-y-0 w-1 bg-indigo-400 rounded"
+              style={{ left: `${(rul.mid/rul.high)*100 - 1}%` }} />
+          </div>
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>Pessimistic: {rul.low}{rul.unit}</span>
+            <span className="text-indigo-400 font-bold">Median: {rul.mid}{rul.unit}</span>
+            <span>Optimistic: {rul.high}{rul.unit}</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-indigo-400 font-mono">{rul.mid}{rul.unit}</p>
+          <p className="text-gray-500 text-xs">P50 RUL estimate</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FleetHeatmap: React.FC = () => {
+  const cols = ['compressors','pumps','exchangers','turbines'] as const;
+  const heatColor = (v: number) => v >= 85 ? '#22c55e' : v >= 65 ? '#f59e0b' : '#ef4444';
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-04 · Fleet-Wide Health Heatmap</h3>
+        <p className="text-gray-500 text-xs">Average health index by site × asset class</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          <th className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide">Site</th>
+          {cols.map(c => <th key={c} className="px-4 py-2 text-center text-gray-500 uppercase tracking-wide">{c}</th>)}
+        </tr></thead>
+        <tbody>
+          {FLEET_HEATMAP.map(row => (
+            <tr key={row.site} className="border-b border-gray-800/50">
+              <td className="px-4 py-2 text-gray-300">{row.site}</td>
+              {cols.map(c => {
+                const v = row[c];
+                return (
+                  <td key={c} className="px-4 py-2 text-center">
+                    <span className="inline-block rounded px-2 py-1 font-mono font-bold text-xs"
+                      style={{ background: heatColor(v)+'22', color: heatColor(v) }}>{v}</span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 // ── Equipment Health Tab ──────────────────────────────────────────────────────
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset,    setFftAsset]    = useState('C-101');
@@ -630,11 +1434,160 @@ const EquipmentHealthTab: React.FC = () => {
 
     {/* REQ-06 — Risk Matrix 5×5 */}
     <RiskMatrix5x5 />
+
+    {/* E-03: RUL Confidence Interval */}
+    <RulConfidenceBar assetId={healthAsset} />
+
+    {/* E-04: Fleet Health Heatmap */}
+    <FleetHeatmap />
+
+    {/* E-01: Failure Signature Library */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-01 · Multi-Modal Failure Signature Library</h3>
+        <p className="text-gray-500 text-xs">Active failure modes matched across vibration, thermal, oil, and process signals</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {FAILURE_SIGS.map(f => (
+          <div key={f.mode} className="px-5 py-4 flex items-start gap-4">
+            <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${f.status==='ACTIVE'?'bg-red-900/40 text-red-400':'bg-amber-900/40 text-amber-400'}`}>{f.status}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">{f.mode}</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {f.signals.map(s => <span key={s} className="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">{s}</span>)}
+              </div>
+            </div>
+            <div className="flex gap-1 flex-wrap justify-end">
+              {f.assets.map(a => <span key={a} className="text-xs font-mono text-purple-400 bg-purple-900/20 border border-purple-800/30 rounded px-2 py-0.5">{a}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* E-08: PM KPI Scorecard */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">E-08 · Predictive Maintenance KPI Scorecard</h3>
+        <p className="text-gray-500 text-xs">Programme performance vs targets · Rolling 90-day period</p>
+      </div>
+      <div className="grid grid-cols-3 gap-0 divide-x divide-y divide-gray-800 border-t border-gray-800">
+        {PM_KPIS.map(k => (
+          <div key={k.kpi} className="px-4 py-3">
+            <p className="text-gray-500 text-xs">{k.kpi}</p>
+            <p className={`text-xl font-bold font-mono mt-0.5 ${k.ok ? 'text-green-400' : 'text-amber-400'}`}>{k.value}</p>
+            <p className="text-gray-600 text-xs">Target: {k.target} · <span className={k.ok?'text-green-500':'text-amber-500'}>{k.trend}</span></p>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
   );
 };
 
 // ── Digital Twin Tab ──────────────────────────────────────────────────────────
+// ── Block K: Digital Twin Enhancements ───────────────────────────────────────
+
+// K-01: Multi-asset twin registry
+const TWIN_ASSETS = [
+  { id:'C-101', name:'Compressor C-101',        type:'Centrifugal Compressor', site:'Ruwais',  fidelity:'High', lastSync:'2s ago',   status:'critical' },
+  { id:'T-405', name:'Gas Turbine T-405',        type:'Gas Turbine',           site:'Ras Tanura',fidelity:'High', lastSync:'5s ago',   status:'warning'  },
+  { id:'E-212', name:'Shell & Tube E-212',       type:'Heat Exchanger',         site:'Houston', fidelity:'Medium',lastSync:'12s ago',  status:'warning'  },
+  { id:'P-205', name:'Centrifugal Pump P-205',   type:'Process Pump',           site:'Houston', fidelity:'Medium',lastSync:'8s ago',   status:'warning'  },
+];
+
+// K-03: Scenario testing (what-if)
+const TWIN_SCENARIOS = [
+  { scenario:'Reduce speed to 3,000 RPM (-16%)', outcome:'Vibration drops to ~4.1 mm/s · RUL extends to ~72h', impact:'positive', runTime:'1.4s' },
+  { scenario:'Increase lube oil pressure to 3.5 bar', outcome:'Bearing temp falls 6°C · Health index improves to 52', impact:'positive', runTime:'0.9s' },
+  { scenario:'Continue at current operating point',   outcome:'Bearing failure probability 97.3% within 48h',     impact:'negative', runTime:'0.2s' },
+];
+
+// K-04: Operating envelope parameters
+const OP_ENVELOPE: { param: string; current: number; normal_lo: number; normal_hi: number; unit: string }[] = [
+  { param:'Speed',                current:3580, normal_lo:2800, normal_hi:3200, unit:'RPM'   },
+  { param:'Bearing Temperature',  current:94,   normal_lo:50,   normal_hi:80,   unit:'°C'    },
+  { param:'Vibration RMS',        current:8.4,  normal_lo:0,    normal_hi:4.5,  unit:'mm/s'  },
+  { param:'Lube Oil Pressure',    current:2.1,  normal_lo:2.8,  normal_hi:4.0,  unit:'bar'   },
+  { param:'Discharge Pressure',   current:18.4, normal_lo:16.0, normal_hi:22.0, unit:'bar'   },
+  { param:'Motor Current',        current:142,  normal_lo:95,   normal_hi:110,  unit:'A'     },
+];
+
+const DigitalTwinEnhancementsPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* K-01: Twin registry */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">K-01 · Digital Twin Asset Registry</h3>
+        <p className="text-gray-500 text-xs">Live fidelity status · Sync frequency · Physics-based models</p>
+      </div>
+      <div className="grid grid-cols-4 divide-x divide-gray-800">
+        {TWIN_ASSETS.map(a => {
+          const sc = { critical:'border-t-red-500 text-red-400', warning:'border-t-amber-500 text-amber-400', healthy:'border-t-green-500 text-green-400' };
+          return (
+            <div key={a.id} className={`p-4 border-t-2 ${a.status==='critical'?'border-t-red-500':a.status==='warning'?'border-t-amber-500':'border-t-green-500'}`}>
+              <p className="text-white font-mono font-bold text-sm">{a.id}</p>
+              <p className="text-gray-400 text-xs">{a.type}</p>
+              <p className="text-gray-600 text-xs">{a.site}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className={`text-xs font-semibold ${sc[a.status as keyof typeof sc]}`}>{a.status.toUpperCase()}</span>
+                <span className="text-gray-600 text-xs">{a.lastSync}</span>
+              </div>
+              <div className="mt-1">
+                <span className={`text-xs px-1.5 py-0.5 rounded ${a.fidelity==='High'?'bg-purple-900/40 text-purple-400':'bg-gray-800 text-gray-500'}`}>{a.fidelity} Fidelity</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* K-04: Operating envelope */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h3 className="text-white font-semibold text-sm mb-3">K-04 · Operating Envelope — C-101 Compressor</h3>
+      <div className="space-y-2.5">
+        {OP_ENVELOPE.map(p => {
+          const range = p.normal_hi - p.normal_lo;
+          const pct = Math.max(0, Math.min(100, ((p.current - p.normal_lo) / range) * 100));
+          const inRange = p.current >= p.normal_lo && p.current <= p.normal_hi;
+          const color = inRange ? '#22c55e' : '#ef4444';
+          return (
+            <div key={p.param} className="flex items-center gap-3">
+              <span className="text-gray-400 text-xs w-40 flex-shrink-0">{p.param}</span>
+              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+                <div className="absolute inset-0 bg-green-900/20 rounded-full" />
+                <div className="absolute h-full w-1 rounded" style={{ left:`${Math.max(0,Math.min(100,((p.current - p.normal_lo)/(p.normal_hi-p.normal_lo))*100))}%`, background:color }} />
+              </div>
+              <span className="font-mono text-xs w-24 text-right" style={{ color }}>{p.current} {p.unit}</span>
+              <span className="text-gray-600 text-xs w-28 text-right">[{p.normal_lo}–{p.normal_hi}]</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* K-03: Scenario testing */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">K-03 · Scenario Testing — What-If Analysis</h3>
+        <p className="text-gray-500 text-xs">Physics-based simulation · Real-time scenario evaluation</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {TWIN_SCENARIOS.map((s,i) => (
+          <div key={i} className="px-5 py-4 flex items-start gap-4">
+            <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${s.impact==='positive'?'bg-green-900/40 text-green-400':'bg-red-900/40 text-red-400'}`}>SIM {i+1}</span>
+            <div className="flex-1">
+              <p className="text-white text-xs font-semibold">{s.scenario}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{s.outcome}</p>
+            </div>
+            <span className="text-gray-500 text-xs flex-shrink-0">{s.runTime}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const DigitalTwinTab: React.FC = () => (
   <div className="space-y-4">
     <div className="flex items-center gap-3">
@@ -682,6 +1635,9 @@ const DigitalTwinTab: React.FC = () => (
         />
       </svg>
     </div>
+
+    {/* Block K: Digital Twin Enhancements */}
+    <DigitalTwinEnhancementsPanel />
   </div>
 );
 
@@ -922,6 +1878,360 @@ const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   retraining: { bg: '#1c1917', text: '#f59e0b' },
 };
 
+// ── Block H: AI Governance & Model Lifecycle ─────────────────────────────────
+
+// H-01: Model registry
+const MODEL_REGISTRY = [
+  { id:'MDL-001', name:'Bearing Fault LSTM',     version:'v3.2.1', status:'production', trainedOn:'01 Apr 2026', drift:'OK',      approval:'approved', champion:true  },
+  { id:'MDL-002', name:'Heat Exchanger XGBoost', version:'v2.8.0', status:'production', trainedOn:'15 Mar 2026', drift:'WARNING', approval:'approved', champion:true  },
+  { id:'MDL-003', name:'Pump Cavitation CNN',     version:'v1.4.2', status:'staging',   trainedOn:'08 Apr 2026', drift:'OK',      approval:'pending',  champion:false },
+  { id:'MDL-004', name:'Turbine Efficiency GBM',  version:'v4.0.0', status:'production', trainedOn:'22 Feb 2026', drift:'OK',      approval:'approved', champion:true  },
+  { id:'MDL-005', name:'Anomaly Isolation Forest',version:'v2.1.3', status:'retired',   trainedOn:'10 Jan 2026', drift:'CRITICAL',approval:'revoked',  champion:false },
+];
+
+// H-02: Drift detection metrics
+const DRIFT_METRICS = [
+  { model:'Bearing Fault LSTM',     featureDrift:0.04, conceptDrift:0.02, psiScore:0.08, alert:false },
+  { model:'Heat Exchanger XGBoost', featureDrift:0.18, conceptDrift:0.11, psiScore:0.22, alert:true  },
+  { model:'Turbine Efficiency GBM', featureDrift:0.06, conceptDrift:0.03, psiScore:0.09, alert:false },
+];
+
+// H-05: Bias detection
+const BIAS_METRICS = [
+  { group:'Offshore Platforms',     fpr:0.08, tpr:0.91, disparity:'low',    ok:true  },
+  { group:'Onshore Refineries',     fpr:0.07, tpr:0.94, disparity:'low',    ok:true  },
+  { group:'Small Assets (<50kW)',   fpr:0.14, tpr:0.82, disparity:'medium', ok:false },
+  { group:'High-temp Environment',  fpr:0.09, tpr:0.88, disparity:'low',    ok:true  },
+];
+
+// ── Block I: SHAP Explainability ─────────────────────────────────────────────
+
+// I-01: Global SHAP feature importance
+const SHAP_GLOBAL = [
+  { feature: 'Bearing Temp (°C)',     importance: 0.31, direction: 'positive' },
+  { feature: 'Vibration RMS (mm/s)',  importance: 0.27, direction: 'positive' },
+  { feature: 'Lube Oil Viscosity',    importance: 0.18, direction: 'negative' },
+  { feature: 'Speed Delta (RPM)',     importance: 0.12, direction: 'positive' },
+  { feature: 'Discharge Pressure',   importance: 0.07, direction: 'positive' },
+  { feature: 'Oil Particle Count',   importance: 0.05, direction: 'positive' },
+];
+
+// I-02: Individual prediction SHAP waterfall (C-101 latest prediction)
+const SHAP_WATERFALL = [
+  { feature: 'Baseline',             value:  0.14, cumulative:  0.14, isBase:true },
+  { feature: 'Bearing Temp +94°C',   value: +0.31, cumulative:  0.45, isBase:false },
+  { feature: 'Vibration 8.4mm/s',    value: +0.27, cumulative:  0.72, isBase:false },
+  { feature: 'Oil Visc low 38cSt',   value: +0.18, cumulative:  0.90, isBase:false },
+  { feature: 'Speed 580 RPM over',   value: +0.07, cumulative:  0.97, isBase:false },
+  { feature: 'Oil particles 28/mL',  value: +0.00, cumulative:  0.97, isBase:false },
+];
+
+// I-06: Counterfactuals
+const COUNTERFACTUALS = [
+  { scenario:'If bearing temp → 78°C',   probChange: -0.34, feasibility: 'achievable', action: 'Increase cooling water flow 15%' },
+  { scenario:'If vibration → 4.2mm/s',   probChange: -0.22, feasibility: 'achievable', action: 'Balance rotor at next window' },
+  { scenario:'If oil changed to spec',    probChange: -0.19, feasibility: 'immediate',  action: 'Emergency oil flush procedure' },
+];
+
+const AIGovernancePanel: React.FC = () => {
+  const driftC = { OK:'text-green-400', WARNING:'text-amber-400', CRITICAL:'text-red-400' };
+  const statusC = { production:'bg-green-900/40 text-green-400', staging:'bg-blue-900/40 text-blue-400', retired:'bg-gray-800 text-gray-500' };
+  return (
+    <div className="space-y-4">
+      {/* H-01: Model Registry */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-01 · AI Model Registry & Lifecycle</h3>
+          <p className="text-gray-500 text-xs">Version tracking · Drift monitoring · Approval status</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['ID','Model','Version','Status','Trained','Drift','Approval','Champion'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {MODEL_REGISTRY.map(m => (
+              <tr key={m.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-purple-400 font-mono">{m.id}</td>
+                <td className="px-3 py-2 text-white">{m.name}</td>
+                <td className="px-3 py-2 text-gray-400 font-mono">{m.version}</td>
+                <td className="px-3 py-2"><span className={`text-xs font-bold px-2 py-0.5 rounded ${statusC[m.status as keyof typeof statusC]}`}>{m.status.toUpperCase()}</span></td>
+                <td className="px-3 py-2 text-gray-400">{m.trainedOn}</td>
+                <td className="px-3 py-2 font-bold"><span className={driftC[m.drift as keyof typeof driftC]}>{m.drift}</span></td>
+                <td className="px-3 py-2">
+                  <span className={`text-xs ${m.approval==='approved'?'text-green-400':m.approval==='pending'?'text-amber-400':'text-red-400'}`}>{m.approval.toUpperCase()}</span>
+                </td>
+                <td className="px-3 py-2">{m.champion ? <span className="text-yellow-400">★ Yes</span> : <span className="text-gray-600">—</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* H-02: Drift Detection */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-02 · Model Drift Detection</h3>
+          <p className="text-gray-500 text-xs">PSI / Feature drift / Concept drift — alert threshold PSI &gt; 0.2</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Model','Feature Drift','Concept Drift','PSI Score','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {DRIFT_METRICS.map(d => (
+              <tr key={d.model} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-white">{d.model}</td>
+                <td className="px-4 py-2 font-mono" style={{ color: d.featureDrift>0.15?'#f59e0b':'#4ade80' }}>{d.featureDrift.toFixed(2)}</td>
+                <td className="px-4 py-2 font-mono" style={{ color: d.conceptDrift>0.10?'#f59e0b':'#4ade80' }}>{d.conceptDrift.toFixed(2)}</td>
+                <td className="px-4 py-2 font-mono font-bold" style={{ color: d.psiScore>0.20?'#ef4444':d.psiScore>0.10?'#f59e0b':'#4ade80' }}>{d.psiScore.toFixed(2)}</td>
+                <td className="px-4 py-2">{d.alert ? <span className="text-amber-400 font-bold">⚠ RETRAIN REQUIRED</span> : <span className="text-green-400">✓ Stable</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* H-05: Bias detection */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">H-05 · Bias Detection by Equipment Group</h3>
+          <p className="text-gray-500 text-xs">Equal opportunity check · FPR / TPR across asset segments</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Equipment Group','FPR','TPR','Disparity','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {BIAS_METRICS.map(b => (
+              <tr key={b.group} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-gray-300">{b.group}</td>
+                <td className="px-4 py-2 font-mono text-white">{(b.fpr*100).toFixed(1)}%</td>
+                <td className="px-4 py-2 font-mono text-white">{(b.tpr*100).toFixed(1)}%</td>
+                <td className="px-4 py-2"><span className={`font-semibold ${b.disparity==='low'?'text-green-400':'text-amber-400'}`}>{b.disparity.toUpperCase()}</span></td>
+                <td className="px-4 py-2">{b.ok ? <span className="text-green-400">✓ Pass</span> : <span className="text-amber-400">⚠ Review</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const SHAPPanel: React.FC = () => {
+  const maxI = Math.max(...SHAP_GLOBAL.map(f=>f.importance));
+  return (
+    <div className="space-y-4">
+      {/* I-01: Global feature importance */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">I-01 · Global SHAP Feature Importance — Bearing Fault LSTM</h3>
+        <div className="space-y-2">
+          {SHAP_GLOBAL.map(f => (
+            <div key={f.feature} className="flex items-center gap-3">
+              <span className="text-gray-400 text-xs w-44 flex-shrink-0">{f.feature}</span>
+              <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width:`${(f.importance/maxI)*100}%`, background: f.direction==='positive'?'#3b82f6':'#f59e0b' }} />
+              </div>
+              <span className="text-white text-xs font-mono w-10 text-right">{(f.importance*100).toFixed(0)}%</span>
+            </div>
+          ))}
+          <p className="text-gray-600 text-xs mt-1">Blue = pushes probability up · Orange = pushes probability down</p>
+        </div>
+      </div>
+
+      {/* I-02: SHAP Waterfall for C-101 */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="mb-3">
+          <h3 className="text-white font-semibold text-sm">I-02 · SHAP Waterfall — C-101 Latest Prediction</h3>
+          <p className="text-gray-500 text-xs">Individual feature contributions → failure probability {(SHAP_WATERFALL[SHAP_WATERFALL.length-1].cumulative*100).toFixed(0)}%</p>
+        </div>
+        <div className="space-y-1.5">
+          {SHAP_WATERFALL.map((s,i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 w-40 flex-shrink-0">{s.feature}</span>
+              <div className="flex-1 relative h-5 bg-gray-800 rounded">
+                <div className="absolute inset-y-0 rounded" style={{
+                  left: s.isBase ? '0%' : `${(SHAP_WATERFALL[i-1]?.cumulative??0)*85}%`,
+                  width: `${Math.abs(s.value)*85}%`,
+                  background: s.isBase ? '#6b7280' : s.value > 0 ? '#ef4444' : '#22c55e',
+                }} />
+              </div>
+              <span className="text-xs font-mono w-16 text-right" style={{ color: s.isBase?'#9ca3af':s.value>0?'#f87171':'#4ade80' }}>
+                {s.isBase ? `${(s.value*100).toFixed(0)}%` : `${s.value>=0?'+':''}${(s.value*100).toFixed(0)}%`}
+              </span>
+              <span className="text-xs font-mono text-gray-500 w-12 text-right">{(s.cumulative*100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* I-06: Counterfactuals */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">I-06 · Counterfactual Explanations</h3>
+          <p className="text-gray-500 text-xs">What would need to change to reduce failure probability?</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {COUNTERFACTUALS.map(c => (
+            <div key={c.scenario} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{c.scenario}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Action: {c.action}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-green-400 font-bold text-sm">{(c.probChange*100).toFixed(0)}%</p>
+                <span className={`text-xs ${c.feasibility==='immediate'?'text-green-400':c.feasibility==='achievable'?'text-blue-400':'text-amber-400'}`}>{c.feasibility}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Block L: Continuous Learning Loop ────────────────────────────────────────
+
+// L-01: Active learning queue (uncertain predictions sent for labelling)
+const ACTIVE_LEARNING_QUEUE = [
+  { id:'AL-2026-0441', asset:'K-302 Compressor', site:'Jamnagar', modelConf:0.51, predictedClass:'Bearing Fault', requestedBy:'LSTM v3.2.1', age:'2h' },
+  { id:'AL-2026-0440', asset:'P-415 Pump',       site:'Rotterdam', modelConf:0.54, predictedClass:'Cavitation',   requestedBy:'CNN v1.4.2',   age:'4h' },
+  { id:'AL-2026-0439', asset:'E-304 Exchanger',  site:'Houston',   modelConf:0.48, predictedClass:'Fouling',       requestedBy:'XGBoost v2.8', age:'6h' },
+];
+
+// L-02: Retraining pipeline status
+const RETRAIN_PIPELINE = [
+  { step:'Data collection',     status:'done',    detail:'12,840 new labeled events added',   elapsed:'2h 14m' },
+  { step:'Feature engineering', status:'done',    detail:'48 features computed, 3 new added', elapsed:'22m'    },
+  { step:'Model training',      status:'running', detail:'Epoch 47/100 · Loss: 0.082',         elapsed:'38m'    },
+  { step:'Validation',          status:'pending', detail:'Hold-out set evaluation',             elapsed:'—'      },
+  { step:'A/B shadow testing',  status:'pending', detail:'Parallel production shadow run',      elapsed:'—'      },
+  { step:'Production promotion',status:'pending', detail:'Pending approval from ML Lead',       elapsed:'—'      },
+];
+
+// L-04: Performance history (8 model versions)
+const MODEL_PERF_HISTORY = [
+  { version:'v2.8', accuracy:89.1, f1:0.881 },
+  { version:'v2.9', accuracy:90.4, f1:0.896 },
+  { version:'v3.0', accuracy:91.8, f1:0.912 },
+  { version:'v3.1', accuracy:92.3, f1:0.918 },
+  { version:'v3.2', accuracy:94.7, f1:0.941 },
+];
+
+// L-05: Feedback integration log
+const FEEDBACK_LOG = [
+  { ts:'11 Apr 14:22', type:'override',  alert:'C-101 Bearing Alert', feedback:'Confirmed — Bearing replaced, failure verified', impact:'+0.4% recall' },
+  { ts:'10 Apr 09:15', type:'override',  alert:'P-205 Cavitation',    feedback:'False alarm — Normal flow variation', impact:'-0.2% FPR'   },
+  { ts:'09 Apr 16:40', type:'label',     alert:'AL-2026-0435 K-302',  feedback:'Expert labelled: No fault detected',  impact:'Queued for retrain' },
+];
+
+const ContinuousLearningPanel: React.FC = () => {
+  const W = 400, H = 80, PL = 8, PR = 24;
+  const cW = W - PL - PR;
+  const accs = MODEL_PERF_HISTORY.map(p => p.accuracy);
+  const minA = Math.min(...accs) - 2, maxA = Math.max(...accs) + 2;
+  const xA = (i:number) => PL + (i/(accs.length-1))*cW;
+  const yA = (v:number) => H - 8 - ((v-minA)/(maxA-minA))*(H-16);
+  const accPts = accs.map((v,i) => `${xA(i).toFixed(1)},${yA(v).toFixed(1)}`).join(' ');
+
+  const stepC = { done:'text-green-400', running:'text-blue-400', pending:'text-gray-600' };
+  const stepDot = { done:'#22c55e', running:'#60a5fa', pending:'#374151' };
+
+  return (
+    <div className="space-y-4">
+      {/* L-04: Performance history sparkline */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-white font-semibold text-sm">L-04 · Model Accuracy — Version History</h3>
+            <p className="text-gray-500 text-xs">Bearing Fault LSTM continuous improvement trajectory</p>
+          </div>
+          <div className="text-right">
+            <p className="text-green-400 font-bold text-xl">{accs[accs.length-1]}%</p>
+            <p className="text-gray-500 text-xs">Latest ({MODEL_PERF_HISTORY[MODEL_PERF_HISTORY.length-1].version})</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height:H }}>
+          <polyline points={accPts} fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinejoin="round" />
+          {accs.map((v,i) => (
+            <g key={i}>
+              <circle cx={xA(i)} cy={yA(v)} r="4" fill={i===accs.length-1?'#a78bfa':'#7c3aed'} opacity={i===accs.length-1?1:0.6} />
+              <text x={xA(i)} y={H-1} fill="#4b5563" fontSize="8" textAnchor="middle">{MODEL_PERF_HISTORY[i].version}</text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {/* L-02: Retraining pipeline */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">L-02 · Retraining Pipeline — Bearing Fault LSTM</h3>
+        <div className="space-y-3">
+          {RETRAIN_PIPELINE.map((s,i) => (
+            <div key={i} className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-1.5" style={{ background:stepDot[s.status as keyof typeof stepDot] }} />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className={`text-xs font-semibold ${stepC[s.status as keyof typeof stepC]}`}>{s.step}</p>
+                  {s.status === 'running' && <span className="text-xs bg-blue-900/40 text-blue-400 rounded px-1.5 py-0.5 animate-pulse">RUNNING</span>}
+                </div>
+                <p className="text-gray-500 text-xs">{s.detail}</p>
+              </div>
+              <span className="text-gray-600 text-xs flex-shrink-0">{s.elapsed}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* L-01: Active learning queue */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">L-01 · Active Learning Queue</h3>
+            <p className="text-gray-500 text-xs">Low-confidence predictions awaiting expert labelling</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {ACTIVE_LEARNING_QUEUE.map(q => (
+              <div key={q.id} className="px-4 py-3 flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-white text-xs font-semibold">{q.asset} <span className="text-gray-500">· {q.site}</span></p>
+                  <p className="text-gray-500 text-xs">{q.predictedClass} · Conf: <span className="text-amber-400 font-bold">{Math.round(q.modelConf*100)}%</span></p>
+                </div>
+                <span className="text-gray-600 text-xs flex-shrink-0">{q.age}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* L-05: Feedback integration log */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">L-05 · Feedback Integration Log</h3>
+            <p className="text-gray-500 text-xs">Override / label feedback → model improvement</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {FEEDBACK_LOG.map((f,i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className="text-white text-xs font-semibold">{f.alert}</p>
+                  <span className={`text-xs ${f.type==='override'?'text-amber-400':'text-blue-400'}`}>{f.type}</span>
+                </div>
+                <p className="text-gray-500 text-xs">{f.feedback}</p>
+                <p className="text-green-400 text-xs font-semibold">{f.impact} · {f.ts}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MLModelsTab: React.FC = () => (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
@@ -951,6 +2261,15 @@ const MLModelsTab: React.FC = () => (
 
     {/* REQ-19 — AI Feedback Loop */}
     <AIFeedbackPanel />
+
+    {/* Block H: AI Governance */}
+    <AIGovernancePanel />
+
+    {/* Block I: SHAP Explainability */}
+    <SHAPPanel />
+
+    {/* Block L: Continuous Learning Loop */}
+    <ContinuousLearningPanel />
 
     {/* Model cards */}
     <div className="grid grid-cols-3 gap-4">
@@ -1112,33 +2431,122 @@ const INITIAL_WOS: WO[] = [
 const PRI_COLOR: Record<string, string> = { EMERGENCY: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#60a5fa', LOW: '#9ca3af' };
 const ST_COLOR:  Record<string, string> = { Open: '#f87171', 'In Progress': '#fbbf24', Scheduled: '#818cf8', Completed: '#4ade80' };
 
+// ── B-03: Spare parts availability lookup ─────────────────────────────────────
+const SAP_PARTS_AVAIL: Record<string, { partNo: string; qty: number; min: number; status: 'available' | 'low' | 'zero' }> = {
+  'C-101': { partNo: '7B-2241-ZZ', qty: 2, min: 2, status: 'available' },
+  'E-212': { partNo: 'HX-SEAL-884', qty: 0, min: 1, status: 'zero' },
+  'P-205': { partNo: 'IMP-P205-TR', qty: 1, min: 2, status: 'low'   },
+  'T-405': { partNo: 'BLD-T405-S3', qty: 4, min: 2, status: 'available' },
+};
+
+// ── B-01/02/05: SAP Integration Panel ────────────────────────────────────────
+interface SapRecord {
+  type: 'IW21' | 'IW31' | 'MMMR';
+  id: string;
+  desc: string;
+  asset: string;
+  time: string;
+  s4Ready: boolean;
+}
+interface SAPIntegrationPanelProps {
+  records: SapRecord[];
+  totalAlerts: number;
+}
+const SAPIntegrationPanel: React.FC<SAPIntegrationPanelProps> = ({ records, totalAlerts }) => {
+  const iw21  = records.filter(r => r.type === 'IW21').length;
+  const iw31  = records.filter(r => r.type === 'IW31').length;
+  const mmmr  = records.filter(r => r.type === 'MMMR').length;
+  const autoRate = totalAlerts > 0 ? Math.round(((iw21) / totalAlerts) * 100) : 0;
+  const s4Ready  = records.filter(r => r.s4Ready).length;
+  return (
+    <div className="bg-gray-900 border border-blue-900/40 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div>
+          <h3 className="text-white font-semibold text-sm">SAP PM / MM Integration</h3>
+          <p className="text-gray-500 text-xs">Live BAPI simulation · IW21 · IW31 · MM reservations · B-07 S/4HANA migration ready</p>
+        </div>
+        <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-800 px-3 py-1 rounded font-mono">SAP ECC → S/4HANA</span>
+      </div>
+      {/* B-05: Automation rate KPI */}
+      <div className="grid grid-cols-5 gap-3 p-5 border-b border-gray-800">
+        {([
+          ['IW21 Notifications', String(iw21), 'text-purple-400', 'Notification creation'],
+          ['IW31 Work Orders',   String(iw31), 'text-blue-400',   'Order auto-generated'],
+          ['MM Reservations',    String(mmmr), 'text-green-400',  'Material reserved'],
+          ['S/4HANA Ready',      String(s4Ready), 'text-cyan-400','ODATA-aligned WOs'],
+          ['Automation Rate',    `${autoRate}%`, autoRate >= 85 ? 'text-green-400' : 'text-amber-400', 'Target: >85%'],
+        ] as [string,string,string,string][]).map(([l,v,c,sub]) => (
+          <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-3 text-center">
+            <p className={`text-xl font-bold ${c}`}>{v}</p>
+            <p className="text-gray-500 text-xs mt-0.5 uppercase tracking-wide">{l}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{sub}</p>
+          </div>
+        ))}
+      </div>
+      {/* SAP action log */}
+      {records.length === 0 ? (
+        <p className="text-gray-600 text-xs text-center py-6">No SAP actions yet — approve a work order above to trigger BAPI integration</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="border-b border-gray-800">
+              {['BAPI','SAP Object ID','Description','Asset','Time','S/4HANA'].map(h => (
+                <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2"><span className="font-mono font-bold text-blue-400">{r.type}</span></td>
+                  <td className="px-4 py-2 text-purple-400 font-mono">{r.id}</td>
+                  <td className="px-4 py-2 text-gray-300">{r.desc}</td>
+                  <td className="px-4 py-2 text-gray-400">{r.asset}</td>
+                  <td className="px-4 py-2 text-gray-500">{r.time}</td>
+                  <td className="px-4 py-2">
+                    {r.s4Ready
+                      ? <span className="text-cyan-400 font-semibold">✓ ODATA</span>
+                      : <span className="text-gray-600">Legacy</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const WorkOrdersTab: React.FC = () => {
   const [wos, setWos] = useState<WO[]>(INITIAL_WOS);
   const [toast, setToast] = useState<string | null>(null);
   const [prCounter, setPrCounter] = useState(1);
+  // B-01/02/04: SAP BAPI records
+  const [sapRecords, setSapRecords] = useState<SapRecord[]>([]);
 
   const featuredWO = wos.find(w => w.priority === 'EMERGENCY' && w.status === 'Open') ?? null;
 
   const handleApprove = (wo: WO) => {
-    const prId = `PR-2026-${String(prCounter).padStart(4, '0')}`;
+    const prId  = `PR-2026-${String(prCounter).padStart(4, '0')}`;
+    const nowT  = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const notifId = `N-${Date.now().toString().slice(-6)}`;
+    const woSapId = `WO-SAP-${Date.now().toString().slice(-5)}`;
+    const mmrId   = `MR-${Date.now().toString().slice(-5)}`;
+    const assetTag = wo.equipment.split(' ')[0];
     setPrCounter(c => c + 1);
     setWos(prev => [
-      // Transition approved WO → In Progress
       ...prev.map(w => w.id === wo.id ? { ...w, status: 'In Progress' as const } : w),
-      // Auto-generated PR → immediately Completed
-      {
-        id: prId,
-        equipment: `${wo.equipment} [PR: Parts & Services]`,
-        site: wo.site,
-        priority: wo.priority,
-        status: 'Completed' as const,
-        cost: wo.cost,
-        due: '—',
-        isPR: true,
-      },
+      { id: prId, equipment: `${wo.equipment} [PR: Parts & Services]`, site: wo.site, priority: wo.priority, status: 'Completed' as const, cost: wo.cost, due: '—', isPR: true },
     ]);
-    setToast(`✓ ${wo.id} dispatched — ${prId} auto-completed`);
-    setTimeout(() => setToast(null), 4000);
+    // B-01 IW21, B-02 IW31, B-04 MM reservation
+    setSapRecords(prev => [
+      ...prev,
+      { type: 'IW21', id: notifId, desc: `PM Notification — ${wo.equipment}`, asset: assetTag, time: nowT, s4Ready: true },
+      { type: 'IW31', id: woSapId, desc: `Work Order — Bearing Replacement`,  asset: assetTag, time: nowT, s4Ready: true },
+      { type: 'MMMR', id: mmrId,   desc: `Material Reservation — Bearing Set`, asset: assetTag, time: nowT, s4Ready: true },
+    ]);
+    setToast(`✓ ${wo.id} dispatched — IW21 ${notifId} · IW31 ${woSapId} · MM ${mmrId} created`);
+    setTimeout(() => setToast(null), 5000);
   };
 
   const counts = {
@@ -1226,6 +2634,23 @@ const WorkOrdersTab: React.FC = () => {
                   </div>
                 ))}
               </div>
+              {/* B-03: SAP MM spare parts availability */}
+              {(() => {
+                const assetTag = featuredWO.equipment.split(' ')[0];
+                const partAvail = SAP_PARTS_AVAIL[assetTag];
+                if (!partAvail) return null;
+                const col = partAvail.status === 'available' ? '#22c55e' : partAvail.status === 'low' ? '#f59e0b' : '#ef4444';
+                const label = partAvail.status === 'available' ? '✓ IN STOCK' : partAvail.status === 'low' ? '⚠ LOW STOCK' : '✕ ZERO STOCK';
+                return (
+                  <div className="rounded-lg p-3 mb-3 border" style={{ background:`${col}11`, borderColor:`${col}44` }}>
+                    <p className="text-xs font-semibold mb-1" style={{ color: col }}>SAP MM — Parts Availability Check</p>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400">Part No: {partAvail.partNo}</span>
+                      <span className="font-bold" style={{ color: col }}>{label} ({partAvail.qty} on-hand)</span>
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="bg-green-950/40 border border-green-900/40 rounded-lg p-3">
                 <p className="text-green-400 text-xs font-semibold mb-1">Cost vs Failure</p>
                 {[['WO cost (planned)','$28,400','text-white'],['Failure cost (avoided)','$2,100,000','text-green-400'],['Net savings','$2,071,600','text-green-400 font-bold']].map(([l,v,c]) => (
@@ -1238,6 +2663,9 @@ const WorkOrdersTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* B-01/02/04/05/07: SAP Integration Panel */}
+      <SAPIntegrationPanel records={sapRecords} totalAlerts={ALERT_DATA.length} />
 
       {/* REQ-13 — Root Cause Analysis */}
       <RCAPanel />
@@ -1265,6 +2693,8 @@ const WorkOrdersTab: React.FC = () => {
                     <span className={`text-sm font-mono ${wo.isPR ? 'text-green-400' : 'text-purple-400'}`}>{wo.id}</span>
                     {wo.aiGenerated && <span className="ml-2 text-xs text-purple-500/70">AI</span>}
                     {wo.isPR && <span className="ml-2 text-xs bg-green-900/50 text-green-400 px-1.5 py-0.5 rounded">PR</span>}
+                    {/* B-07: S/4HANA badge */}
+                    <span className="ml-1 text-xs text-cyan-600/70 font-mono">S/4</span>
                   </td>
                   <td className="py-2.5 px-4 text-white text-sm">{wo.equipment}</td>
                   <td className="py-2.5 px-4 text-gray-400 text-sm whitespace-nowrap">{wo.site}</td>
@@ -2024,6 +3454,120 @@ const COMP_CHIP: Record<string,{bg:string;color:string;label:string}> = {
   overdue:   {bg:'#450a0a',color:'#f87171',label:'OVERDUE'},
 };
 
+// ── Block N: Regulatory Compliance Enhancements ───────────────────────────────
+
+// N-01: Evidence document tracking
+const EVIDENCE_DOCS = [
+  { docId:'EV-API510-2026-01', regulation:'API 510', site:'Ruwais',    doc:'Annual inspection report + UT thickness data', uploaded:'10 Apr 2026', status:'verified' },
+  { docId:'EV-PSM-2026-04',    regulation:'PSM',     site:'Whiting',   doc:'Process Hazard Analysis (PHA) revalidation',  uploaded:'02 Apr 2026', status:'verified' },
+  { docId:'EV-ISO45001-Q1',    regulation:'ISO 45001',site:'All Sites', doc:'Q1 2026 Safety KPI report + incident log',    uploaded:'01 Apr 2026', status:'pending'  },
+  { docId:'EV-API570-HOU-01',  regulation:'API 570', site:'Houston',   doc:'Corrosion under insulation (CUI) survey',     uploaded:'—',           status:'missing'  },
+];
+
+// N-02: Regulatory change tracker
+const REG_CHANGES = [
+  { reg:'API RP 580 Rev 4',      effective:'01 Jul 2026', impact:'Risk-Based Inspection scope expanded to include offshore risers', action:'Update RBI programme by 30 Jun', status:'in-progress' },
+  { reg:'EU Industrial Emissions',effective:'01 Jan 2027', impact:'NOx/SOx limits tightened 20% at Rotterdam refinery',           action:'Upgrade SCR units Q3 2026',     status:'planned'     },
+  { reg:'OSHA PSM Modernisation',effective:'01 Sep 2026', impact:'Enhanced safeguards for highly hazardous chemicals',           action:'PSM revalidation required',      status:'not-started' },
+];
+
+// N-04: AI-generated compliance checklist
+const AI_CHECKLIST = [
+  { item:'API 570 piping inspection overdue — Bureau Veritas booking needed',     priority:'critical', status:'open',  owner:'Maintenance Lead Houston' },
+  { item:'ISO 45001 Q1 evidence upload incomplete — safety KPI doc missing',      priority:'high',     status:'open',  owner:'HSSE Manager' },
+  { item:'ASME B31.3 Ras Tanura — 13 days overdue — escalate to Engineering VP',  priority:'critical', status:'open',  owner:'VP Engineering MENA' },
+  { item:'API 580 RBI programme review required before Jul 2026 deadline',         priority:'medium',   status:'in-progress', owner:'Reliability Engineer' },
+];
+
+const ComplianceEnhancementsPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* N-04: AI compliance checklist */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+        <div>
+          <h3 className="text-white font-semibold text-sm">N-04 · AI-Generated Compliance Action List</h3>
+          <p className="text-gray-500 text-xs">Proactive AI monitoring · Auto-generated actions from regulation changes + deadlines</p>
+        </div>
+        <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
+          {AI_CHECKLIST.filter(i=>i.priority==='critical').length} CRITICAL OPEN
+        </span>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {AI_CHECKLIST.map((c,i) => {
+          const pc = { critical:'text-red-400 bg-red-900/40', high:'text-amber-400 bg-amber-900/30', medium:'text-blue-400 bg-blue-900/30' };
+          const sc = { open:'text-red-400', 'in-progress':'text-amber-400', closed:'text-green-400' };
+          return (
+            <div key={i} className="px-5 py-4 flex items-start gap-4">
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${pc[c.priority as keyof typeof pc]}`}>{c.priority.toUpperCase()}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{c.item}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Owner: {c.owner}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${sc[c.status as keyof typeof sc]}`}>{c.status.toUpperCase()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* N-01: Evidence document tracker */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">N-01 · Evidence Document Tracker</h3>
+        <p className="text-gray-500 text-xs">Audit-ready evidence vault · Upload status per regulation</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          {['Doc ID','Regulation','Site','Document','Uploaded','Status'].map(h => (
+            <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {EVIDENCE_DOCS.map(d => {
+            const sc = { verified:'text-green-400', pending:'text-amber-400', missing:'text-red-400' };
+            return (
+              <tr key={d.docId} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{d.docId}</td>
+                <td className="px-4 py-2 text-white">{d.regulation}</td>
+                <td className="px-4 py-2 text-gray-400">{d.site}</td>
+                <td className="px-4 py-2 text-gray-300">{d.doc}</td>
+                <td className="px-4 py-2 text-gray-400">{d.uploaded}</td>
+                <td className="px-4 py-2 font-bold"><span className={sc[d.status as keyof typeof sc]}>{d.status.toUpperCase()}</span></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    {/* N-02: Regulatory change tracker */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">N-02 · Upcoming Regulatory Changes</h3>
+        <p className="text-gray-500 text-xs">Horizon scanning · Change impact assessment · Action planning</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {REG_CHANGES.map((r,i) => {
+          const sc = { 'in-progress':'text-amber-400', planned:'text-blue-400', 'not-started':'text-red-400' };
+          return (
+            <div key={i} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-xs font-semibold">{r.reg}</p>
+                  <span className="text-gray-500 text-xs">· Effective: {r.effective}</span>
+                </div>
+                <p className="text-gray-400 text-xs">Impact: {r.impact}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Action: {r.action}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${sc[r.status as keyof typeof sc]}`}>{r.status.toUpperCase()}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
 const ComplianceTab: React.FC = () => (
   <div className="space-y-4">
     <div className="grid grid-cols-3 gap-3">
@@ -2077,6 +3621,9 @@ const ComplianceTab: React.FC = () => (
         })}
       </div>
     </div>
+
+    {/* Block N: Compliance Enhancements */}
+    <ComplianceEnhancementsPanel />
   </div>
 );
 
@@ -2150,6 +3697,139 @@ const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange }) => {
 };
 
 // ── REQ-22: TAR Shutdown Planning ────────────────────────────────────────────
+// ── Block J: Maintenance Scheduling Copilot ───────────────────────────────────
+
+// J-01: AI scheduling recommendations
+const SCHEDULE_RECS = [
+  { id:'REC-001', asset:'C-101 Compressor',  site:'Ruwais',   action:'Bearing replacement', window:'12-14 Apr',  risk:'critical', constraint:'Crew available, parts on-order ETA 13 Apr', aiConf:0.94 },
+  { id:'REC-002', asset:'E-212 Exchanger',   site:'Houston',  action:'Tube bundle clean',   window:'15-16 Apr',  risk:'high',     constraint:'No conflicting unit outages', aiConf:0.87 },
+  { id:'REC-003', asset:'P-205 Pump',        site:'Houston',  action:'Mechanical seal swap', window:'18-19 Apr', risk:'medium',   constraint:'Standby P-205B available',   aiConf:0.79 },
+];
+
+// J-02: Resource availability calendar (simplified)
+const RESOURCE_CAL = [
+  { crew:'Rotating Equipment (3 specialists)', available:'12-14 Apr', site:'Ruwais',  conflict:false },
+  { crew:'Heat Exchanger Team (2 technicians)',available:'15 Apr',    site:'Houston', conflict:false },
+  { crew:'Pump Repair (1 technician)',         available:'18 Apr',    site:'Houston', conflict:false },
+  { crew:'Rotating Equipment (3 specialists)', available:'15-17 Apr', site:'Ruwais',  conflict:true  },
+];
+
+// J-03: Constraint analysis
+const CONSTRAINTS = [
+  { type:'Safety', constraint:'Hot-work permit required for C-101 bearing work', status:'ready', owner:'HSE Lead' },
+  { type:'Permit', constraint:'PTW-2026-1841 issued for compressor entry', status:'ready', owner:'Shift Lead' },
+  { type:'Parts',  constraint:'Bearing 7B-2241-ZZ ETA 13 Apr 09:00', status:'watch', owner:'Supply Chain' },
+  { type:'Ops',    constraint:'CDU-1 throughput reduction 15% during work', status:'approved', owner:'Production' },
+];
+
+// J-04: Optimized schedule vs baseline
+const SCHEDULE_COMPARISON = [
+  { metric:'Total Planned Downtime',   baseline:'96h', optimized:'67h', saving:'29h',  pct:30 },
+  { metric:'Maintenance Cost Savings', baseline:'$0',  optimized:'-$142K', saving:'$142K', pct:18 },
+  { metric:'Risk Reduction Score',     baseline:'61',  optimized:'88',  saving:'+27',  pct:44 },
+  { metric:'Crew Utilisation',         baseline:'62%', optimized:'84%', saving:'+22pp', pct:35 },
+];
+
+const MaintenanceCopilotPanel: React.FC = () => (
+  <div className="space-y-4">
+    {/* J-01: AI scheduling recommendations */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">J-01 · AI Maintenance Scheduling Copilot</h3>
+        <p className="text-gray-500 text-xs">Optimal maintenance windows · Resource / permit / parts constraint resolution</p>
+      </div>
+      <div className="divide-y divide-gray-800">
+        {SCHEDULE_RECS.map(r => {
+          const rc = { critical:'#ef4444', high:'#f59e0b', medium:'#60a5fa' };
+          return (
+            <div key={r.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 text-xs font-mono text-gray-500 pt-0.5">{r.id}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-sm font-semibold">{r.asset}</p>
+                  <span className="text-xs text-gray-500">· {r.site}</span>
+                  <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background:rc[r.risk as keyof typeof rc]+'22', color:rc[r.risk as keyof typeof rc] }}>{r.risk.toUpperCase()}</span>
+                </div>
+                <p className="text-gray-300 text-xs">Action: {r.action} · Window: <span className="text-blue-400 font-semibold">{r.window}</span></p>
+                <p className="text-gray-500 text-xs mt-0.5">{r.constraint}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-green-400 font-bold text-sm">{Math.round(r.aiConf*100)}%</p>
+                <p className="text-gray-600 text-xs">AI confidence</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-4">
+      {/* J-02: Resource availability */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">J-02 · Crew Resource Calendar</h3>
+          <p className="text-gray-500 text-xs">Conflict detection · 2-week horizon</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {RESOURCE_CAL.map((r,i) => (
+            <div key={i} className="px-4 py-3 flex items-start gap-3">
+              <span className={`flex-shrink-0 mt-0.5 text-xs ${r.conflict?'text-red-400':'text-green-400'}`}>{r.conflict?'⚠':'✓'}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{r.crew}</p>
+                <p className="text-gray-500 text-xs">{r.site} · {r.available}</p>
+              </div>
+              {r.conflict && <span className="text-xs bg-red-900/40 text-red-400 rounded px-2 py-0.5">CONFLICT</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* J-03: Constraint analysis */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">J-03 · Constraint Analysis</h3>
+          <p className="text-gray-500 text-xs">Safety / permit / parts / ops readiness</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {CONSTRAINTS.map((c,i) => {
+            const sc = { ready:'text-green-400', watch:'text-amber-400', approved:'text-blue-400' };
+            return (
+              <div key={i} className="px-4 py-3 flex items-start gap-3">
+                <span className={`flex-shrink-0 text-xs font-bold w-12 pt-0.5 ${sc[c.status as keyof typeof sc]}`}>{c.type}</span>
+                <div className="flex-1">
+                  <p className="text-white text-xs">{c.constraint}</p>
+                  <p className="text-gray-500 text-xs">{c.owner}</p>
+                </div>
+                <span className={`flex-shrink-0 text-xs font-bold ${sc[c.status as keyof typeof sc]}`}>{c.status.toUpperCase()}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    {/* J-04: Schedule optimization comparison */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <h3 className="text-white font-semibold text-sm mb-3">J-04 · Schedule Optimization Gains — AI vs Baseline</h3>
+      <div className="grid grid-cols-4 gap-3">
+        {SCHEDULE_COMPARISON.map(s => (
+          <div key={s.metric} className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs mb-2">{s.metric}</p>
+            <div className="flex items-end gap-2 mb-1">
+              <span className="text-green-400 font-bold text-xl">{s.optimized}</span>
+              <span className="text-gray-600 text-xs line-through pb-0.5">{s.baseline}</span>
+            </div>
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden mb-1">
+              <div className="h-full bg-green-500 rounded-full" style={{ width:`${s.pct}%` }} />
+            </div>
+            <p className="text-green-400 text-xs font-semibold">{s.saving} saved</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const TAR_ITEMS = [
   { id:'TAR-2026-01', site:'Ruwais, UAE',     unit:'CDU-1',      start:'2026-06-01', end:'2026-06-28', days:28, status:'planned',   cost:'$8.4M',  scope:124 },
   { id:'TAR-2026-02', site:'Houston, USA',    unit:'VDU + HDS',  start:'2026-08-10', end:'2026-09-15', days:36, status:'planned',   cost:'$14.2M', scope:218 },
@@ -2218,6 +3898,9 @@ const TARTab: React.FC = () => {
           </svg>
         </div>
       </div>
+
+      {/* Block J: Maintenance Copilot */}
+      <MaintenanceCopilotPanel />
 
       {/* Cards */}
       <div className="grid grid-cols-2 gap-4">
@@ -2501,8 +4184,1212 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'field-ops':        return <FieldOpsTab />;
     case 'energy':           return <EnergyTab />;
     case 'tar':              return <TARTab />;
+    case 'castrol':          return <CastrolTab />;
+    case 'offshore':         return <OffshoreTab />;
+    case 'ot-data':          return <OTDataTab />;
+    case 'adoption':         return <AdoptionTab />;
+    case 'wave-tracker':     return <WaveTrackerTab />;
+    case 'edge-ai':          return <EdgeAITab />;
     default:                 return null;
   }
+};
+
+// ── Block C: Castrol Blending Quality Prediction ─────────────────────────────
+
+// C-02: Active blend run data
+const CASTROL_BLENDS = [
+  { id: 'BL-2026-0441', grade: 'Castrol GTX 5W-30', tank: 'BT-04', vol: 12000, elapsed: 68, total: 100, site: 'Castellon, ES' },
+  { id: 'BL-2026-0442', grade: 'Castrol Edge 0W-40', tank: 'BT-07', vol: 8500,  elapsed: 31, total: 100, site: 'Ellesmere Port, UK' },
+];
+
+// C-03/04: Quality prediction data per blend (12 prediction points over blend run)
+interface BlendQuality { visc: number; pour: number; tbn: number; }
+const CASTROL_QUALITY: Record<string, { predicted: BlendQuality[]; spec: BlendQuality }> = {
+  'BL-2026-0441': {
+    spec: { visc: 66.2, pour: -35, tbn: 8.5 },
+    predicted: [
+      {visc:65.0,pour:-33,tbn:8.1},{visc:65.2,pour:-33,tbn:8.2},{visc:65.5,pour:-34,tbn:8.3},
+      {visc:65.8,pour:-34,tbn:8.4},{visc:66.0,pour:-34,tbn:8.4},{visc:66.1,pour:-35,tbn:8.5},
+      {visc:66.2,pour:-35,tbn:8.5},{visc:66.3,pour:-35,tbn:8.6},{visc:66.4,pour:-36,tbn:8.6},
+      {visc:66.2,pour:-35,tbn:8.5},{visc:66.1,pour:-35,tbn:8.5},{visc:66.2,pour:-35,tbn:8.5},
+    ],
+  },
+  'BL-2026-0442': {
+    spec: { visc: 72.1, pour: -40, tbn: 9.2 },
+    predicted: [
+      {visc:69.0,pour:-37,tbn:8.6},{visc:69.5,pour:-37,tbn:8.7},{visc:70.0,pour:-38,tbn:8.8},
+      {visc:70.4,pour:-38,tbn:8.9},{visc:70.8,pour:-39,tbn:9.0},{visc:71.2,pour:-39,tbn:9.1},
+      {visc:71.5,pour:-39,tbn:9.1},{visc:71.7,pour:-40,tbn:9.2},{visc:72.0,pour:-40,tbn:9.2},
+      {visc:72.1,pour:-40,tbn:9.2},
+    ],
+  },
+};
+
+// C-07: Blend tank sensor readings
+const CASTROL_SENSORS: Record<string, { temp: number; visc: number; density: number; dosingRate: number }> = {
+  'BL-2026-0441': { temp: 68.4, visc: 66.2, density: 872.1, dosingRate: 2.14 },
+  'BL-2026-0442': { temp: 71.1, visc: 71.5, density: 868.4, dosingRate: 2.87 },
+};
+
+// C-08: LIMS historical records
+const LIMS_RECORDS = [
+  { id: 'LI-2026-0440', grade: 'GTX 5W-30',  date: '11 Apr', result: 'PASS', visc: 66.1, pour: -35, tbn: 8.5, rework: false },
+  { id: 'LI-2026-0439', grade: 'Edge 0W-40',  date: '10 Apr', result: 'FAIL', visc: 69.8, pour: -38, tbn: 8.8, rework: true  },
+  { id: 'LI-2026-0438', grade: 'GTX 10W-40',  date: '09 Apr', result: 'PASS', visc: 98.2, pour: -25, tbn: 7.9, rework: false },
+  { id: 'LI-2026-0437', grade: 'Classic 20W', date: '08 Apr', result: 'FAIL', visc: 141.0,pour: -15, tbn: 6.8, rework: true  },
+  { id: 'LI-2026-0436', grade: 'GTX 5W-30',  date: '07 Apr', result: 'PASS', visc: 65.9, pour: -35, tbn: 8.4, rework: false },
+];
+
+// C-05: Corrective actions
+const CASTROL_CORRECTIONS: Record<string, string[]> = {
+  'BL-2026-0441': [],
+  'BL-2026-0442': [
+    'Increase VI improver dosing by 0.12% (current: 2.87 → target: 2.99 kg/min)',
+    'Raise blend temperature 2°C to 73°C to improve homogeneity',
+    'Extend mixing time by 8 minutes to reduce viscosity gradient',
+  ],
+};
+
+// C-09: Additive dosing optimizer
+const DOSING_OPTS = [
+  { additive: 'VI Improver',        current: 2.14, optimal: 2.18, unit: 'kg/min', impact: '+0.8 cSt viscosity'  },
+  { additive: 'Pour Point Depressant', current: 0.42, optimal: 0.45, unit: 'kg/min', impact: '-1°C pour point'  },
+  { additive: 'Antioxidant Pkg',    current: 1.88, optimal: 1.88, unit: 'kg/min', impact: 'Optimal'             },
+  { additive: 'Anti-wear Additive', current: 0.76, optimal: 0.79, unit: 'kg/min', impact: '+0.2 TBN'           },
+];
+
+const CastrolTab: React.FC = () => {
+  const [selectedBlend, setSelectedBlend] = useState(CASTROL_BLENDS[0].id);
+  const blend   = CASTROL_BLENDS.find(b => b.id === selectedBlend) ?? CASTROL_BLENDS[0];
+  const quality = CASTROL_QUALITY[selectedBlend];
+  const sensors = CASTROL_SENSORS[selectedBlend];
+  const corrections = CASTROL_CORRECTIONS[selectedBlend] ?? [];
+  const pct = Math.round((blend.elapsed / blend.total) * 100);
+  const latest = quality.predicted[quality.predicted.length - 1];
+  const offSpec = LIMS_RECORDS.filter(r => r.result === 'FAIL').length;
+  const offSpecRate = Math.round((offSpec / LIMS_RECORDS.length) * 100);
+
+  // C-04: SVG confidence timeline for viscosity
+  const W = 480, H = 90, PL = 36, PR = 16, PT = 12, PB = 24;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const pts = quality.predicted;
+  const viscVals = pts.map(p => p.visc);
+  const minV = Math.min(...viscVals) - 2, maxV = Math.max(...viscVals) + 2;
+  const xOf = (i: number) => PL + (i / (pts.length - 1)) * cW;
+  const yOf = (v: number) => PT + cH - ((v - minV) / (maxV - minV)) * cH;
+  const polyPts = pts.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.visc).toFixed(1)}`).join(' ');
+  const specY = yOf(quality.spec.visc);
+
+  return (
+    <div className="space-y-5">
+      {/* C-06: Off-spec rate KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(CASTROL_BLENDS.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
+          [`${offSpecRate}%`,             'OFF-SPEC RATE',    offSpecRate < 5 ? 'text-green-400' : 'text-red-400', offSpecRate < 5 ? 'border-green-900/50' : 'border-red-900/50'],
+          ['2%',                          'TARGET OFF-SPEC',  'text-gray-400',   'border-gray-800'     ],
+          [String(LIMS_RECORDS.filter(r => r.rework).length), 'REWORK BATCHES', 'text-amber-400', 'border-amber-900/50'],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* C-02: Blend selector + run monitor */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Active Blend Run Monitor</h3>
+            <p className="text-gray-500 text-xs">Real-time in-process quality prediction · updated every 60s</p>
+          </div>
+          <div className="flex gap-2">
+            {CASTROL_BLENDS.map(b => (
+              <button key={b.id} onClick={() => setSelectedBlend(b.id)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedBlend === b.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
+                {b.id}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Grade</p>
+            <p className="text-white font-semibold text-sm">{blend.grade}</p>
+            <p className="text-gray-500 text-xs">{blend.site} · Tank {blend.tank}</p>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Blend Progress</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-blue-500" style={{ width:`${pct}%` }} />
+              </div>
+              <span className="text-white font-bold text-sm">{pct}%</span>
+            </div>
+            <p className="text-gray-500 text-xs">{blend.elapsed}% of {blend.vol.toLocaleString()}L complete</p>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Batch ID</p>
+            <p className="text-white font-semibold text-sm font-mono">{blend.id}</p>
+          </div>
+        </div>
+
+        {/* C-07: Blend tank sensors */}
+        <div className="grid grid-cols-4 gap-3 mb-4 border-t border-gray-800 pt-4">
+          <p className="col-span-4 text-xs text-gray-500 uppercase tracking-widest font-semibold mb-1">Live Tank Sensors</p>
+          {([
+            ['Temperature',  `${sensors.temp}°C`, '#f59e0b'],
+            ['Viscosity',    `${sensors.visc} cSt`, '#60a5fa'],
+            ['Density',      `${sensors.density} kg/m³`, '#34d399'],
+            ['Dosing Rate',  `${sensors.dosingRate} kg/min`, '#a78bfa'],
+          ] as [string,string,string][]).map(([l,v,c]) => (
+            <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+              <p className="text-lg font-bold font-mono" style={{ color:c }}>{v}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* C-03: In-process quality prediction */}
+        <div className="border-t border-gray-800 pt-4">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">In-Process Quality Prediction (vs Specification)</p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              ['Kinematic Viscosity', latest.visc.toFixed(1), quality.spec.visc.toFixed(1), 'cSt',  Math.abs(latest.visc - quality.spec.visc) < 1],
+              ['Pour Point',         String(latest.pour),     String(quality.spec.pour),     '°C',   latest.pour <= quality.spec.pour],
+              ['Total Base Number',  latest.tbn.toFixed(1),   quality.spec.tbn.toFixed(1),   'mgKOH/g', Math.abs(latest.tbn - quality.spec.tbn) < 0.3],
+            ] as [string,string,string,string,boolean][]).map(([l,pred,spec,unit,ok]) => (
+              <div key={l} className={`rounded-lg px-4 py-3 border ${ok ? 'bg-green-950/30 border-green-900/40' : 'bg-red-950/30 border-red-900/40'}`}>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">{l}</p>
+                <p className={`text-xl font-bold font-mono ${ok ? 'text-green-400' : 'text-red-400'}`}>{pred} {unit}</p>
+                <p className="text-gray-500 text-xs">Spec: {spec} {unit} · {ok ? '✓ ON TRACK' : '⚠ DRIFTING'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* C-04: Viscosity confidence timeline SVG */}
+        <div className="border-t border-gray-800 pt-4 mt-4">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">Viscosity Prediction Trajectory (Full Blend Run)</p>
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+            <line x1={PL} y1={specY} x2={W-PR} y2={specY} stroke="#22c55e" strokeWidth="1" strokeDasharray="5,3" />
+            <text x={W-PR+2} y={specY+3} fill="#22c55e" fontSize="8">Spec {quality.spec.visc}</text>
+            <polyline points={polyPts} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" />
+            {pts.map((p, i) => <circle key={i} cx={xOf(i)} cy={yOf(p.visc)} r="3" fill="#60a5fa" opacity={i === pts.length-1 ? 1 : 0.4} />)}
+            {[0,25,50,75,100].map(v => {
+              const x = PL + (v/100)*cW;
+              return <text key={v} x={x} y={H-4} fill="#4b5563" fontSize="8" textAnchor="middle">{v}%</text>;
+            })}
+            <text x={8} y={H/2} fill="#4b5563" fontSize="8" textAnchor="middle" transform={`rotate(-90,8,${H/2})`}>cSt</text>
+          </svg>
+        </div>
+
+        {/* C-05: Corrective action recommendations */}
+        {corrections.length > 0 && (
+          <div className="border-t border-gray-800 pt-4 mt-2">
+            <p className="text-xs text-amber-400 font-semibold uppercase tracking-widest mb-2">⚠ AI Corrective Actions Required</p>
+            <div className="space-y-2">
+              {corrections.map((c, i) => (
+                <div key={i} className="flex gap-2 bg-amber-950/20 border border-amber-900/30 rounded-lg px-3 py-2">
+                  <span className="text-amber-500 text-xs flex-shrink-0">{i+1}.</span>
+                  <p className="text-amber-300 text-xs">{c}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* C-09: Additive dosing optimizer */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Additive Dosing Optimizer</h3>
+          <p className="text-gray-500 text-xs">AI-recommended dosing adjustments for {blend.grade}</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Additive','Current (kg/min)','AI Optimal (kg/min)','Δ','Impact'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {DOSING_OPTS.map(d => {
+              const delta = d.optimal - d.current;
+              return (
+                <tr key={d.additive} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2 text-gray-300">{d.additive}</td>
+                  <td className="px-4 py-2 text-white font-mono">{d.current.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-blue-400 font-mono font-bold">{d.optimal.toFixed(2)}</td>
+                  <td className="px-4 py-2 font-mono font-bold" style={{ color: Math.abs(delta) < 0.01 ? '#4ade80' : delta > 0 ? '#f59e0b' : '#60a5fa' }}>
+                    {delta === 0 ? '—' : `${delta > 0 ? '+' : ''}${delta.toFixed(2)}`}
+                  </td>
+                  <td className="px-4 py-2 text-gray-400">{d.impact}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* C-08: LIMS Quality Record Archive */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">LIMS Quality Record Archive</h3>
+          <p className="text-gray-500 text-xs">Historical batch results · End-of-batch lab measurements</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Batch ID','Grade','Date','Viscosity (cSt)','Pour (°C)','TBN','Result','Rework'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {LIMS_RECORDS.map(r => (
+              <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{r.id}</td>
+                <td className="px-4 py-2 text-gray-300">{r.grade}</td>
+                <td className="px-4 py-2 text-gray-400">{r.date}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.visc.toFixed(1)}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.pour}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.tbn.toFixed(1)}</td>
+                <td className="px-4 py-2"><span className={`font-bold ${r.result === 'PASS' ? 'text-green-400' : 'text-red-400'}`}>{r.result}</span></td>
+                <td className="px-4 py-2">{r.rework ? <span className="text-amber-400">✓ Rework</span> : <span className="text-gray-600">—</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block D: North Sea Offshore Operations ────────────────────────────────────
+
+// D-01: Offshore platform data
+const OFFSHORE_PLATFORMS = [
+  { id: 'TERN-A',  name: 'Tern Alpha',     field: 'Tern Field',   status: 'operational', lat: 60.8, lon: 1.7,  prod: 18400, uptime: 97.2, wells: 14, crew: 172, weatherScore: 82 },
+  { id: 'CORMORANT',name:'Cormorant Alpha',field:'Cormorant Fld', status: 'warning',    lat: 61.1, lon: 1.4,  prod: 12100, uptime: 91.4, wells: 9,  crew: 148, weatherScore: 61 },
+  { id: 'DUNLIN-A', name: 'Dunlin Alpha',  field: 'Dunlin Field', status: 'operational', lat: 60.6, lon: 1.5,  prod: 9800,  uptime: 98.1, wells: 8,  crew: 126, weatherScore: 77 },
+  { id: 'BRENT-C',  name: 'Brent Charlie', field: 'Brent Field',  status: 'critical',   lat: 61.3, lon: 1.7,  prod: 6200,  uptime: 78.3, wells: 6,  crew: 98,  weatherScore: 42 },
+];
+
+// D-02: Weather/marine forecast windows
+const OFFSHORE_WEATHER = [
+  { platform: 'TERN-A',   dayLabel: 'Today',    waveH: 1.8, windKt: 22, visibility: 8.2, workable: true },
+  { platform: 'TERN-A',   dayLabel: '+24h',     waveH: 2.4, windKt: 31, visibility: 6.1, workable: true },
+  { platform: 'TERN-A',   dayLabel: '+48h',     waveH: 4.1, windKt: 48, visibility: 3.8, workable: false },
+  { platform: 'CORMORANT',dayLabel: 'Today',    waveH: 3.2, windKt: 39, visibility: 4.9, workable: false },
+  { platform: 'BRENT-C',  dayLabel: 'Today',    waveH: 4.8, windKt: 54, visibility: 2.1, workable: false },
+];
+
+// D-03: Subsea equipment predictive alerts
+const SUBSEA_ALERTS = [
+  { id:'SS-001', asset:'Christmas Tree CT-14', platform:'TERN-A',     issue:'Annulus pressure trending +18% above baseline', failProb:0.72, eta:8,  sev:'critical' },
+  { id:'SS-002', asset:'Flowline Flex Joint',  platform:'CORMORANT',  issue:'Fatigue cycle count exceeds 78% design life',   failProb:0.54, eta:21, sev:'warning'  },
+  { id:'SS-003', asset:'BOP Stack BOP-07',     platform:'DUNLIN-A',   issue:'Hydraulic actuator response time +340ms drift', failProb:0.31, eta:45, sev:'advisory' },
+  { id:'SS-004', asset:'Riser Tensioner RT-3', platform:'BRENT-C',    issue:'Tension variance ±12% above spec threshold',    failProb:0.88, eta:3,  sev:'critical' },
+];
+
+// D-04: Logistics & crew schedule
+const VESSEL_SCHEDULE = [
+  { vessel:'Highland Sentinel', type:'PSV',       departure:'12 Apr 08:00', arrival:'12 Apr 14:30', destination:'TERN-A',    cargo:'Drill mud, Casing joints', status:'underway' },
+  { vessel:'Normand Fortress',  type:'DSV',       departure:'13 Apr 06:00', arrival:'13 Apr 12:00', destination:'BRENT-C',   cargo:'Dive team, ROV tools',    status:'scheduled' },
+  { vessel:'Caledonian Star',   type:'Helicopter',departure:'12 Apr 07:30', arrival:'12 Apr 08:45', destination:'CORMORANT', cargo:'Crew change (24 pax)',     status:'completed' },
+];
+
+// D-05: Environmental discharge monitoring
+const ENV_METRICS = [
+  { metric: 'Produced Water Overboard', value: 18.2,  limit: 30,   unit: 'mg/L Oil',  ok: true },
+  { metric: 'Flaring Volume (24h)',      value: 142,   limit: 200,  unit: 'MSCF/day',  ok: true },
+  { metric: 'Chemical Discharge',        value: 0.84,  limit: 1.0,  unit: 'kg/day',    ok: true },
+  { metric: 'Drilling Mud to Sea',       value: 0,     limit: 0,    unit: 'kg',         ok: true },
+  { metric: 'NOx Emissions',             value: 4.8,   limit: 5.0,  unit: 't/day',     ok: true },
+];
+
+// D-06: Well integrity log
+const WELL_INTEGRITY = [
+  { well:'A-14', barrier:'Primary', status:'OK',  annPres:12.4, lastTest:'08 Apr', note:'' },
+  { well:'A-11', barrier:'Primary', status:'WARN',annPres:18.8, lastTest:'05 Apr', note:'Annulus pressure trending up' },
+  { well:'B-07', barrier:'Primary', status:'OK',  annPres:9.1,  lastTest:'10 Apr', note:'' },
+  { well:'B-09', barrier:'Both',    status:'CRIT',annPres:31.2, lastTest:'01 Apr', note:'Shut-in pending investigation' },
+  { well:'C-03', barrier:'Primary', status:'OK',  annPres:11.8, lastTest:'11 Apr', note:'' },
+];
+
+const OffshoreTab: React.FC = () => {
+  const [selPlatform, setSelPlatform] = useState(OFFSHORE_PLATFORMS[0].id);
+  const plat = OFFSHORE_PLATFORMS.find(p => p.id === selPlatform) ?? OFFSHORE_PLATFORMS[0];
+  const weather = OFFSHORE_WEATHER.filter(w => w.platform === selPlatform);
+  const activeAlert = SUBSEA_ALERTS.filter(a => a.platform === selPlatform);
+  const sev = { critical:'#ef4444', warning:'#f59e0b', advisory:'#60a5fa' };
+  const pSev = { operational:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
+
+  return (
+    <div className="space-y-5">
+      {/* D-01: Fleet overview KPIs */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(OFFSHORE_PLATFORMS.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
+          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
+          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
+          [String(SUBSEA_ALERTS.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Platform selector */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">North Sea Platform Intelligence</h3>
+            <p className="text-gray-500 text-xs">UK Continental Shelf · Real-time operations & predictive subsea analytics</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {OFFSHORE_PLATFORMS.map(p => (
+              <button key={p.id} onClick={() => setSelPlatform(p.id)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selPlatform === p.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
+                <span style={{ color: pSev[p.status as keyof typeof pSev], marginRight: 5 }}>●</span>{p.id}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Platform detail row */}
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          {([
+            ['Production', `${plat.prod.toLocaleString()} BOPD`, '#60a5fa'],
+            ['Uptime',     `${plat.uptime}%`,                    plat.uptime >= 95 ? '#4ade80' : plat.uptime >= 85 ? '#f59e0b' : '#ef4444'],
+            ['Active Wells',String(plat.wells),                  '#a78bfa'],
+            ['Crew Onboard',String(plat.crew),                   '#f9fafb'],
+            ['Weather Score',`${plat.weatherScore}/100`,         plat.weatherScore >= 70 ? '#4ade80' : plat.weatherScore >= 50 ? '#f59e0b' : '#ef4444'],
+          ] as [string,string,string][]).map(([l,v,c]) => (
+            <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-3 text-center">
+              <p className="text-lg font-bold font-mono" style={{ color:c }}>{v}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* D-02: Weather window */}
+        {weather.length > 0 && (
+          <div className="border-t border-gray-800 pt-4">
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Marine Weather Windows</p>
+            <div className="flex gap-3">
+              {weather.map(w => (
+                <div key={w.dayLabel} className={`flex-1 rounded-lg px-4 py-3 border ${w.workable ? 'bg-green-950/20 border-green-900/40' : 'bg-red-950/20 border-red-900/40'}`}>
+                  <p className="text-white font-semibold text-sm">{w.dayLabel}</p>
+                  <p className="text-gray-400 text-xs mt-1">Hs: {w.waveH}m · Wind: {w.windKt}kt · Vis: {w.visibility}nm</p>
+                  <p className={`text-xs font-bold mt-1 ${w.workable ? 'text-green-400' : 'text-red-400'}`}>{w.workable ? '✓ WORKABLE' : '✗ UNSAFE'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* D-03: Subsea predictive alerts */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Subsea Equipment — Predictive Alerts</h3>
+            <p className="text-gray-500 text-xs">ML-driven failure probability · All platforms</p>
+          </div>
+          <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded-lg px-3 py-1 font-semibold">
+            {SUBSEA_ALERTS.filter(a=>a.sev==='critical').length} CRITICAL
+          </span>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {SUBSEA_ALERTS.map(a => (
+            <div key={a.id} className="px-5 py-4 flex items-start gap-4">
+              <span style={{ width:8,height:8,borderRadius:'50%',background:sev[a.sev as keyof typeof sev],flexShrink:0,marginTop:5 }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold">{a.asset} <span className="text-gray-500 font-normal text-xs">· {a.platform}</span></p>
+                <p className="text-gray-400 text-xs mt-0.5">{a.issue}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-mono font-bold text-sm" style={{ color:sev[a.sev as keyof typeof sev] }}>{Math.round(a.failProb*100)}%</p>
+                <p className="text-gray-600 text-xs">ETA: {a.eta}d</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5">
+        {/* D-04: Vessel schedule */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">Logistics & Vessel Schedule</h3>
+            <p className="text-gray-500 text-xs">PSV, DSV & helicopter movements</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {VESSEL_SCHEDULE.map(v => {
+              const sc = { underway:'text-blue-400', scheduled:'text-amber-400', completed:'text-green-400' };
+              return (
+                <div key={v.vessel} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white text-xs font-semibold">{v.vessel} <span className="text-gray-600">({v.type})</span></p>
+                    <span className={`text-xs font-bold ${sc[v.status as keyof typeof sc]}`}>{v.status.toUpperCase()}</span>
+                  </div>
+                  <p className="text-gray-500 text-xs">{v.destination} · Dep: {v.departure}</p>
+                  <p className="text-gray-600 text-xs">{v.cargo}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* D-05: Environmental compliance */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">Environmental Discharge Monitor</h3>
+            <p className="text-gray-500 text-xs">OPPC/MARPOL compliance · Live readings vs permit limits</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {ENV_METRICS.map(m => (
+              <div key={m.metric} className="px-4 py-2.5 flex items-center justify-between">
+                <p className="text-gray-400 text-xs">{m.metric}</p>
+                <div className="text-right">
+                  <span className={`text-xs font-mono font-bold ${m.ok ? 'text-green-400' : 'text-red-400'}`}>{m.value} {m.unit}</span>
+                  <span className="text-gray-600 text-xs ml-2">/ {m.limit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* D-06: Well integrity */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Well Integrity Register</h3>
+          <p className="text-gray-500 text-xs">Barrier verification · Annulus pressure monitoring · WIMS-compliant</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Well','Barrier','Annulus P (barg)','Last Test','Status','Note'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {WELL_INTEGRITY.map(w => {
+              const sc = { OK:'text-green-400', WARN:'text-amber-400', CRIT:'text-red-400' };
+              return (
+                <tr key={w.well} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2 text-white font-mono font-bold">{w.well}</td>
+                  <td className="px-4 py-2 text-gray-400">{w.barrier}</td>
+                  <td className="px-4 py-2 font-mono" style={{ color: w.annPres > 25 ? '#ef4444' : w.annPres > 15 ? '#f59e0b' : '#f9fafb' }}>{w.annPres}</td>
+                  <td className="px-4 py-2 text-gray-400">{w.lastTest}</td>
+                  <td className="px-4 py-2 font-bold"><span className={sc[w.status as keyof typeof sc]}>{w.status}</span></td>
+                  <td className="px-4 py-2 text-gray-500 italic">{w.note || '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block G: OT Data Ingestion & Quality ─────────────────────────────────────
+
+// G-01: OT data source inventory
+const OT_SOURCES = [
+  { id:'PI-HOU-01', type:'OSIsoft PI',  site:'Houston, USA',     tags:4821, latency:'250ms', status:'connected', lastPoll:'Just now',    qScore:98 },
+  { id:'MATRIKON-RUW',type:'OPC-UA',  site:'Ruwais, UAE',       tags:3204, latency:'180ms', status:'connected', lastPoll:'4s ago',      qScore:96 },
+  { id:'DCS-RT-01',  type:'DCS Honeywell',site:'Ras Tanura, KSA',tags:6102, latency:'95ms',  status:'connected', lastPoll:'1s ago',      qScore:99 },
+  { id:'SCADA-JAM',  type:'SCADA GE',  site:'Jamnagar, India',   tags:2890, latency:'320ms', status:'degraded',  lastPoll:'38s ago',     qScore:71 },
+  { id:'PI-ROT-02',  type:'OSIsoft PI', site:'Rotterdam, NL',    tags:3710, latency:'140ms', status:'connected', lastPoll:'2s ago',      qScore:94 },
+];
+
+// G-02: Data quality issues
+const OT_QUALITY_ISSUES = [
+  { tag:'FT-2201.PV', site:'Jamnagar', issue:'Frozen value detected — same reading for 47min', severity:'critical', impact:'Flow calculation error in unit B-12' },
+  { tag:'TI-4405.PV', site:'Ruwais',   issue:'Out-of-range value: 2847°C (instrument max 1200°C)', severity:'critical', impact:'Bearing temp alarm suppression' },
+  { tag:'PT-1108.PV', site:'Houston',  issue:'Stale timestamp — last update 8 minutes ago', severity:'warning', impact:'Compressor health model input gap' },
+  { tag:'LT-3302.PV', site:'Rotterdam',issue:'Intermittent dropouts (12% missing last hour)', severity:'warning', impact:'Tank level calculation uncertainty' },
+];
+
+// G-03: Tag statistics
+const OT_STATS = [
+  { label:'Total Tags Ingested',  value:'20,727', sub:'Across 5 sites',    color:'text-blue-400' },
+  { label:'Data Quality Score',   value:'91.6%',  sub:'Fleet average',     color:'text-green-400' },
+  { label:'Active Quality Issues',value:'4',       sub:'2 critical',       color:'text-red-400' },
+  { label:'Avg Latency',          value:'197ms',   sub:'P95: 420ms',       color:'text-amber-400' },
+];
+
+// G-04: Protocol breakdown
+const PROTOCOL_BREAKDOWN = [
+  { protocol:'OSIsoft PI', tags:8531, pct:41 },
+  { protocol:'OPC-UA',     tags:6102, pct:29 },
+  { protocol:'Modbus TCP', tags:3204, pct:15 },
+  { protocol:'MQTT',       tags:1890, pct:9  },
+  { protocol:'REST/JSON',  tags:1000, pct:5  },
+];
+
+// G-05: Schema normalization log
+const NORM_LOG = [
+  { ts:'12 Apr 09:14', action:'Tag renaming applied', detail:'FIC_2201 → FT-2201.PV (ISA-88 standard)', status:'success' },
+  { ts:'12 Apr 09:12', action:'Unit conversion', detail:'kPa → bar for 312 pressure tags (Houston)', status:'success' },
+  { ts:'12 Apr 09:10', action:'Frozen value filter', detail:'FT-2201.PV excluded from model inputs', status:'warn' },
+  { ts:'12 Apr 09:08', action:'Schema mismatch detected', detail:'SCADA-JAM sends 3-decimal pct vs 2-decimal expected', status:'error' },
+];
+
+const OTDataTab: React.FC = () => {
+  const statusC = { connected:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  const sevC    = { critical:'text-red-400', warning:'text-amber-400', advisory:'text-blue-400' };
+  const normC   = { success:'#22c55e', warn:'#f59e0b', error:'#ef4444' };
+
+  return (
+    <div className="space-y-5">
+      {/* G-03: KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {OT_STATS.map(s => (
+          <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{s.label}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* G-01: OT data source inventory */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">G-01 · OT Data Source Inventory</h3>
+          <p className="text-gray-500 text-xs">Live connections · OSIsoft PI / OPC-UA / DCS / SCADA / MQTT</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Source ID','Protocol','Site','Tags','Latency','Quality Score','Status','Last Poll'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {OT_SOURCES.map(s => (
+              <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{s.id}</td>
+                <td className="px-4 py-2 text-gray-300">{s.type}</td>
+                <td className="px-4 py-2 text-gray-400">{s.site}</td>
+                <td className="px-4 py-2 text-white font-mono">{s.tags.toLocaleString()}</td>
+                <td className="px-4 py-2 text-white font-mono">{s.latency}</td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 h-1.5 bg-gray-800 rounded-full">
+                      <div className="h-full rounded-full" style={{ width:`${s.qScore}%`, background: s.qScore>=90?'#22c55e':s.qScore>=70?'#f59e0b':'#ef4444' }} />
+                    </div>
+                    <span className="font-mono text-white">{s.qScore}%</span>
+                  </div>
+                </td>
+                <td className="px-4 py-2 font-bold"><span className={statusC[s.status as keyof typeof statusC]}>{s.status.toUpperCase()}</span></td>
+                <td className="px-4 py-2 text-gray-400">{s.lastPoll}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* G-02: Data quality issues */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-semibold text-sm">G-02 · Data Quality Issues</h3>
+            <p className="text-gray-500 text-xs">Frozen values, out-of-range, stale timestamps, missing data</p>
+          </div>
+          <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
+            {OT_QUALITY_ISSUES.filter(i=>i.severity==='critical').length} CRITICAL
+          </span>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {OT_QUALITY_ISSUES.map(q => (
+            <div key={q.tag} className="px-5 py-4 flex items-start gap-4">
+              <span className={`flex-shrink-0 font-mono font-bold text-xs pt-0.5 ${sevC[q.severity as keyof typeof sevC]}`}>{q.tag}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{q.issue}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Impact: {q.impact}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${q.severity==='critical'?'bg-red-900/40 text-red-400':'bg-amber-900/40 text-amber-400'}`}>{q.severity.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5">
+        {/* G-04: Protocol breakdown */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 className="text-white font-semibold text-sm mb-3">G-04 · Protocol Breakdown</h3>
+          <div className="space-y-2">
+            {PROTOCOL_BREAKDOWN.map(p => (
+              <div key={p.protocol} className="flex items-center gap-3">
+                <span className="text-gray-400 text-xs w-28 flex-shrink-0">{p.protocol}</span>
+                <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-500" style={{ width:`${p.pct}%` }} />
+                </div>
+                <span className="text-white font-mono text-xs w-12 text-right">{p.tags.toLocaleString()}</span>
+                <span className="text-gray-500 text-xs w-8 text-right">{p.pct}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* G-05: Schema normalization log */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">G-05 · Schema Normalization Log</h3>
+            <p className="text-gray-500 text-xs">ISA-88 / ISO 15926 tag normalization pipeline</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {NORM_LOG.map((n,i) => (
+              <div key={i} className="px-4 py-3 flex items-start gap-3">
+                <span style={{ width:6,height:6,borderRadius:'50%',background:normC[n.status as keyof typeof normC],flexShrink:0,marginTop:5 }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-semibold">{n.action}</p>
+                  <p className="text-gray-500 text-xs">{n.detail}</p>
+                </div>
+                <span className="text-gray-600 text-xs flex-shrink-0">{n.ts}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Block M: Operator Adoption & Training ─────────────────────────────────────
+
+// M-01: User adoption metrics per site
+const ADOPTION_METRICS = [
+  { site:'Ras Tanura, KSA',  users:42, active:39, alertsActioned:94, avgResponseMin:8.2,  training:92, score:94 },
+  { site:'Jamnagar, India',  users:38, active:34, alertsActioned:88, avgResponseMin:11.4, training:85, score:86 },
+  { site:'Rotterdam, NL',    users:31, active:26, alertsActioned:79, avgResponseMin:14.1, training:74, score:74 },
+  { site:'Houston, USA',     users:44, active:33, alertsActioned:72, avgResponseMin:16.8, training:68, score:68 },
+  { site:'Ruwais, UAE',      users:36, active:24, alertsActioned:61, avgResponseMin:22.3, training:55, score:57 },
+];
+
+// M-02: Training module completion
+const TRAINING_MODULES = [
+  { module:'RefinerAI Fundamentals',       type:'mandatory', completionPct:88, avgScore:84, dueDate:'30 Apr' },
+  { module:'Alert-to-Action Protocol',     type:'mandatory', completionPct:79, avgScore:79, dueDate:'30 Apr' },
+  { module:'SHAP Explainability for Ops',  type:'optional',  completionPct:52, avgScore:77, dueDate:'—'      },
+  { module:'Override & Audit Trail',       type:'mandatory', completionPct:91, avgScore:88, dueDate:'30 Apr' },
+  { module:'Digital Twin Operations',      type:'optional',  completionPct:41, avgScore:81, dueDate:'—'      },
+];
+
+// M-03: Adoption barriers / feedback themes
+const ADOPTION_BARRIERS = [
+  { theme:'Too many alerts — hard to prioritise',  votes:28, priority:'high'   },
+  { theme:'SHAP explanations not intuitive',       votes:21, priority:'high'   },
+  { theme:'Mobile interface needed on field',      votes:17, priority:'medium' },
+  { theme:'SAP integration adds extra steps',      votes:14, priority:'medium' },
+  { theme:'Dashboard loads slowly on site network',votes:9,  priority:'low'    },
+];
+
+// M-04: Change champion network
+const CHAMPIONS = [
+  { name:'A. Rahman',  site:'Ruwais',   role:'Lead Maintenance Engineer', sessions:47, alertsActioned:118 },
+  { name:'S. Nair',    site:'Jamnagar', role:'Senior Reliability Engineer',sessions:39, alertsActioned:94  },
+  { name:'L. Müller',  site:'Rotterdam',role:'Process Engineer',          sessions:31, alertsActioned:71  },
+  { name:'K. Johnson', site:'Houston',  role:'Maintenance Supervisor',    sessions:22, alertsActioned:48  },
+];
+
+const AdoptionTab: React.FC = () => (
+  <div className="space-y-5">
+    {/* M-01: KPIs */}
+    <div className="grid grid-cols-4 gap-3">
+      {([
+        [String(ADOPTION_METRICS.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.alertsActioned,0)/ADOPTION_METRICS.length))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.avgResponseMin,0)/ADOPTION_METRICS.length))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
+        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.training,0)/ADOPTION_METRICS.length))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
+      ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+          <p className={`text-2xl font-bold ${t}`}>{v}</p>
+          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+        </div>
+      ))}
+    </div>
+
+    {/* M-01: Site adoption table */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">M-01 · Site-by-Site Adoption Scorecard</h3>
+        <p className="text-gray-500 text-xs">Active users · Alert action rate · Response time · Training completion</p>
+      </div>
+      <table className="w-full text-xs">
+        <thead><tr className="border-b border-gray-800">
+          {['Site','Users','Active','Alerts Actioned','Avg Response','Training','Score'].map(h => (
+            <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+          ))}
+        </tr></thead>
+        <tbody>
+          {ADOPTION_METRICS.sort((a,b)=>b.score-a.score).map(a => (
+            <tr key={a.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+              <td className="px-4 py-2 text-white font-semibold">{a.site}</td>
+              <td className="px-4 py-2 text-gray-400">{a.users}</td>
+              <td className="px-4 py-2 text-white">{a.active}</td>
+              <td className="px-4 py-2 font-bold" style={{ color:a.alertsActioned>=85?'#22c55e':a.alertsActioned>=70?'#f59e0b':'#ef4444' }}>{a.alertsActioned}%</td>
+              <td className="px-4 py-2 font-mono" style={{ color:a.avgResponseMin<=10?'#22c55e':a.avgResponseMin<=15?'#f59e0b':'#ef4444' }}>{a.avgResponseMin}m</td>
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-16 h-1.5 bg-gray-800 rounded-full"><div className="h-full rounded-full bg-purple-500" style={{ width:`${a.training}%` }} /></div>
+                  <span className="text-white">{a.training}%</span>
+                </div>
+              </td>
+              <td className="px-4 py-2 font-bold" style={{ color:a.score>=85?'#22c55e':a.score>=70?'#f59e0b':'#ef4444' }}>{a.score}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="grid grid-cols-2 gap-5">
+      {/* M-02: Training modules */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">M-02 · Training Module Progress</h3>
+          <p className="text-gray-500 text-xs">Completion rate · Average assessment score</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {TRAINING_MODULES.map(t => (
+            <div key={t.module} className="px-4 py-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-white text-xs font-semibold">{t.module}</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${t.type==='mandatory'?'bg-red-900/30 text-red-400':'bg-gray-800 text-gray-500'}`}>{t.type}</span>
+                  <span className="text-gray-600 text-xs">Due: {t.dueDate}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-gray-800 rounded-full">
+                  <div className="h-full rounded-full" style={{ width:`${t.completionPct}%`, background:t.completionPct>=80?'#22c55e':t.completionPct>=60?'#f59e0b':'#ef4444' }} />
+                </div>
+                <span className="text-xs text-white w-8 text-right">{t.completionPct}%</span>
+                <span className="text-xs text-gray-500 w-16 text-right">Avg: {t.avgScore}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* M-03: Adoption barriers */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">M-03 · Adoption Barriers — User Feedback</h3>
+          <p className="text-gray-500 text-xs">Aggregated from in-app feedback surveys</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {ADOPTION_BARRIERS.map((b,i) => {
+            const c = { high:'text-red-400', medium:'text-amber-400', low:'text-gray-500' };
+            return (
+              <div key={i} className="px-4 py-3 flex items-center gap-3">
+                <span className="text-2xl font-bold text-gray-700 w-6 flex-shrink-0">{i+1}</span>
+                <div className="flex-1">
+                  <p className="text-white text-xs">{b.theme}</p>
+                </div>
+                <span className={`font-bold text-xs ${c[b.priority as keyof typeof c]}`}>{b.votes} votes</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    {/* M-04: Change champions */}
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-800">
+        <h3 className="text-white font-semibold text-sm">M-04 · Change Champion Network</h3>
+        <p className="text-gray-500 text-xs">Power users driving adoption across sites</p>
+      </div>
+      <div className="grid grid-cols-4 divide-x divide-gray-800">
+        {CHAMPIONS.map(c => (
+          <div key={c.name} className="p-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-800 flex items-center justify-center text-purple-400 font-bold text-lg mx-auto mb-2">
+              {c.name[0]}
+            </div>
+            <p className="text-white text-xs font-semibold">{c.name}</p>
+            <p className="text-gray-500 text-xs">{c.site}</p>
+            <p className="text-gray-600 text-xs mt-0.5">{c.role}</p>
+            <div className="mt-2 flex justify-center gap-3">
+              <div className="text-center"><p className="text-blue-400 font-bold text-sm">{c.sessions}</p><p className="text-gray-600 text-xs">sessions</p></div>
+              <div className="text-center"><p className="text-green-400 font-bold text-sm">{c.alertsActioned}</p><p className="text-gray-600 text-xs">actioned</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ── Block O: Implementation Wave Tracker ─────────────────────────────────────
+
+// O-01: Wave plan
+const WAVE_PLAN = [
+  { wave:'Wave 1 — Foundation',      period:'Jan–Jun 2026', sites:['Ras Tanura','Jamnagar'],       status:'in-progress', pctDone:78, budget:'$4.2M', modules:['Equipment Health','Live Alerts','AI Advisor','Work Orders'] },
+  { wave:'Wave 2 — Scale',           period:'Jul–Dec 2026', sites:['Houston','Rotterdam'],          status:'planned',     pctDone:0,  budget:'$6.8M', modules:['Offshore Ops','Castrol Blending','OT Data','Compliance'] },
+  { wave:'Wave 3 — Optimise',        period:'Jan–Jun 2027', sites:['Ruwais + all remaining sites'], status:'planned',     pctDone:0,  budget:'$9.1M', modules:['Edge AI','Digital Twin v2','Continuous Learning','Full ML Gov.'] },
+];
+
+// O-02: Milestone tracker
+const MILESTONES = [
+  { id:'MS-01', wave:1, milestone:'OSIsoft PI integration — Ras Tanura + Jamnagar', due:'28 Feb 2026', status:'done',        owner:'Data Engineering' },
+  { id:'MS-02', wave:1, milestone:'Live Alerts + Alert-to-Action go-live',           due:'31 Mar 2026', status:'done',        owner:'Product' },
+  { id:'MS-03', wave:1, milestone:'SAP PM/MM BAPI integration',                      due:'15 Apr 2026', status:'in-progress', owner:'ERP Integration' },
+  { id:'MS-04', wave:1, milestone:'Wave 1 UAT + hypercare complete',                  due:'30 Jun 2026', status:'pending',     owner:'Delivery Lead' },
+  { id:'MS-05', wave:2, milestone:'Houston + Rotterdam OT data onboarding',           due:'31 Aug 2026', status:'pending',     owner:'Data Engineering' },
+  { id:'MS-06', wave:2, milestone:'Castrol blending quality go-live',                 due:'30 Sep 2026', status:'pending',     owner:'Product' },
+];
+
+// O-03: Risk register
+const WAVE_RISKS = [
+  { id:'R-01', risk:'SAP BTP integration complexity underestimated',       impact:'Schedule delay 4–6 weeks',     prob:'high',   mitigation:'Dedicated SAP architect engaged',       status:'open'     },
+  { id:'R-02', risk:'OT network firewalls block PI tag data at Houston',   impact:'Wave 2 data quality issues',   prob:'medium', mitigation:'IT/OT network architecture review',      status:'in-progress' },
+  { id:'R-03', risk:'Operator adoption below 70% at Ruwais',               impact:'Value realisation shortfall',  prob:'medium', mitigation:'Change champion programme accelerated',   status:'open'     },
+  { id:'R-04', risk:'GDPR constraints on personal data in AI training',     impact:'Model retraining blocked EU',  prob:'low',    mitigation:'Legal review + anonymisation pipeline',   status:'closed'   },
+];
+
+// O-04: Budget vs actuals
+const BUDGET_ACTUALS = [
+  { wave:'Wave 1', budget:4.2, actual:3.6, forecast:4.4 },
+  { wave:'Wave 2', budget:6.8, actual:0,   forecast:7.1 },
+  { wave:'Wave 3', budget:9.1, actual:0,   forecast:9.1 },
+];
+
+const WaveTrackerTab: React.FC = () => {
+  const msC = { done:'text-green-400', 'in-progress':'text-blue-400', pending:'text-gray-500' };
+  const msDot = { done:'#22c55e', 'in-progress':'#60a5fa', pending:'#374151' };
+  const probC = { high:'text-red-400 bg-red-900/40', medium:'text-amber-400 bg-amber-900/30', low:'text-gray-500 bg-gray-800' };
+
+  return (
+    <div className="space-y-5">
+      {/* O-04: Budget summary KPIs */}
+      <div className="grid grid-cols-3 gap-3">
+        {BUDGET_ACTUALS.map(b => (
+          <div key={b.wave} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">{b.wave}</p>
+            <p className="text-white text-2xl font-bold">${b.budget}M</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-green-400 text-xs">Actual: ${b.actual}M</span>
+              <span className="text-gray-600 text-xs">·</span>
+              <span className="text-amber-400 text-xs">Forecast: ${b.forecast}M</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* O-01: Wave cards */}
+      <div className="space-y-4">
+        {WAVE_PLAN.map(w => (
+          <div key={w.wave} className={`bg-gray-900 border rounded-xl p-5 ${w.status==='in-progress'?'border-blue-800':'border-gray-800'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-white font-semibold">{w.wave}</h3>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${w.status==='in-progress'?'bg-blue-900/40 text-blue-400':'bg-gray-800 text-gray-500'}`}>{w.status.toUpperCase()}</span>
+                </div>
+                <p className="text-gray-500 text-xs">{w.period} · Budget: {w.budget} · Sites: {w.sites.join(', ')}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-white font-bold text-xl">{w.pctDone}%</p>
+                <p className="text-gray-500 text-xs">complete</p>
+              </div>
+            </div>
+            {w.status === 'in-progress' && (
+              <div className="h-2 bg-gray-800 rounded-full overflow-hidden mb-3">
+                <div className="h-full rounded-full bg-blue-500" style={{ width:`${w.pctDone}%` }} />
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {w.modules.map(m => <span key={m} className="text-xs bg-gray-800 text-gray-400 rounded px-2 py-0.5">{m}</span>)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* O-02: Milestone tracker */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">O-02 · Milestone Tracker</h3>
+          <p className="text-gray-500 text-xs">Cross-wave delivery milestones · Owner accountability</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {MILESTONES.map(m => (
+            <div key={m.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 w-2 h-2 rounded-full mt-1.5" style={{ background:msDot[m.status as keyof typeof msDot] }} />
+              <div className="flex-1">
+                <p className={`text-xs font-semibold ${msC[m.status as keyof typeof msC]}`}>{m.milestone}</p>
+                <p className="text-gray-500 text-xs mt-0.5">Wave {m.wave} · Owner: {m.owner} · Due: {m.due}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold ${msC[m.status as keyof typeof msC]}`}>{m.status.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* O-03: Risk register */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">O-03 · Delivery Risk Register</h3>
+          <p className="text-gray-500 text-xs">Programme risks · Probability · Mitigation status</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['ID','Risk','Impact','Prob','Mitigation','Status'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {WAVE_RISKS.map(r => (
+              <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-gray-500 font-mono">{r.id}</td>
+                <td className="px-4 py-2 text-white">{r.risk}</td>
+                <td className="px-4 py-2 text-gray-400">{r.impact}</td>
+                <td className="px-4 py-2"><span className={`text-xs font-bold px-1.5 py-0.5 rounded ${probC[r.prob as keyof typeof probC]}`}>{r.prob.toUpperCase()}</span></td>
+                <td className="px-4 py-2 text-gray-400">{r.mitigation}</td>
+                <td className="px-4 py-2">
+                  <span className={r.status==='closed'?'text-green-400':r.status==='in-progress'?'text-amber-400':'text-red-400'} style={{ fontWeight:600 }}>{r.status.toUpperCase()}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block P: Cross-Domain Orchestration Panel ────────────────────────────────
+
+// P-01: Active orchestration scenarios
+const ORCHESTRATION_EVENTS = [
+  { id:'ORC-001', trigger:'C-101 bearing failure probability >90%',  domains:['Equipment Health','Work Orders','Spare Parts','SAP PM'], status:'active',   impact:'Cascade: WO auto-drafted → parts reserved → crew notified' },
+  { id:'ORC-002', trigger:'Ras Tanura CDU throughput anomaly +18%',   domains:['Digital Twin','Energy','OT Data','AI Advisor'],         status:'active',   impact:'Twin simulation running → energy model updated' },
+  { id:'ORC-003', trigger:'API 570 Houston compliance due in 19 days', domains:['Compliance','Work Orders','Wave Tracker'],              status:'pending',  impact:'Inspection WO to be auto-raised by 14 Apr' },
+  { id:'ORC-004', trigger:'Offshore Brent-C weather UNSAFE forecast',  domains:['North Sea Ops','TAR Planning','Logistics'],            status:'resolved', impact:'PSV departure deferred 48h; crew change rescheduled' },
+];
+
+// P-02: Agent health (cross-domain agents status)
+const AGENT_HEALTH = [
+  { agent:'PredictiveMaintenance',    domain:'Equipment',   calls24h:4821, latency:42,   status:'healthy' },
+  { agent:'CastrolQuality',           domain:'Blending',    calls24h:1240, latency:68,   status:'healthy' },
+  { agent:'OffshoreOps',              domain:'North Sea',   calls24h:892,  latency:88,   status:'healthy' },
+  { agent:'ComplianceMonitor',        domain:'Regulatory',  calls24h:312,  latency:121,  status:'degraded'},
+  { agent:'EnergyOptimisation',       domain:'Sustainability',calls24h:1860, latency:55, status:'healthy' },
+];
+
+// P-03: Event bus throughput (messages/min, 12-point history)
+const EVENT_BUS_THROUGHPUT = [120,135,142,138,155,162,158,171,180,174,188,194];
+
+const CrossDomainPanel: React.FC = () => {
+  const W = 480, H = 60, PL = 8, PR = 8;
+  const cW = W - PL - PR;
+  const minT = Math.min(...EVENT_BUS_THROUGHPUT) - 10;
+  const maxT = Math.max(...EVENT_BUS_THROUGHPUT) + 10;
+  const xT = (i:number) => PL + (i/(EVENT_BUS_THROUGHPUT.length-1))*cW;
+  const yT = (v:number) => H - 6 - ((v-minT)/(maxT-minT))*(H-12);
+  const tPts = EVENT_BUS_THROUGHPUT.map((v,i) => `${xT(i).toFixed(1)},${yT(v).toFixed(1)}`).join(' ');
+  const agentC = { healthy:'#22c55e', degraded:'#f59e0b', offline:'#ef4444' };
+  const stC = { active:'text-green-400 bg-green-900/30', pending:'text-amber-400 bg-amber-900/30', resolved:'text-gray-500 bg-gray-800' };
+
+  return (
+    <div className="space-y-4">
+      {/* P-03: Event bus throughput */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="text-white font-semibold text-sm">P-03 · Cross-Domain Event Bus — Throughput</h3>
+            <p className="text-gray-500 text-xs">Messages per minute · API Gateway routing · All 6 domains</p>
+          </div>
+          <div className="text-right">
+            <p className="text-green-400 font-bold text-xl">{EVENT_BUS_THROUGHPUT[EVENT_BUS_THROUGHPUT.length-1]}</p>
+            <p className="text-gray-500 text-xs">msg/min</p>
+          </div>
+        </div>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height:H }}>
+          <polyline points={tPts} fill="none" stroke="#34d399" strokeWidth="2" strokeLinejoin="round" />
+          {EVENT_BUS_THROUGHPUT.map((v,i) => (
+            <circle key={i} cx={xT(i)} cy={yT(v)} r="2.5" fill={i===EVENT_BUS_THROUGHPUT.length-1?'#34d399':'#34d399'} opacity={i===EVENT_BUS_THROUGHPUT.length-1?1:0.4} />
+          ))}
+        </svg>
+      </div>
+
+      {/* P-01: Active orchestration events */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">P-01 · Cross-Domain Orchestration Events</h3>
+          <p className="text-gray-500 text-xs">AI-triggered cascades spanning multiple domains</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {ORCHESTRATION_EVENTS.map(e => (
+            <div key={e.id} className="px-5 py-4 flex items-start gap-4">
+              <span className="flex-shrink-0 text-xs font-mono text-gray-500 pt-0.5">{e.id}</span>
+              <div className="flex-1">
+                <p className="text-white text-xs font-semibold">{e.trigger}</p>
+                <div className="flex flex-wrap gap-1 my-1">
+                  {e.domains.map(d => <span key={d} className="text-xs bg-indigo-900/30 text-indigo-400 border border-indigo-800/30 rounded px-1.5 py-0.5">{d}</span>)}
+                </div>
+                <p className="text-gray-500 text-xs">{e.impact}</p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded ${stC[e.status as keyof typeof stC]}`}>{e.status.toUpperCase()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* P-02: Agent health grid */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 className="text-white font-semibold text-sm mb-3">P-02 · Cross-Domain Agent Health</h3>
+        <div className="grid grid-cols-5 gap-3">
+          {AGENT_HEALTH.map(a => (
+            <div key={a.agent} className="bg-gray-800/50 rounded-lg p-3 text-center">
+              <span className="inline-block w-2 h-2 rounded-full mb-2" style={{ background:agentC[a.status as keyof typeof agentC] }} />
+              <p className="text-white text-xs font-semibold leading-tight">{a.agent}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{a.domain}</p>
+              <p className="text-gray-400 text-xs font-mono mt-1">{a.calls24h.toLocaleString()} calls/24h</p>
+              <p className="text-gray-500 text-xs">{a.latency}ms p50</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Block Q: Edge AI Infrastructure ──────────────────────────────────────────
+
+// Q-01: Edge node inventory
+const EDGE_NODES = [
+  { id:'EDGE-RUW-01', site:'Ruwais, UAE',      hw:'NVIDIA Jetson AGX',  models:3, inferencePct:91, latency:12,  status:'online',  lastSync:'30s ago' },
+  { id:'EDGE-JAM-01', site:'Jamnagar, India',  hw:'Intel NUC i7',       models:2, inferencePct:88, latency:18,  status:'online',  lastSync:'1m ago'  },
+  { id:'EDGE-HOU-01', site:'Houston, USA',     hw:'NVIDIA Jetson Nano', models:2, inferencePct:78, latency:24,  status:'online',  lastSync:'45s ago' },
+  { id:'EDGE-ROT-01', site:'Rotterdam, NL',    hw:'NVIDIA Jetson AGX',  models:3, inferencePct:94, latency:9,   status:'online',  lastSync:'15s ago' },
+  { id:'EDGE-TERN-01',site:'Tern Alpha (Offshr)',hw:'Ruggedised NUC',   models:2, inferencePct:82, latency:28,  status:'degraded',lastSync:'8m ago'  },
+];
+
+// Q-02: Edge vs cloud latency comparison
+const LATENCY_COMPARISON = [
+  { scenario:'Critical bearing alert detection', edge:12,  cloud:280, saving:'95.7%' },
+  { scenario:'Anomaly isolation forest',          edge:18,  cloud:410, saving:'95.6%' },
+  { scenario:'Vibration FFT analysis',            edge:24,  cloud:560, saving:'95.7%' },
+  { scenario:'Quality prediction (Castrol)',       edge:31,  cloud:340, saving:'90.9%' },
+];
+
+// Q-03: Models deployed to edge
+const EDGE_MODELS = [
+  { model:'Bearing Fault LSTM (quantised)',   version:'v3.2.1-edge', size:'48MB',  nodes:['EDGE-RUW-01','EDGE-JAM-01','EDGE-HOU-01','EDGE-ROT-01'] },
+  { model:'Anomaly Isolation Forest',          version:'v2.1.3-edge', size:'12MB',  nodes:['EDGE-RUW-01','EDGE-ROT-01','EDGE-TERN-01'] },
+  { model:'Vibration Signature CNN (int8)',     version:'v1.4.2-edge', size:'68MB',  nodes:['EDGE-RUW-01','EDGE-JAM-01','EDGE-ROT-01'] },
+];
+
+const EdgeAITab: React.FC = () => {
+  const nodeC = { online:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  return (
+    <div className="space-y-5">
+      {/* Q-01: KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(EDGE_NODES.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
+          [String(EDGE_NODES.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
+          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.inferencePct,0)/EDGE_NODES.length)+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
+          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.latency,0)/EDGE_NODES.length)+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Q-01: Edge node table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-01 · Edge Node Inventory</h3>
+          <p className="text-gray-500 text-xs">On-premise AI inference · Air-gapped-capable · OT network–safe</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Node ID','Site','Hardware','Models','Inference Offload','Latency','Status','Last Sync'].map(h => (
+              <th key={h} className="px-3 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {EDGE_NODES.map(n => (
+              <tr key={n.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-3 py-2 text-purple-400 font-mono">{n.id}</td>
+                <td className="px-3 py-2 text-white">{n.site}</td>
+                <td className="px-3 py-2 text-gray-400">{n.hw}</td>
+                <td className="px-3 py-2 text-white text-center">{n.models}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-1.5 bg-gray-800 rounded-full"><div className="h-full rounded-full bg-purple-500" style={{ width:`${n.inferencePct}%` }} /></div>
+                    <span className="text-white font-mono">{n.inferencePct}%</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-white font-mono">{n.latency}ms</td>
+                <td className="px-3 py-2 font-bold"><span className={nodeC[n.status as keyof typeof nodeC]}>{n.status.toUpperCase()}</span></td>
+                <td className="px-3 py-2 text-gray-400">{n.lastSync}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Q-02: Edge vs cloud latency */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-02 · Edge vs Cloud Latency Comparison</h3>
+          <p className="text-gray-500 text-xs">On-device inference vs cloud round-trip · Critical for OT safety response</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Scenario','Edge (ms)','Cloud (ms)','Latency Saving'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {LATENCY_COMPARISON.map(l => (
+              <tr key={l.scenario} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-white">{l.scenario}</td>
+                <td className="px-4 py-2 text-green-400 font-mono font-bold">{l.edge}ms</td>
+                <td className="px-4 py-2 text-gray-400 font-mono">{l.cloud}ms</td>
+                <td className="px-4 py-2 text-green-400 font-bold">{l.saving}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Q-03: Edge model deployments */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Q-03 · Edge Model Deployments</h3>
+          <p className="text-gray-500 text-xs">Quantised models deployed to edge nodes · OTA update capable</p>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {EDGE_MODELS.map(m => (
+            <div key={m.model} className="px-5 py-4 flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-white text-xs font-semibold">{m.model}</p>
+                  <span className="text-gray-500 font-mono text-xs">{m.version}</span>
+                  <span className="text-gray-600 text-xs">{m.size}</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {m.nodes.map(n => <span key={n} className="text-xs bg-gray-800 text-gray-400 rounded px-1.5 py-0.5 font-mono">{n}</span>)}
+                </div>
+              </div>
+              <span className="text-green-400 text-xs font-bold">DEPLOYED</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -2635,6 +5522,31 @@ const RefinerAIPage: React.FC = () => {
                   border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
                 }}>
                 <span>{item.icon}</span>{item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Specialty */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 8 }}>Specialty</p>
+            {[
+              { id: 'castrol',      label: 'Castrol Blending', icon: '⬡', badge: 'NEW' },
+              { id: 'offshore',     label: 'North Sea Ops',    icon: '⛽', badge: 'NEW' },
+              { id: 'ot-data',      label: 'OT Data',          icon: '⊡', badge: 'NEW' },
+              { id: 'adoption',     label: 'Adoption',         icon: '◑', badge: 'NEW' },
+              { id: 'wave-tracker', label: 'Wave Tracker',     icon: '≋', badge: 'NEW' },
+              { id: 'edge-ai',      label: 'Edge AI',          icon: '⬡', badge: 'NEW' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all .15s',
+                  background: activeTab === item.id ? '#1e1b4b' : 'transparent',
+                  color: activeTab === item.id ? '#a78bfa' : '#9ca3af',
+                  border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
+                }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{item.icon}</span>{item.label}
+                </span>
+                {item.badge && <span style={{ fontSize: 10, background: '#7c3aed', color: '#fff', borderRadius: 10, padding: '1px 6px', fontWeight: 700 }}>{item.badge}</span>}
               </button>
             ))}
           </div>
