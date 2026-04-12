@@ -3209,6 +3209,7 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'energy':           return <EnergyTab />;
     case 'tar':              return <TARTab />;
     case 'castrol':          return <CastrolTab />;
+    case 'offshore':         return <OffshoreTab />;
     default:                 return null;
   }
 };
@@ -3476,6 +3477,238 @@ const CastrolTab: React.FC = () => {
                 <td className="px-4 py-2">{r.rework ? <span className="text-amber-400">✓ Rework</span> : <span className="text-gray-600">—</span>}</td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// ── Block D: North Sea Offshore Operations ────────────────────────────────────
+
+// D-01: Offshore platform data
+const OFFSHORE_PLATFORMS = [
+  { id: 'TERN-A',  name: 'Tern Alpha',     field: 'Tern Field',   status: 'operational', lat: 60.8, lon: 1.7,  prod: 18400, uptime: 97.2, wells: 14, crew: 172, weatherScore: 82 },
+  { id: 'CORMORANT',name:'Cormorant Alpha',field:'Cormorant Fld', status: 'warning',    lat: 61.1, lon: 1.4,  prod: 12100, uptime: 91.4, wells: 9,  crew: 148, weatherScore: 61 },
+  { id: 'DUNLIN-A', name: 'Dunlin Alpha',  field: 'Dunlin Field', status: 'operational', lat: 60.6, lon: 1.5,  prod: 9800,  uptime: 98.1, wells: 8,  crew: 126, weatherScore: 77 },
+  { id: 'BRENT-C',  name: 'Brent Charlie', field: 'Brent Field',  status: 'critical',   lat: 61.3, lon: 1.7,  prod: 6200,  uptime: 78.3, wells: 6,  crew: 98,  weatherScore: 42 },
+];
+
+// D-02: Weather/marine forecast windows
+const OFFSHORE_WEATHER = [
+  { platform: 'TERN-A',   dayLabel: 'Today',    waveH: 1.8, windKt: 22, visibility: 8.2, workable: true },
+  { platform: 'TERN-A',   dayLabel: '+24h',     waveH: 2.4, windKt: 31, visibility: 6.1, workable: true },
+  { platform: 'TERN-A',   dayLabel: '+48h',     waveH: 4.1, windKt: 48, visibility: 3.8, workable: false },
+  { platform: 'CORMORANT',dayLabel: 'Today',    waveH: 3.2, windKt: 39, visibility: 4.9, workable: false },
+  { platform: 'BRENT-C',  dayLabel: 'Today',    waveH: 4.8, windKt: 54, visibility: 2.1, workable: false },
+];
+
+// D-03: Subsea equipment predictive alerts
+const SUBSEA_ALERTS = [
+  { id:'SS-001', asset:'Christmas Tree CT-14', platform:'TERN-A',     issue:'Annulus pressure trending +18% above baseline', failProb:0.72, eta:8,  sev:'critical' },
+  { id:'SS-002', asset:'Flowline Flex Joint',  platform:'CORMORANT',  issue:'Fatigue cycle count exceeds 78% design life',   failProb:0.54, eta:21, sev:'warning'  },
+  { id:'SS-003', asset:'BOP Stack BOP-07',     platform:'DUNLIN-A',   issue:'Hydraulic actuator response time +340ms drift', failProb:0.31, eta:45, sev:'advisory' },
+  { id:'SS-004', asset:'Riser Tensioner RT-3', platform:'BRENT-C',    issue:'Tension variance ±12% above spec threshold',    failProb:0.88, eta:3,  sev:'critical' },
+];
+
+// D-04: Logistics & crew schedule
+const VESSEL_SCHEDULE = [
+  { vessel:'Highland Sentinel', type:'PSV',       departure:'12 Apr 08:00', arrival:'12 Apr 14:30', destination:'TERN-A',    cargo:'Drill mud, Casing joints', status:'underway' },
+  { vessel:'Normand Fortress',  type:'DSV',       departure:'13 Apr 06:00', arrival:'13 Apr 12:00', destination:'BRENT-C',   cargo:'Dive team, ROV tools',    status:'scheduled' },
+  { vessel:'Caledonian Star',   type:'Helicopter',departure:'12 Apr 07:30', arrival:'12 Apr 08:45', destination:'CORMORANT', cargo:'Crew change (24 pax)',     status:'completed' },
+];
+
+// D-05: Environmental discharge monitoring
+const ENV_METRICS = [
+  { metric: 'Produced Water Overboard', value: 18.2,  limit: 30,   unit: 'mg/L Oil',  ok: true },
+  { metric: 'Flaring Volume (24h)',      value: 142,   limit: 200,  unit: 'MSCF/day',  ok: true },
+  { metric: 'Chemical Discharge',        value: 0.84,  limit: 1.0,  unit: 'kg/day',    ok: true },
+  { metric: 'Drilling Mud to Sea',       value: 0,     limit: 0,    unit: 'kg',         ok: true },
+  { metric: 'NOx Emissions',             value: 4.8,   limit: 5.0,  unit: 't/day',     ok: true },
+];
+
+// D-06: Well integrity log
+const WELL_INTEGRITY = [
+  { well:'A-14', barrier:'Primary', status:'OK',  annPres:12.4, lastTest:'08 Apr', note:'' },
+  { well:'A-11', barrier:'Primary', status:'WARN',annPres:18.8, lastTest:'05 Apr', note:'Annulus pressure trending up' },
+  { well:'B-07', barrier:'Primary', status:'OK',  annPres:9.1,  lastTest:'10 Apr', note:'' },
+  { well:'B-09', barrier:'Both',    status:'CRIT',annPres:31.2, lastTest:'01 Apr', note:'Shut-in pending investigation' },
+  { well:'C-03', barrier:'Primary', status:'OK',  annPres:11.8, lastTest:'11 Apr', note:'' },
+];
+
+const OffshoreTab: React.FC = () => {
+  const [selPlatform, setSelPlatform] = useState(OFFSHORE_PLATFORMS[0].id);
+  const plat = OFFSHORE_PLATFORMS.find(p => p.id === selPlatform) ?? OFFSHORE_PLATFORMS[0];
+  const weather = OFFSHORE_WEATHER.filter(w => w.platform === selPlatform);
+  const activeAlert = SUBSEA_ALERTS.filter(a => a.platform === selPlatform);
+  const sev = { critical:'#ef4444', warning:'#f59e0b', advisory:'#60a5fa' };
+  const pSev = { operational:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
+
+  return (
+    <div className="space-y-5">
+      {/* D-01: Fleet overview KPIs */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(OFFSHORE_PLATFORMS.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
+          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
+          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
+          [String(SUBSEA_ALERTS.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Platform selector */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">North Sea Platform Intelligence</h3>
+            <p className="text-gray-500 text-xs">UK Continental Shelf · Real-time operations & predictive subsea analytics</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {OFFSHORE_PLATFORMS.map(p => (
+              <button key={p.id} onClick={() => setSelPlatform(p.id)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selPlatform === p.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
+                <span style={{ color: pSev[p.status as keyof typeof pSev], marginRight: 5 }}>●</span>{p.id}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Platform detail row */}
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          {([
+            ['Production', `${plat.prod.toLocaleString()} BOPD`, '#60a5fa'],
+            ['Uptime',     `${plat.uptime}%`,                    plat.uptime >= 95 ? '#4ade80' : plat.uptime >= 85 ? '#f59e0b' : '#ef4444'],
+            ['Active Wells',String(plat.wells),                  '#a78bfa'],
+            ['Crew Onboard',String(plat.crew),                   '#f9fafb'],
+            ['Weather Score',`${plat.weatherScore}/100`,         plat.weatherScore >= 70 ? '#4ade80' : plat.weatherScore >= 50 ? '#f59e0b' : '#ef4444'],
+          ] as [string,string,string][]).map(([l,v,c]) => (
+            <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-3 text-center">
+              <p className="text-lg font-bold font-mono" style={{ color:c }}>{v}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* D-02: Weather window */}
+        {weather.length > 0 && (
+          <div className="border-t border-gray-800 pt-4">
+            <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Marine Weather Windows</p>
+            <div className="flex gap-3">
+              {weather.map(w => (
+                <div key={w.dayLabel} className={`flex-1 rounded-lg px-4 py-3 border ${w.workable ? 'bg-green-950/20 border-green-900/40' : 'bg-red-950/20 border-red-900/40'}`}>
+                  <p className="text-white font-semibold text-sm">{w.dayLabel}</p>
+                  <p className="text-gray-400 text-xs mt-1">Hs: {w.waveH}m · Wind: {w.windKt}kt · Vis: {w.visibility}nm</p>
+                  <p className={`text-xs font-bold mt-1 ${w.workable ? 'text-green-400' : 'text-red-400'}`}>{w.workable ? '✓ WORKABLE' : '✗ UNSAFE'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* D-03: Subsea predictive alerts */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-semibold text-sm">Subsea Equipment — Predictive Alerts</h3>
+            <p className="text-gray-500 text-xs">ML-driven failure probability · All platforms</p>
+          </div>
+          <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded-lg px-3 py-1 font-semibold">
+            {SUBSEA_ALERTS.filter(a=>a.sev==='critical').length} CRITICAL
+          </span>
+        </div>
+        <div className="divide-y divide-gray-800">
+          {SUBSEA_ALERTS.map(a => (
+            <div key={a.id} className="px-5 py-4 flex items-start gap-4">
+              <span style={{ width:8,height:8,borderRadius:'50%',background:sev[a.sev as keyof typeof sev],flexShrink:0,marginTop:5 }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold">{a.asset} <span className="text-gray-500 font-normal text-xs">· {a.platform}</span></p>
+                <p className="text-gray-400 text-xs mt-0.5">{a.issue}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="font-mono font-bold text-sm" style={{ color:sev[a.sev as keyof typeof sev] }}>{Math.round(a.failProb*100)}%</p>
+                <p className="text-gray-600 text-xs">ETA: {a.eta}d</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5">
+        {/* D-04: Vessel schedule */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">Logistics & Vessel Schedule</h3>
+            <p className="text-gray-500 text-xs">PSV, DSV & helicopter movements</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {VESSEL_SCHEDULE.map(v => {
+              const sc = { underway:'text-blue-400', scheduled:'text-amber-400', completed:'text-green-400' };
+              return (
+                <div key={v.vessel} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white text-xs font-semibold">{v.vessel} <span className="text-gray-600">({v.type})</span></p>
+                    <span className={`text-xs font-bold ${sc[v.status as keyof typeof sc]}`}>{v.status.toUpperCase()}</span>
+                  </div>
+                  <p className="text-gray-500 text-xs">{v.destination} · Dep: {v.departure}</p>
+                  <p className="text-gray-600 text-xs">{v.cargo}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* D-05: Environmental compliance */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-800">
+            <h3 className="text-white font-semibold text-sm">Environmental Discharge Monitor</h3>
+            <p className="text-gray-500 text-xs">OPPC/MARPOL compliance · Live readings vs permit limits</p>
+          </div>
+          <div className="divide-y divide-gray-800">
+            {ENV_METRICS.map(m => (
+              <div key={m.metric} className="px-4 py-2.5 flex items-center justify-between">
+                <p className="text-gray-400 text-xs">{m.metric}</p>
+                <div className="text-right">
+                  <span className={`text-xs font-mono font-bold ${m.ok ? 'text-green-400' : 'text-red-400'}`}>{m.value} {m.unit}</span>
+                  <span className="text-gray-600 text-xs ml-2">/ {m.limit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* D-06: Well integrity */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Well Integrity Register</h3>
+          <p className="text-gray-500 text-xs">Barrier verification · Annulus pressure monitoring · WIMS-compliant</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Well','Barrier','Annulus P (barg)','Last Test','Status','Note'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {WELL_INTEGRITY.map(w => {
+              const sc = { OK:'text-green-400', WARN:'text-amber-400', CRIT:'text-red-400' };
+              return (
+                <tr key={w.well} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2 text-white font-mono font-bold">{w.well}</td>
+                  <td className="px-4 py-2 text-gray-400">{w.barrier}</td>
+                  <td className="px-4 py-2 font-mono" style={{ color: w.annPres > 25 ? '#ef4444' : w.annPres > 15 ? '#f59e0b' : '#f9fafb' }}>{w.annPres}</td>
+                  <td className="px-4 py-2 text-gray-400">{w.lastTest}</td>
+                  <td className="px-4 py-2 font-bold"><span className={sc[w.status as keyof typeof sc]}>{w.status}</span></td>
+                  <td className="px-4 py-2 text-gray-500 italic">{w.note || '—'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
