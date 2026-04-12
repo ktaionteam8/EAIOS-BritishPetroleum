@@ -562,7 +562,8 @@ const RiskMatrix5x5: React.FC = () => {
 
 // ── Equipment Health Tab ──────────────────────────────────────────────────────
 const EquipmentHealthTab: React.FC = () => {
-  const [fftAsset, setFftAsset] = useState('C-101');
+  const [fftAsset,    setFftAsset]    = useState('C-101');
+  const [healthAsset, setHealthAsset] = useState('C-101');
   return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
@@ -615,13 +616,13 @@ const EquipmentHealthTab: React.FC = () => {
       <div className="flex items-center gap-3 mb-3">
         <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest">Degradation Forecast — Select Asset:</p>
         {Object.keys(HEALTH_TREND).map(id => (
-          <button key={id} onClick={() => setFftAsset(id)}
-            className={`text-xs px-3 py-1 rounded-full border transition-colors font-mono ${fftAsset === id ? 'bg-indigo-900/50 text-indigo-300 border-indigo-700' : 'text-gray-500 border-gray-700 hover:border-gray-500'}`}>
+          <button key={id} onClick={() => setHealthAsset(id)}
+            className={`text-xs px-3 py-1 rounded-full border transition-colors font-mono ${healthAsset === id ? 'bg-indigo-900/50 text-indigo-300 border-indigo-700' : 'text-gray-500 border-gray-700 hover:border-gray-500'}`}>
             {id}
           </button>
         ))}
       </div>
-      <HealthTrendPanel assetId={fftAsset} />
+      <HealthTrendPanel assetId={healthAsset} />
     </div>
 
     {/* REQ-17 — Oil Analysis & Lubrication Tracker */}
@@ -1617,7 +1618,7 @@ const MultiSiteBenchmark: React.FC = () => {
             <span className="text-xs font-bold w-16 text-right" style={{ color: s.oee >= 85 ? '#4ade80' : s.oee >= 75 ? '#fbbf24' : '#ef4444' }}>OEE {s.oee}%</span>
             <span className="text-blue-400 text-xs w-20 text-right font-mono">MTBF {s.mtbf}h</span>
             <span className="text-green-400 text-xs w-18 text-right font-mono">MTTR {s.mttr}h</span>
-            <span className={`text-xs font-semibold w-14 text-right ${s.trend > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            <span className={`text-xs font-semibold w-14 text-right ${s.trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
               {s.trend > 0 ? '↑' : '↓'} {Math.abs(s.trend)}%
             </span>
           </div>
@@ -1924,9 +1925,9 @@ const OilAnalysisPanel: React.FC = () => (
             <tr key={s.asset} className="border-b border-gray-800 hover:bg-gray-800/30">
               <td className="py-3 px-4 text-purple-400 font-mono text-sm font-bold">{s.asset}</td>
               <td className="py-3 px-4 text-gray-400 text-xs">{s.date}</td>
-              {[s.visc, s.ferrous, s.water, s.tbn].map((v, i) => (
-                <td key={i} className="py-3 px-4">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: `${OIL_PARAM_COL[v] ?? '#9ca3af'}22`, color: OIL_PARAM_COL[v] ?? '#9ca3af' }}>{v}</span>
+              {(['visc','ferrous','water','tbn'] as const).map(col => (
+                <td key={col} className="py-3 px-4">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: `${OIL_PARAM_COL[s[col]] ?? '#9ca3af'}22`, color: OIL_PARAM_COL[s[col]] ?? '#9ca3af' }}>{s[col]}</span>
                 </td>
               ))}
               <td className="py-3 px-4">
@@ -2102,9 +2103,13 @@ const TourOverlay: React.FC<TourOverlayProps> = ({ onClose, onTabChange }) => {
   const [step, setStep] = useState(0);
   const current = TOUR_STEPS[step];
 
-  useEffect(() => { onTabChange(current.tab); }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+  const go = (next: number) => {
+    setStep(next);
+    onTabChange(TOUR_STEPS[next].tab);
+  };
 
-  const go = (next: number) => { setStep(next); };
+  // Navigate to the first tab on mount
+  useEffect(() => { onTabChange(TOUR_STEPS[0].tab); }, []); // intentional: mount only
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.65)', backdropFilter:'blur(4px)', display:'flex', alignItems:'flex-end', justifyContent:'center', paddingBottom:36 }}>
@@ -2505,10 +2510,11 @@ const RefinerAIPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [tourOpen, setTourOpen] = useState(false);
+  const handleTourTabChange = React.useCallback((tab: TabId) => setActiveTab(tab), []);
 
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: '#f9fafb', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} onTabChange={tab => setActiveTab(tab)} />}
+      {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} onTabChange={handleTourTabChange} />}
 
       {/* ── App Header ──────────────────────────────────────────────────────── */}
       <header style={{ background: '#0f0f1a', borderBottom: '1px solid #1f2937' }}>
