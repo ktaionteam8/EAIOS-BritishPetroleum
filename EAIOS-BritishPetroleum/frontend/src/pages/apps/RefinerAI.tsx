@@ -431,6 +431,121 @@ const VibrationSpectrumPanel: React.FC<{ assetId: string }> = ({ assetId }) => {
   );
 };
 
+// ── REQ-06: Risk Matrix 5×5 ──────────────────────────────────────────────────
+interface RiskEquipment { tag: string; l: number; c: number; dx?: number; dy?: number; }
+const RISK_EQUIPMENT: RiskEquipment[] = [
+  { tag: 'C-101', l: 5, c: 5 },
+  { tag: 'E-212', l: 4, c: 4 },
+  { tag: 'P-205', l: 3, c: 4, dx: -14 },
+  { tag: 'T-405', l: 3, c: 4, dx: 14 },
+  { tag: 'G-302', l: 3, c: 3 },
+  { tag: 'V-305', l: 2, c: 3 },
+  { tag: 'K-302', l: 1, c: 2 },
+];
+const RISK_COLOR = (rpn: number) =>
+  rpn >= 15 ? { bg: '#3b0a0a', border: '#ef4444', text: '#f87171' }
+: rpn >= 10 ? { bg: '#2d1400', border: '#f97316', text: '#fb923c' }
+: rpn >=  5 ? { bg: '#2a1e00', border: '#fbbf24', text: '#fcd34d' }
+:             { bg: '#071a0d', border: '#4ade80', text: '#86efac' };
+
+const LIKELIHOOD_LABELS = ['Rare', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'];
+const CONSEQUENCE_LABELS = ['Negligible', 'Minor', 'Moderate', 'Major', 'Catastrophic'];
+
+const RiskMatrix5x5: React.FC = () => {
+  const CELL = 74, LW = 108, BH = 32, PAD = 16;
+  const W = LW + 5 * CELL + PAD;
+  const H = 5 * CELL + BH + PAD;
+
+  return (
+    <div className="bg-gray-900 border border-orange-900/40 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h4 className="text-white font-semibold text-sm">REQ-06 · Risk Matrix (5×5) — Equipment Criticality</h4>
+          <p className="text-gray-500 text-xs mt-0.5">ISO 31000 · Likelihood × Consequence = RPN · Equipment plotted by AI assessment</p>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          {([['≥15','#ef4444','CRITICAL'],['10–14','#f97316','HIGH'],['5–9','#fbbf24','MEDIUM'],['1–4','#4ade80','LOW']] as [string,string,string][]).map(([r,c,l]) => (
+            <span key={l} className="flex items-center gap-1.5 text-gray-400">
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: c }} />{l} ({r})
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-5">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+          {/* Grid cells */}
+          {[1,2,3,4,5].map(l =>
+            [1,2,3,4,5].map(c => {
+              const rpn = l * c;
+              const { bg, border } = RISK_COLOR(rpn);
+              const x = LW + (c - 1) * CELL;
+              const y = (5 - l) * CELL;
+              return (
+                <g key={`${l}-${c}`}>
+                  <rect x={x} y={y} width={CELL} height={CELL} fill={bg} stroke={border} strokeWidth="0.5" opacity="0.9" />
+                  <text x={x + CELL / 2} y={y + CELL / 2} fill={border} fontSize="11" textAnchor="middle"
+                    dominantBaseline="middle" fontWeight="bold" opacity="0.4">{rpn}</text>
+                </g>
+              );
+            })
+          )}
+
+          {/* Y-axis labels (Likelihood) */}
+          {LIKELIHOOD_LABELS.map((label, i) => {
+            const l = i + 1;
+            const y = (5 - l) * CELL + CELL / 2;
+            return <text key={label} x={LW - 6} y={y} fill="#9ca3af" fontSize="8" textAnchor="end" dominantBaseline="middle">{label}</text>;
+          })}
+
+          {/* X-axis labels (Consequence) */}
+          {CONSEQUENCE_LABELS.map((label, i) => {
+            const x = LW + i * CELL + CELL / 2;
+            return <text key={label} x={x} y={5 * CELL + 18} fill="#9ca3af" fontSize="8" textAnchor="middle">{label}</text>;
+          })}
+
+          {/* Axis titles */}
+          <text x={LW / 2 - 10} y={5 * CELL / 2} fill="#6b7280" fontSize="9" textAnchor="middle"
+            transform={`rotate(-90,${LW / 2 - 10},${5 * CELL / 2})`}>Likelihood ↑</text>
+          <text x={LW + 5 * CELL / 2} y={5 * CELL + 30} fill="#6b7280" fontSize="9" textAnchor="middle">Consequence →</text>
+
+          {/* Equipment dots */}
+          {RISK_EQUIPMENT.map(eq => {
+            const rpn = eq.l * eq.c;
+            const { border } = RISK_COLOR(rpn);
+            const cx = LW + (eq.c - 1) * CELL + CELL / 2 + (eq.dx ?? 0);
+            const cy = (5 - eq.l) * CELL + CELL / 2 + (eq.dy ?? 0);
+            return (
+              <g key={eq.tag}>
+                <circle cx={cx} cy={cy} r={16} fill={border} opacity="0.15" />
+                <circle cx={cx} cy={cy} r={4}  fill={border} />
+                <text x={cx} y={cy - 12} fill={border} fontSize="8" fontWeight="bold" textAnchor="middle">{eq.tag}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Legend table */}
+      <div className="px-5 pb-4">
+        <div className="grid grid-cols-4 gap-2">
+          {RISK_EQUIPMENT.map(eq => {
+            const rpn = eq.l * eq.c;
+            const { border, text } = RISK_COLOR(rpn);
+            const label = rpn >= 15 ? 'CRITICAL' : rpn >= 10 ? 'HIGH' : rpn >= 5 ? 'MEDIUM' : 'LOW';
+            return (
+              <div key={eq.tag} className="bg-gray-800 rounded-lg px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-mono font-bold" style={{ color: border }}>{eq.tag}</span>
+                <span className="text-xs font-semibold" style={{ color: text }}>RPN {rpn} · {label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── Equipment Health Tab ──────────────────────────────────────────────────────
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset, setFftAsset] = useState('C-101');
@@ -480,6 +595,9 @@ const EquipmentHealthTab: React.FC = () => {
       </div>
       <VibrationSpectrumPanel assetId={fftAsset} />
     </div>
+
+    {/* REQ-06 — Risk Matrix 5×5 */}
+    <RiskMatrix5x5 />
   </div>
   );
 };
@@ -1127,6 +1245,15 @@ const WorkOrdersTab: React.FC = () => {
   );
 };
 
+// ── REQ-05: MTBF / MTTR / OEE data ──────────────────────────────────────────
+const RELIABILITY_SITES = [
+  { site: 'Ruwais, UAE',      mtbf: 842,  mttr: 6.2, oee: 71.4, avail: 88.1, perf: 90.2, qual: 89.8, trend: -3.2 },
+  { site: 'Houston, USA',     mtbf: 1124, mttr: 4.8, oee: 81.2, avail: 91.4, perf: 93.6, qual: 94.8, trend: +2.1 },
+  { site: 'Rotterdam, NL',    mtbf: 1380, mttr: 3.9, oee: 86.7, avail: 94.2, perf: 95.1, qual: 96.7, trend: +1.4 },
+  { site: 'Ras Tanura, KSA',  mtbf: 960,  mttr: 5.4, oee: 78.3, avail: 90.1, perf: 91.8, qual: 93.4, trend: -0.8 },
+  { site: 'Jamnagar, India',  mtbf: 1560, mttr: 3.1, oee: 89.4, avail: 95.6, perf: 96.2, qual: 97.4, trend: +3.2 },
+];
+
 // ── ROI & 40% Target Tab ──────────────────────────────────────────────────────
 const ROI_BARS = [
   { label: 'LSTM Vibration Detection', value: 34, color: '#7c3aed' },
@@ -1138,6 +1265,87 @@ const ROI_BARS = [
 
 const ROITab: React.FC = () => (
   <div className="space-y-4">
+
+    {/* REQ-05 — MTBF / MTTR / OEE */}
+    <div className="bg-gray-900 border border-blue-900/40 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800">
+        <div>
+          <h3 className="text-white font-semibold text-sm">REQ-05 · Reliability KPIs — MTBF / MTTR / OEE</h3>
+          <p className="text-gray-500 text-xs mt-0.5">Fleet-wide · ISO 55001 aligned · Rolling 12-month average</p>
+        </div>
+        <span className="text-xs bg-blue-900/30 text-blue-400 border border-blue-900/50 px-3 py-1 rounded-full">YTD 2026</span>
+      </div>
+
+      {/* Fleet KPIs */}
+      <div className="grid grid-cols-3 divide-x divide-gray-800 border-b border-gray-800">
+        {[
+          ['MTBF', '1,173 h', 'Mean Time Between Failures', '↑ +148h vs last year', 'text-blue-400'],
+          ['MTTR', '4.68 h', 'Mean Time To Repair', '↓ −1.2h vs last year', 'text-green-400'],
+          ['OEE',  '81.4 %', 'Overall Equipment Effectiveness', '↑ +3.8% vs last year', 'text-purple-400'],
+        ].map(([k, v, desc, trend, c]) => (
+          <div key={k} className="px-6 py-4">
+            <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-1">{k}</p>
+            <p className={`text-4xl font-bold ${c} mb-1`}>{v}</p>
+            <p className="text-gray-500 text-xs">{desc}</p>
+            <p className={`text-xs mt-1 ${c}`}>{trend}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* OEE Breakdown */}
+      <div className="grid grid-cols-3 divide-x divide-gray-800 border-b border-gray-800 bg-gray-950/40">
+        {[
+          ['Availability', '91.2%', 'Planned vs actual uptime', 92.4],
+          ['Performance',  '93.8%', 'Actual vs theoretical rate', 88.0],
+          ['Quality',      '95.1%', 'Good output vs total output', 94.8],
+        ].map(([k, v, desc, target]) => (
+          <div key={String(k)} className="px-6 py-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-gray-400 text-xs font-semibold">{k}</p>
+              <p className="text-white text-sm font-bold">{v}</p>
+            </div>
+            <div className="bg-gray-800 rounded-full h-1.5 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-blue-500" style={{ width: v as string }} />
+            </div>
+            <p className="text-gray-600 text-xs mt-1">{desc} · target {target}%</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-site table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-800">
+              {['Site','MTBF (h)','MTTR (h)','Availability','Performance','Quality','OEE','Trend'].map(h => (
+                <th key={h} className="py-2.5 px-4 text-left text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {RELIABILITY_SITES.map(r => (
+              <tr key={r.site} className="border-b border-gray-800 hover:bg-gray-800/30">
+                <td className="py-2.5 px-4 text-white text-sm whitespace-nowrap">{r.site}</td>
+                <td className="py-2.5 px-4 text-blue-400 text-sm font-mono font-semibold">{r.mtbf.toLocaleString()}</td>
+                <td className="py-2.5 px-4 text-green-400 text-sm font-mono font-semibold">{r.mttr}</td>
+                <td className="py-2.5 px-4 text-gray-300 text-sm">{r.avail}%</td>
+                <td className="py-2.5 px-4 text-gray-300 text-sm">{r.perf}%</td>
+                <td className="py-2.5 px-4 text-gray-300 text-sm">{r.qual}%</td>
+                <td className="py-2.5 px-4">
+                  <span className="text-sm font-bold" style={{ color: r.oee >= 85 ? '#4ade80' : r.oee >= 75 ? '#fbbf24' : '#f87171' }}>{r.oee}%</span>
+                </td>
+                <td className="py-2.5 px-4">
+                  <span className={`text-xs font-semibold ${r.trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {r.trend > 0 ? '↑' : '↓'} {Math.abs(r.trend)}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     {/* Hero — 40% Target */}
     <div className="bg-gray-900 border border-purple-900/50 rounded-xl p-6">
       <div className="flex items-center justify-between">
