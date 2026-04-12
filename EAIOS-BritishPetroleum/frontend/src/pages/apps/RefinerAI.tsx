@@ -16,7 +16,13 @@ type TabId =
   | 'compliance'
   | 'field-ops'
   | 'energy'
-  | 'tar';
+  | 'tar'
+  | 'castrol'
+  | 'offshore'
+  | 'ot-data'
+  | 'adoption'
+  | 'wave-tracker'
+  | 'edge-ai';
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 interface KPICardProps {
@@ -3202,8 +3208,279 @@ const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
     case 'field-ops':        return <FieldOpsTab />;
     case 'energy':           return <EnergyTab />;
     case 'tar':              return <TARTab />;
+    case 'castrol':          return <CastrolTab />;
     default:                 return null;
   }
+};
+
+// ── Block C: Castrol Blending Quality Prediction ─────────────────────────────
+
+// C-02: Active blend run data
+const CASTROL_BLENDS = [
+  { id: 'BL-2026-0441', grade: 'Castrol GTX 5W-30', tank: 'BT-04', vol: 12000, elapsed: 68, total: 100, site: 'Castellon, ES' },
+  { id: 'BL-2026-0442', grade: 'Castrol Edge 0W-40', tank: 'BT-07', vol: 8500,  elapsed: 31, total: 100, site: 'Ellesmere Port, UK' },
+];
+
+// C-03/04: Quality prediction data per blend (12 prediction points over blend run)
+interface BlendQuality { visc: number; pour: number; tbn: number; }
+const CASTROL_QUALITY: Record<string, { predicted: BlendQuality[]; spec: BlendQuality }> = {
+  'BL-2026-0441': {
+    spec: { visc: 66.2, pour: -35, tbn: 8.5 },
+    predicted: [
+      {visc:65.0,pour:-33,tbn:8.1},{visc:65.2,pour:-33,tbn:8.2},{visc:65.5,pour:-34,tbn:8.3},
+      {visc:65.8,pour:-34,tbn:8.4},{visc:66.0,pour:-34,tbn:8.4},{visc:66.1,pour:-35,tbn:8.5},
+      {visc:66.2,pour:-35,tbn:8.5},{visc:66.3,pour:-35,tbn:8.6},{visc:66.4,pour:-36,tbn:8.6},
+      {visc:66.2,pour:-35,tbn:8.5},{visc:66.1,pour:-35,tbn:8.5},{visc:66.2,pour:-35,tbn:8.5},
+    ],
+  },
+  'BL-2026-0442': {
+    spec: { visc: 72.1, pour: -40, tbn: 9.2 },
+    predicted: [
+      {visc:69.0,pour:-37,tbn:8.6},{visc:69.5,pour:-37,tbn:8.7},{visc:70.0,pour:-38,tbn:8.8},
+      {visc:70.4,pour:-38,tbn:8.9},{visc:70.8,pour:-39,tbn:9.0},{visc:71.2,pour:-39,tbn:9.1},
+      {visc:71.5,pour:-39,tbn:9.1},{visc:71.7,pour:-40,tbn:9.2},{visc:72.0,pour:-40,tbn:9.2},
+      {visc:72.1,pour:-40,tbn:9.2},
+    ],
+  },
+};
+
+// C-07: Blend tank sensor readings
+const CASTROL_SENSORS: Record<string, { temp: number; visc: number; density: number; dosingRate: number }> = {
+  'BL-2026-0441': { temp: 68.4, visc: 66.2, density: 872.1, dosingRate: 2.14 },
+  'BL-2026-0442': { temp: 71.1, visc: 71.5, density: 868.4, dosingRate: 2.87 },
+};
+
+// C-08: LIMS historical records
+const LIMS_RECORDS = [
+  { id: 'LI-2026-0440', grade: 'GTX 5W-30',  date: '11 Apr', result: 'PASS', visc: 66.1, pour: -35, tbn: 8.5, rework: false },
+  { id: 'LI-2026-0439', grade: 'Edge 0W-40',  date: '10 Apr', result: 'FAIL', visc: 69.8, pour: -38, tbn: 8.8, rework: true  },
+  { id: 'LI-2026-0438', grade: 'GTX 10W-40',  date: '09 Apr', result: 'PASS', visc: 98.2, pour: -25, tbn: 7.9, rework: false },
+  { id: 'LI-2026-0437', grade: 'Classic 20W', date: '08 Apr', result: 'FAIL', visc: 141.0,pour: -15, tbn: 6.8, rework: true  },
+  { id: 'LI-2026-0436', grade: 'GTX 5W-30',  date: '07 Apr', result: 'PASS', visc: 65.9, pour: -35, tbn: 8.4, rework: false },
+];
+
+// C-05: Corrective actions
+const CASTROL_CORRECTIONS: Record<string, string[]> = {
+  'BL-2026-0441': [],
+  'BL-2026-0442': [
+    'Increase VI improver dosing by 0.12% (current: 2.87 → target: 2.99 kg/min)',
+    'Raise blend temperature 2°C to 73°C to improve homogeneity',
+    'Extend mixing time by 8 minutes to reduce viscosity gradient',
+  ],
+};
+
+// C-09: Additive dosing optimizer
+const DOSING_OPTS = [
+  { additive: 'VI Improver',        current: 2.14, optimal: 2.18, unit: 'kg/min', impact: '+0.8 cSt viscosity'  },
+  { additive: 'Pour Point Depressant', current: 0.42, optimal: 0.45, unit: 'kg/min', impact: '-1°C pour point'  },
+  { additive: 'Antioxidant Pkg',    current: 1.88, optimal: 1.88, unit: 'kg/min', impact: 'Optimal'             },
+  { additive: 'Anti-wear Additive', current: 0.76, optimal: 0.79, unit: 'kg/min', impact: '+0.2 TBN'           },
+];
+
+const CastrolTab: React.FC = () => {
+  const [selectedBlend, setSelectedBlend] = useState(CASTROL_BLENDS[0].id);
+  const blend   = CASTROL_BLENDS.find(b => b.id === selectedBlend) ?? CASTROL_BLENDS[0];
+  const quality = CASTROL_QUALITY[selectedBlend];
+  const sensors = CASTROL_SENSORS[selectedBlend];
+  const corrections = CASTROL_CORRECTIONS[selectedBlend] ?? [];
+  const pct = Math.round((blend.elapsed / blend.total) * 100);
+  const latest = quality.predicted[quality.predicted.length - 1];
+  const offSpec = LIMS_RECORDS.filter(r => r.result === 'FAIL').length;
+  const offSpecRate = Math.round((offSpec / LIMS_RECORDS.length) * 100);
+
+  // C-04: SVG confidence timeline for viscosity
+  const W = 480, H = 90, PL = 36, PR = 16, PT = 12, PB = 24;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const pts = quality.predicted;
+  const viscVals = pts.map(p => p.visc);
+  const minV = Math.min(...viscVals) - 2, maxV = Math.max(...viscVals) + 2;
+  const xOf = (i: number) => PL + (i / (pts.length - 1)) * cW;
+  const yOf = (v: number) => PT + cH - ((v - minV) / (maxV - minV)) * cH;
+  const polyPts = pts.map((p, i) => `${xOf(i).toFixed(1)},${yOf(p.visc).toFixed(1)}`).join(' ');
+  const specY = yOf(quality.spec.visc);
+
+  return (
+    <div className="space-y-5">
+      {/* C-06: Off-spec rate KPI strip */}
+      <div className="grid grid-cols-4 gap-3">
+        {([
+          [String(CASTROL_BLENDS.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
+          [`${offSpecRate}%`,             'OFF-SPEC RATE',    offSpecRate < 5 ? 'text-green-400' : 'text-red-400', offSpecRate < 5 ? 'border-green-900/50' : 'border-red-900/50'],
+          ['2%',                          'TARGET OFF-SPEC',  'text-gray-400',   'border-gray-800'     ],
+          [String(LIMS_RECORDS.filter(r => r.rework).length), 'REWORK BATCHES', 'text-amber-400', 'border-amber-900/50'],
+        ] as [string,string,string,string][]).map(([v,l,t,b]) => (
+          <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
+            <p className={`text-2xl font-bold ${t}`}>{v}</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* C-02: Blend selector + run monitor */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-semibold">Active Blend Run Monitor</h3>
+            <p className="text-gray-500 text-xs">Real-time in-process quality prediction · updated every 60s</p>
+          </div>
+          <div className="flex gap-2">
+            {CASTROL_BLENDS.map(b => (
+              <button key={b.id} onClick={() => setSelectedBlend(b.id)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedBlend === b.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
+                {b.id}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Grade</p>
+            <p className="text-white font-semibold text-sm">{blend.grade}</p>
+            <p className="text-gray-500 text-xs">{blend.site} · Tank {blend.tank}</p>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Blend Progress</p>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-blue-500" style={{ width:`${pct}%` }} />
+              </div>
+              <span className="text-white font-bold text-sm">{pct}%</span>
+            </div>
+            <p className="text-gray-500 text-xs">{blend.elapsed}% of {blend.vol.toLocaleString()}L complete</p>
+          </div>
+          <div className="bg-gray-800/50 rounded-lg px-4 py-3">
+            <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Batch ID</p>
+            <p className="text-white font-semibold text-sm font-mono">{blend.id}</p>
+          </div>
+        </div>
+
+        {/* C-07: Blend tank sensors */}
+        <div className="grid grid-cols-4 gap-3 mb-4 border-t border-gray-800 pt-4">
+          <p className="col-span-4 text-xs text-gray-500 uppercase tracking-widest font-semibold mb-1">Live Tank Sensors</p>
+          {([
+            ['Temperature',  `${sensors.temp}°C`, '#f59e0b'],
+            ['Viscosity',    `${sensors.visc} cSt`, '#60a5fa'],
+            ['Density',      `${sensors.density} kg/m³`, '#34d399'],
+            ['Dosing Rate',  `${sensors.dosingRate} kg/min`, '#a78bfa'],
+          ] as [string,string,string][]).map(([l,v,c]) => (
+            <div key={l} className="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+              <p className="text-lg font-bold font-mono" style={{ color:c }}>{v}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* C-03: In-process quality prediction */}
+        <div className="border-t border-gray-800 pt-4">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">In-Process Quality Prediction (vs Specification)</p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              ['Kinematic Viscosity', latest.visc.toFixed(1), quality.spec.visc.toFixed(1), 'cSt',  Math.abs(latest.visc - quality.spec.visc) < 1],
+              ['Pour Point',         String(latest.pour),     String(quality.spec.pour),     '°C',   latest.pour <= quality.spec.pour],
+              ['Total Base Number',  latest.tbn.toFixed(1),   quality.spec.tbn.toFixed(1),   'mgKOH/g', Math.abs(latest.tbn - quality.spec.tbn) < 0.3],
+            ] as [string,string,string,string,boolean][]).map(([l,pred,spec,unit,ok]) => (
+              <div key={l} className={`rounded-lg px-4 py-3 border ${ok ? 'bg-green-950/30 border-green-900/40' : 'bg-red-950/30 border-red-900/40'}`}>
+                <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">{l}</p>
+                <p className={`text-xl font-bold font-mono ${ok ? 'text-green-400' : 'text-red-400'}`}>{pred} {unit}</p>
+                <p className="text-gray-500 text-xs">Spec: {spec} {unit} · {ok ? '✓ ON TRACK' : '⚠ DRIFTING'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* C-04: Viscosity confidence timeline SVG */}
+        <div className="border-t border-gray-800 pt-4 mt-4">
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2">Viscosity Prediction Trajectory (Full Blend Run)</p>
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ height: H }}>
+            <line x1={PL} y1={specY} x2={W-PR} y2={specY} stroke="#22c55e" strokeWidth="1" strokeDasharray="5,3" />
+            <text x={W-PR+2} y={specY+3} fill="#22c55e" fontSize="8">Spec {quality.spec.visc}</text>
+            <polyline points={polyPts} fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinejoin="round" />
+            {pts.map((p, i) => <circle key={i} cx={xOf(i)} cy={yOf(p.visc)} r="3" fill="#60a5fa" opacity={i === pts.length-1 ? 1 : 0.4} />)}
+            {[0,25,50,75,100].map(v => {
+              const x = PL + (v/100)*cW;
+              return <text key={v} x={x} y={H-4} fill="#4b5563" fontSize="8" textAnchor="middle">{v}%</text>;
+            })}
+            <text x={8} y={H/2} fill="#4b5563" fontSize="8" textAnchor="middle" transform={`rotate(-90,8,${H/2})`}>cSt</text>
+          </svg>
+        </div>
+
+        {/* C-05: Corrective action recommendations */}
+        {corrections.length > 0 && (
+          <div className="border-t border-gray-800 pt-4 mt-2">
+            <p className="text-xs text-amber-400 font-semibold uppercase tracking-widest mb-2">⚠ AI Corrective Actions Required</p>
+            <div className="space-y-2">
+              {corrections.map((c, i) => (
+                <div key={i} className="flex gap-2 bg-amber-950/20 border border-amber-900/30 rounded-lg px-3 py-2">
+                  <span className="text-amber-500 text-xs flex-shrink-0">{i+1}.</span>
+                  <p className="text-amber-300 text-xs">{c}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* C-09: Additive dosing optimizer */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">Additive Dosing Optimizer</h3>
+          <p className="text-gray-500 text-xs">AI-recommended dosing adjustments for {blend.grade}</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Additive','Current (kg/min)','AI Optimal (kg/min)','Δ','Impact'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {DOSING_OPTS.map(d => {
+              const delta = d.optimal - d.current;
+              return (
+                <tr key={d.additive} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                  <td className="px-4 py-2 text-gray-300">{d.additive}</td>
+                  <td className="px-4 py-2 text-white font-mono">{d.current.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-blue-400 font-mono font-bold">{d.optimal.toFixed(2)}</td>
+                  <td className="px-4 py-2 font-mono font-bold" style={{ color: Math.abs(delta) < 0.01 ? '#4ade80' : delta > 0 ? '#f59e0b' : '#60a5fa' }}>
+                    {delta === 0 ? '—' : `${delta > 0 ? '+' : ''}${delta.toFixed(2)}`}
+                  </td>
+                  <td className="px-4 py-2 text-gray-400">{d.impact}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* C-08: LIMS Quality Record Archive */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-800">
+          <h3 className="text-white font-semibold text-sm">LIMS Quality Record Archive</h3>
+          <p className="text-gray-500 text-xs">Historical batch results · End-of-batch lab measurements</p>
+        </div>
+        <table className="w-full text-xs">
+          <thead><tr className="border-b border-gray-800">
+            {['Batch ID','Grade','Date','Viscosity (cSt)','Pour (°C)','TBN','Result','Rework'].map(h => (
+              <th key={h} className="px-4 py-2 text-left text-gray-500 uppercase tracking-wide font-semibold">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {LIMS_RECORDS.map(r => (
+              <tr key={r.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
+                <td className="px-4 py-2 text-purple-400 font-mono">{r.id}</td>
+                <td className="px-4 py-2 text-gray-300">{r.grade}</td>
+                <td className="px-4 py-2 text-gray-400">{r.date}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.visc.toFixed(1)}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.pour}</td>
+                <td className="px-4 py-2 text-white font-mono">{r.tbn.toFixed(1)}</td>
+                <td className="px-4 py-2"><span className={`font-bold ${r.result === 'PASS' ? 'text-green-400' : 'text-red-400'}`}>{r.result}</span></td>
+                <td className="px-4 py-2">{r.rework ? <span className="text-amber-400">✓ Rework</span> : <span className="text-gray-600">—</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 };
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
@@ -3336,6 +3613,31 @@ const RefinerAIPage: React.FC = () => {
                   border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
                 }}>
                 <span>{item.icon}</span>{item.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Specialty */}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 8 }}>Specialty</p>
+            {[
+              { id: 'castrol',      label: 'Castrol Blending', icon: '⬡', badge: 'NEW' },
+              { id: 'offshore',     label: 'North Sea Ops',    icon: '⛽', badge: 'NEW' },
+              { id: 'ot-data',      label: 'OT Data',          icon: '⊡', badge: 'NEW' },
+              { id: 'adoption',     label: 'Adoption',         icon: '◑', badge: 'NEW' },
+              { id: 'wave-tracker', label: 'Wave Tracker',     icon: '≋', badge: 'NEW' },
+              { id: 'edge-ai',      label: 'Edge AI',          icon: '⬡', badge: 'NEW' },
+            ].map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all .15s',
+                  background: activeTab === item.id ? '#1e1b4b' : 'transparent',
+                  color: activeTab === item.id ? '#a78bfa' : '#9ca3af',
+                  border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
+                }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{item.icon}</span>{item.label}
+                </span>
+                {item.badge && <span style={{ fontSize: 10, background: '#7c3aed', color: '#fff', borderRadius: 10, padding: '1px 6px', fontWeight: 700 }}>{item.badge}</span>}
               </button>
             ))}
           </div>
