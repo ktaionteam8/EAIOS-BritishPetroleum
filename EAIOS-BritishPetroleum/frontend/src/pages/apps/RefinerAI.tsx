@@ -4237,14 +4237,28 @@ const ROUTE_PRI: Record<string,{bg:string;color:string}> = {
 };
 const ROUTE_ST: Record<string,string> = { 'In Progress':'#fbbf24', Scheduled:'#60a5fa', Completed:'#4ade80' };
 
-const FieldOpsTab: React.FC = () => (
+const FieldOpsTab: React.FC = () => {
+  const [routes, setRoutes] = useState(INSPECTION_ROUTES);
+  useEffect(() => {
+    API.fetchInspectionRoutes().then(list => {
+      if (list.length > 0) setRoutes(list.map(r => ({
+        id: r.route_code, name: r.name, assets: [] as string[],
+        inspector: r.inspector_name ?? 'TBA',
+        duration: r.estimated_duration_min ? `${r.estimated_duration_min}min` : 'N/A',
+        distance: r.distance_km ? `${r.distance_km} km` : 'N/A',
+        status: r.status === 'in-progress' ? 'In Progress' : r.status.charAt(0).toUpperCase() + r.status.slice(1),
+        priority: r.priority,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        [String(INSPECTION_ROUTES.length),                                              'ROUTES TODAY',  'text-white',   'border-gray-800'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='In Progress').length),        'IN PROGRESS',   'text-amber-400','border-amber-900/50'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='Scheduled').length),          'SCHEDULED',     'text-blue-400', 'border-blue-900/50'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='Completed').length),          'COMPLETED',     'text-green-400','border-green-900/50'],
+        [String(routes.length),                                              'ROUTES TODAY',  'text-white',   'border-gray-800'],
+        [String(routes.filter(r => r.status==='In Progress').length),        'IN PROGRESS',   'text-amber-400','border-amber-900/50'],
+        [String(routes.filter(r => r.status==='Scheduled').length),          'SCHEDULED',     'text-blue-400', 'border-blue-900/50'],
+        [String(routes.filter(r => r.status==='Completed').length),          'COMPLETED',     'text-green-400','border-green-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4258,7 +4272,7 @@ const FieldOpsTab: React.FC = () => (
         <p className="text-gray-500 text-xs mt-0.5">AI-optimised inspection sequences · Shortest path · Priority weighted</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {INSPECTION_ROUTES.map(route => (
+        {routes.map(route => (
           <div key={route.id} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -4305,7 +4319,8 @@ const FieldOpsTab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-08: FMEA Failure Mode Library ────────────────────────────────────────
 const FMEA_DATA = [
@@ -4465,8 +4480,18 @@ const DOSING_OPTS = [
 ];
 
 const CastrolTab: React.FC = () => {
+  const [blends, setBlends] = useState(CASTROL_BLENDS);
   const [selectedBlend, setSelectedBlend] = useState(CASTROL_BLENDS[0].id);
-  const blend   = CASTROL_BLENDS.find(b => b.id === selectedBlend) ?? CASTROL_BLENDS[0];
+  useEffect(() => {
+    API.fetchCastrolRuns().then(list => {
+      if (list.length > 0) setBlends(list.map(r => ({
+        id: r.batch_code, grade: r.grade_name, tank: 'N/A',
+        vol: Math.round(r.target_volume_liters),
+        elapsed: Math.round(r.progress_pct), total: 100, site: r.site_id,
+      })));
+    }).catch(() => {});
+  }, []);
+  const blend   = blends.find(b => b.id === selectedBlend) ?? blends[0];
   const quality = CASTROL_QUALITY[selectedBlend];
   const sensors = CASTROL_SENSORS[selectedBlend];
   const corrections = CASTROL_CORRECTIONS[selectedBlend] ?? [];
@@ -4491,7 +4516,7 @@ const CastrolTab: React.FC = () => {
       {/* C-06: Off-spec rate KPI strip */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(CASTROL_BLENDS.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
+          [String(blends.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
           [`${offSpecRate}%`,             'OFF-SPEC RATE',    offSpecRate < 5 ? 'text-green-400' : 'text-red-400', offSpecRate < 5 ? 'border-green-900/50' : 'border-red-900/50'],
           ['2%',                          'TARGET OFF-SPEC',  'text-gray-400',   'border-gray-800'     ],
           [String(LIMS_RECORDS.filter(r => r.rework).length), 'REWORK BATCHES', 'text-amber-400', 'border-amber-900/50'],
@@ -4511,7 +4536,7 @@ const CastrolTab: React.FC = () => {
             <p className="text-gray-500 text-xs">Real-time in-process quality prediction · updated every 60s</p>
           </div>
           <div className="flex gap-2">
-            {CASTROL_BLENDS.map(b => (
+            {blends.map(b => (
               <button key={b.id} onClick={() => setSelectedBlend(b.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedBlend === b.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
                 {b.id}
