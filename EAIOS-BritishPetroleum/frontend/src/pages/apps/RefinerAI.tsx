@@ -4974,6 +4974,24 @@ const OTDataTab: React.FC = () => {
   const statusC = { connected:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
   const sevC    = { critical:'text-red-400', warning:'text-amber-400', advisory:'text-blue-400' };
   const normC   = { success:'#22c55e', warn:'#f59e0b', error:'#ef4444' };
+  const [sources, setSources] = useState(OT_SOURCES);
+  const [qualityIssues, setQualityIssues] = useState(OT_QUALITY_ISSUES);
+  useEffect(() => {
+    API.fetchOTSources().then(list => {
+      if (list.length > 0) setSources(list.map(s => ({
+        id: s.source_code, type: s.source_type, site: s.site_id,
+        tags: s.tag_count, latency: `${s.latency_ms}ms`, status: s.status,
+        lastPoll: s.last_poll_at ? new Date(s.last_poll_at).toLocaleTimeString() : 'N/A',
+        qScore: Math.round(s.quality_score_pct),
+      })));
+    }).catch(() => {});
+    API.fetchOTQualityIssues().then(list => {
+      if (list.length > 0) setQualityIssues(list.map(i => ({
+        tag: i.tag_name, site: i.source_id, issue: i.description,
+        severity: i.severity, impact: i.issue_type,
+      })));
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -5001,7 +5019,7 @@ const OTDataTab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {OT_SOURCES.map(s => (
+            {sources.map(s => (
               <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-4 py-2 text-purple-400 font-mono">{s.id}</td>
                 <td className="px-4 py-2 text-gray-300">{s.type}</td>
@@ -5032,11 +5050,11 @@ const OTDataTab: React.FC = () => {
             <p className="text-gray-500 text-xs">Frozen values, out-of-range, stale timestamps, missing data</p>
           </div>
           <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
-            {OT_QUALITY_ISSUES.filter(i=>i.severity==='critical').length} CRITICAL
+            {qualityIssues.filter(i=>i.severity==='critical').length} CRITICAL
           </span>
         </div>
         <div className="divide-y divide-gray-800">
-          {OT_QUALITY_ISSUES.map(q => (
+          {qualityIssues.map(q => (
             <div key={q.tag} className="px-5 py-4 flex items-start gap-4">
               <span className={`flex-shrink-0 font-mono font-bold text-xs pt-0.5 ${sevC[q.severity as keyof typeof sevC]}`}>{q.tag}</span>
               <div className="flex-1">
@@ -5128,15 +5146,46 @@ const CHAMPIONS = [
   { name:'K. Johnson', site:'Houston',  role:'Maintenance Supervisor',    sessions:22, alertsActioned:48  },
 ];
 
-const AdoptionTab: React.FC = () => (
+const AdoptionTab: React.FC = () => {
+  const [metrics, setMetrics] = useState(ADOPTION_METRICS);
+  const [trainingMods, setTrainingMods] = useState(TRAINING_MODULES);
+  const [barriers, setBarriers] = useState(ADOPTION_BARRIERS);
+  const [champions, setChampions] = useState(CHAMPIONS);
+  useEffect(() => {
+    API.fetchAdoptionMetrics().then(list => {
+      if (list.length > 0) setMetrics(list.map(a => ({
+        site: a.site_id, users: a.total_users, active: a.active_users,
+        alertsActioned: Math.round(a.avg_alert_action_rate_pct),
+        avgResponseMin: a.avg_response_time_min,
+        training: Math.round(a.training_completion_rate_pct),
+        score: Math.round(a.adoption_score),
+      })));
+    }).catch(() => {});
+    API.fetchTrainingModules().then(list => {
+      if (list.length > 0) setTrainingMods(list.map(m => ({
+        module: m.name, type: m.module_type,
+        completionPct: Math.round(m.target_completion_pct), avgScore: 0, dueDate: '—',
+      })));
+    }).catch(() => {});
+    API.fetchAdoptionBarriers().then(list => {
+      if (list.length > 0) setBarriers(list.map(b => ({ theme: b.theme, votes: b.vote_count, priority: b.priority })));
+    }).catch(() => {});
+    API.fetchAdoptionChampions().then(list => {
+      if (list.length > 0) setChampions(list.map(c => ({
+        name: c.user_id, site: c.site_id, role: c.role,
+        sessions: c.sessions_count, alertsActioned: c.alerts_actioned_count,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-5">
     {/* M-01: KPIs */}
     <div className="grid grid-cols-4 gap-3">
       {([
-        [String(ADOPTION_METRICS.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.alertsActioned,0)/ADOPTION_METRICS.length))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.avgResponseMin,0)/ADOPTION_METRICS.length))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.training,0)/ADOPTION_METRICS.length))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
+        [String(metrics.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.alertsActioned,0)/Math.max(metrics.length,1)))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.avgResponseMin,0)/Math.max(metrics.length,1)))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.training,0)/Math.max(metrics.length,1)))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
       ] as [string,string,string,string][]).map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -5158,7 +5207,7 @@ const AdoptionTab: React.FC = () => (
           ))}
         </tr></thead>
         <tbody>
-          {ADOPTION_METRICS.sort((a,b)=>b.score-a.score).map(a => (
+          {[...metrics].sort((a,b)=>b.score-a.score).map(a => (
             <tr key={a.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
               <td className="px-4 py-2 text-white font-semibold">{a.site}</td>
               <td className="px-4 py-2 text-gray-400">{a.users}</td>
@@ -5186,7 +5235,7 @@ const AdoptionTab: React.FC = () => (
           <p className="text-gray-500 text-xs">Completion rate · Average assessment score</p>
         </div>
         <div className="divide-y divide-gray-800">
-          {TRAINING_MODULES.map(t => (
+          {trainingMods.map(t => (
             <div key={t.module} className="px-4 py-3">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-white text-xs font-semibold">{t.module}</p>
@@ -5214,7 +5263,7 @@ const AdoptionTab: React.FC = () => (
           <p className="text-gray-500 text-xs">Aggregated from in-app feedback surveys</p>
         </div>
         <div className="divide-y divide-gray-800">
-          {ADOPTION_BARRIERS.map((b,i) => {
+          {barriers.map((b,i) => {
             const c = { high:'text-red-400', medium:'text-amber-400', low:'text-gray-500' };
             return (
               <div key={i} className="px-4 py-3 flex items-center gap-3">
@@ -5237,7 +5286,7 @@ const AdoptionTab: React.FC = () => (
         <p className="text-gray-500 text-xs">Power users driving adoption across sites</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
-        {CHAMPIONS.map(c => (
+        {champions.map(c => (
           <div key={c.name} className="p-4 text-center">
             <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-800 flex items-center justify-center text-purple-400 font-bold text-lg mx-auto mb-2">
               {c.name[0]}
@@ -5254,7 +5303,8 @@ const AdoptionTab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── Block O: Implementation Wave Tracker ─────────────────────────────────────
 
