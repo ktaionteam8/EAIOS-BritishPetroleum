@@ -4722,11 +4722,35 @@ const WELL_INTEGRITY = [
   { well:'C-03', barrier:'Primary', status:'OK',  annPres:11.8, lastTest:'11 Apr', note:'' },
 ];
 
+type OffshorePlatformItem = typeof OFFSHORE_PLATFORMS[0];
+type SubseaAlertItem = typeof SUBSEA_ALERTS[0];
+type WellIntegrityItem = typeof WELL_INTEGRITY[0];
+function mapApiPlatform(p: API.Platform): OffshorePlatformItem {
+  return { id: p.id, name: p.name, field: p.field_name, status: p.status, lat: 0, lon: 0, prod: p.production_bopd, uptime: p.uptime_pct, wells: 0, crew: 0, weatherScore: 0 };
+}
+function mapApiSubseaAlert(a: API.SubseaAlert): SubseaAlertItem {
+  const sev = a.failure_probability_pct >= 70 ? 'critical' : a.failure_probability_pct >= 40 ? 'warning' : 'advisory';
+  return { id: a.id, asset: a.asset_name, platform: a.id, issue: a.issue_description, failProb: a.failure_probability_pct / 100, eta: a.eta_days, sev };
+}
+function mapApiWellIntegrity(w: API.WellIntegrity): WellIntegrityItem {
+  const s = (w.status || '').toLowerCase();
+  const status = s === 'ok' ? 'OK' : s === 'warn' || s === 'warning' ? 'WARN' : s === 'crit' || s === 'critical' ? 'CRIT' : 'OK';
+  return { well: w.well_name, barrier: w.barrier_type, status, annPres: 0, lastTest: '—', note: '' };
+}
+
 const OffshoreTab: React.FC = () => {
+  const [platforms, setPlatforms] = useState<OffshorePlatformItem[]>(OFFSHORE_PLATFORMS);
+  const [subseaAlerts, setSubseaAlerts] = useState<SubseaAlertItem[]>(SUBSEA_ALERTS);
+  const [wellIntegrity, setWellIntegrity] = useState<WellIntegrityItem[]>(WELL_INTEGRITY);
+  useEffect(() => {
+    API.fetchPlatforms().then(list => { if (list.length > 0) setPlatforms(list.map(mapApiPlatform)); }).catch(() => {});
+    API.fetchSubseaAlerts().then(list => { if (list.length > 0) setSubseaAlerts(list.map(mapApiSubseaAlert)); }).catch(() => {});
+    API.fetchWellIntegrity().then(list => { if (list.length > 0) setWellIntegrity(list.map(mapApiWellIntegrity)); }).catch(() => {});
+  }, []);
   const [selPlatform, setSelPlatform] = useState(OFFSHORE_PLATFORMS[0].id);
-  const plat = OFFSHORE_PLATFORMS.find(p => p.id === selPlatform) ?? OFFSHORE_PLATFORMS[0];
+  const plat = platforms.find(p => p.id === selPlatform) ?? platforms[0];
   const weather = OFFSHORE_WEATHER.filter(w => w.platform === selPlatform);
-  const activeAlert = SUBSEA_ALERTS.filter(a => a.platform === selPlatform);
+  const activeAlert = subseaAlerts.filter(a => a.platform === selPlatform);
   const sev = { critical:'#ef4444', warning:'#f59e0b', advisory:'#60a5fa' };
   const pSev = { operational:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
 
@@ -4735,10 +4759,10 @@ const OffshoreTab: React.FC = () => {
       {/* D-01: Fleet overview KPIs */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(OFFSHORE_PLATFORMS.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
-          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
-          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
-          [String(SUBSEA_ALERTS.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
+          [String(platforms.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
+          [String(platforms.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
+          [String(platforms.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
+          [String(subseaAlerts.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4755,7 +4779,7 @@ const OffshoreTab: React.FC = () => {
             <p className="text-gray-500 text-xs">UK Continental Shelf · Real-time operations & predictive subsea analytics</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {OFFSHORE_PLATFORMS.map(p => (
+            {platforms.map(p => (
               <button key={p.id} onClick={() => setSelPlatform(p.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selPlatform === p.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
                 <span style={{ color: pSev[p.status as keyof typeof pSev], marginRight: 5 }}>●</span>{p.id}
@@ -4805,11 +4829,11 @@ const OffshoreTab: React.FC = () => {
             <p className="text-gray-500 text-xs">ML-driven failure probability · All platforms</p>
           </div>
           <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded-lg px-3 py-1 font-semibold">
-            {SUBSEA_ALERTS.filter(a=>a.sev==='critical').length} CRITICAL
+            {subseaAlerts.filter(a=>a.sev==='critical').length} CRITICAL
           </span>
         </div>
         <div className="divide-y divide-gray-800">
-          {SUBSEA_ALERTS.map(a => (
+          {subseaAlerts.map(a => (
             <div key={a.id} className="px-5 py-4 flex items-start gap-4">
               <span style={{ width:8,height:8,borderRadius:'50%',background:sev[a.sev as keyof typeof sev],flexShrink:0,marginTop:5 }} />
               <div className="flex-1 min-w-0">
@@ -4882,7 +4906,7 @@ const OffshoreTab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {WELL_INTEGRITY.map(w => {
+            {wellIntegrity.map(w => {
               const sc = { OK:'text-green-400', WARN:'text-amber-400', CRIT:'text-red-400' };
               return (
                 <tr key={w.well} className="border-b border-gray-800/50 hover:bg-gray-800/20">
