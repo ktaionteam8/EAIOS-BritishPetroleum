@@ -152,10 +152,10 @@ export interface EnergyTarget { id: string; site_id: string; fiscal_year: number
 export interface EnergySavingEvent { id: string; site_id: string; event_date: string; cost_avoided_usd: number; source: string; }
 export interface ComplianceAudit { id: string; site_id: string; audit_date: string; score_pct: number; status: string; }
 export interface ComplianceAction { id: string; action_description: string; due_date: string | null; status: string; owner: string | null; }
-export interface TarEvent { id: string; tar_code: string; site_id: string; unit_name: string; start_date: string; end_date: string; status: string; budget_usd: number; pct_complete?: number; }
+export interface TarEvent { id: string; tar_code: string; site_id: string; unit_name: string; start_date: string; end_date: string; status: string; budget_usd: number; duration_days?: number; work_scope_count?: number; pct_complete?: number; }
 export interface Platform { id: string; name: string; field_name: string; status: string; production_bopd: number; uptime_pct: number; }
 export interface WellIntegrity { id: string; well_name: string; barrier_type: string; status: string; }
-export interface SubseaAlert { id: string; asset_name: string; asset_type: string; issue_description: string; failure_probability_pct: number; eta_days: number; }
+export interface SubseaAlert { id: string; platform_id: string; asset_name: string; asset_type: string; issue_description: string; failure_probability_pct: number; eta_days: number; }
 export interface AdoptionMetric { id: string; site_id: string; adoption_score: number; active_users: number; total_users: number; avg_alert_action_rate_pct: number; }
 export interface TrainingModule { id: string; code: string; name: string; module_type: string; estimated_duration_hours: number; }
 export interface Wave { id: string; wave_number: number; wave_name: string; status: string; pct_complete: number; budget_usd: number; }
