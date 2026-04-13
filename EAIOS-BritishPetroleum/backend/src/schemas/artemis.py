@@ -40,8 +40,24 @@ class AuditLogOut(BaseModel):
     estimated_pnl_usd: float | None
     confidence_pct: float | None
     regulatory_tier: str
-    approver_id: str | None
+    # approver_id omitted — contains PII (email); use approver_ref (opaque) if needed
+    approved: bool = False   # True when approver_id is set, without exposing identity
     created_at: datetime
+
+    @classmethod
+    def from_orm_with_approval(cls, obj: object) -> "AuditLogOut":
+        """Build schema, converting approver_id presence to a boolean flag."""
+        return cls(
+            id=obj.id,                              # type: ignore[attr-defined]
+            action_type=obj.action_type,            # type: ignore[attr-defined]
+            agent_key=obj.agent_key,                # type: ignore[attr-defined]
+            recommendation_summary=obj.recommendation_summary,  # type: ignore[attr-defined]
+            estimated_pnl_usd=obj.estimated_pnl_usd,            # type: ignore[attr-defined]
+            confidence_pct=obj.confidence_pct,      # type: ignore[attr-defined]
+            regulatory_tier=obj.regulatory_tier,    # type: ignore[attr-defined]
+            approved=obj.approver_id is not None,   # type: ignore[attr-defined]
+            created_at=obj.created_at,              # type: ignore[attr-defined]
+        )
 
 
 class ComplianceEventOut(BaseModel):
