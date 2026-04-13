@@ -161,3 +161,112 @@ export interface TrainingModule { id: string; code: string; name: string; module
 export interface Wave { id: string; wave_number: number; wave_name: string; status: string; pct_complete: number; budget_usd: number; }
 export interface EdgeNode { id: string; node_code: string; site_id: string; status: string; avg_latency_ms: number; inference_offload_pct: number; }
 export interface LatencyBenchmark { id: string; scenario_description: string; edge_latency_ms: number; cloud_latency_ms: number; latency_saving_pct: number; }
+
+// ── Dashboard extras ──────────────────────────────────────────────────────────
+export const fetchDashboardSites = () => get<SiteSummary[]>("/api/dashboard/sites");
+export const fetchFleetHeatmap = () => get<SiteHeatmapEntry[]>("/api/dashboard/fleet-heatmap");
+export const fetchEnterpriseScore = () => get<EnterpriseScore>("/api/dashboard/enterprise-score");
+
+// ── Equipment extras ──────────────────────────────────────────────────────────
+export const fetchHealthTrend = (id: string, days = 30) =>
+  get<HealthPoint[]>(`/api/equipment/${id}/health-trend`, { days: String(days) });
+export const fetchFFT = (id: string) => get<FFTPoint[]>(`/api/equipment/${id}/fft`);
+export const fetchRUL = (id: string) => get<RULOut>(`/api/equipment/${id}/rul`);
+export const fetchFailureSignatures = () => get<FailureSignature[]>("/api/equipment/failure-signatures");
+export const fetchEquipmentKPIs = (site_id?: string) =>
+  get<EquipmentKPI[]>("/api/equipment/kpis", site_id ? { site_id } : undefined);
+
+// ── ML Model extras ───────────────────────────────────────────────────────────
+export const fetchModelDrift = (id: string) => get<DriftMetric[]>(`/api/ml-models/${id}/drift`);
+export const fetchModelShap = (id: string) => get<ShapImportance[]>(`/api/ml-models/${id}/shap`);
+export const fetchModelFeedback = (id: string) => get<ModelFeedback[]>(`/api/ml-models/${id}/feedback`);
+export const retireModel = (id: string) => patch<MLModel>(`/api/ml-models/${id}/retire`, {});
+
+// ── OT Data ───────────────────────────────────────────────────────────────────
+export const fetchOTSources = (site_id?: string) =>
+  get<OTSource[]>("/api/ot-data/sources", site_id ? { site_id } : undefined);
+export const fetchOTQualityIssues = (params?: { source_id?: string; severity?: string }) =>
+  get<OTQualityIssue[]>("/api/ot-data/quality-issues", params as Record<string, string>);
+
+// ── Adoption extras ───────────────────────────────────────────────────────────
+export const fetchAdoptionBarriers = () => get<AdoptionBarrier[]>("/api/adoption/barriers");
+export const fetchAdoptionChampions = (site_id?: string) =>
+  get<ChangeChampion[]>("/api/adoption/champions", site_id ? { site_id } : undefined);
+
+// ── Wave extras ───────────────────────────────────────────────────────────────
+export const fetchWaveMilestones = (waveId: string) =>
+  get<WaveMilestone[]>(`/api/waves/${waveId}/milestones`);
+export const fetchWaveRisks = (waveId: string) =>
+  get<DeliveryRisk[]>(`/api/waves/${waveId}/risks`);
+export const createWaveRisk = (waveId: string, body: DeliveryRiskCreate) =>
+  post<DeliveryRisk>(`/api/waves/${waveId}/risks`, body);
+
+// ── Edge extras ───────────────────────────────────────────────────────────────
+export const fetchEdgeLatency = () => get<LatencyBenchmark[]>("/api/edge/latency");
+
+// ── Castrol ───────────────────────────────────────────────────────────────────
+export const fetchCastrolSpecs = () => get<BlendSpec[]>("/api/castrol/specs");
+export const fetchCastrolRuns = (params?: { site_id?: string; status?: string }) =>
+  get<BlendRun[]>("/api/castrol/runs", params as Record<string, string>);
+export const fetchCastrolRunQuality = (runId: string) =>
+  get<BlendQuality[]>(`/api/castrol/runs/${runId}/quality`);
+
+// ── Digital Twin ──────────────────────────────────────────────────────────────
+export const fetchDigitalTwinRegistry = (status?: string) =>
+  get<TwinAsset[]>("/api/digital-twin/registry", status ? { status } : undefined);
+export const fetchDigitalTwinEnvelope = (twinId: string) =>
+  get<EnvelopeParam[]>(`/api/digital-twin/${twinId}/envelope`);
+export const fetchScenarios = (twin_id?: string) =>
+  get<TwinScenario[]>("/api/digital-twin/scenarios", twin_id ? { twin_id } : undefined);
+export const runScenario = (scenarioId: string) =>
+  post<ScenarioRunResult>(`/api/digital-twin/scenarios/${scenarioId}/run`, {});
+
+// ── Reliability ───────────────────────────────────────────────────────────────
+export const fetchFMEA = (params?: { equipment_type?: string; min_rpn?: string }) =>
+  get<FMEAEntry[]>("/api/reliability/fmea", params as Record<string, string>);
+export const fetchReliabilityKPIs = (site_id?: string) =>
+  get<ReliabilityKPI[]>("/api/reliability/kpis", site_id ? { site_id } : undefined);
+export const fetchRiskMatrix = (site_id?: string) =>
+  get<RiskMatrixEntry[]>("/api/reliability/risk-matrix", site_id ? { site_id } : undefined);
+
+// ── Field Ops ─────────────────────────────────────────────────────────────────
+export const fetchInspectionRoutes = (params?: { site_id?: string; status?: string }) =>
+  get<InspectionRoute[]>("/api/field-ops/routes", params as Record<string, string>);
+export const fetchChecklist = (routeId: string) =>
+  get<ChecklistItem[]>(`/api/field-ops/routes/${routeId}/checklist`);
+export const completeChecklistItem = (routeId: string, itemId: string, body: { pass_fail: string; observation_notes?: string }) =>
+  post<ChecklistItem>(`/api/field-ops/routes/${routeId}/items/${itemId}/complete`, body);
+export const fetchContractors = (site_id?: string) =>
+  get<Contractor[]>("/api/field-ops/contractors", site_id ? { site_id } : undefined);
+
+// ── New type stubs ────────────────────────────────────────────────────────────
+export interface SiteSummary { id: string; name: string; code: string; country: string; status: string; }
+export interface SiteHeatmapEntry { site_id: string; site_name: string; critical: number; warning: number; healthy: number; avg_health: number; }
+export interface EnterpriseScore { avg_health_score: number; total_equipment: number; critical_pct: number; oee_pct: number; avoided_cost_usd: number; }
+export interface HealthPoint { timestamp: string; health_score: number; rul_hours: number | null; }
+export interface FFTPoint { frequency_hz: number; amplitude: number; band: string; }
+export interface RULOut { equipment_id: string; tag: string; rul_hours: number | null; rul_days: number | null; confidence_pct: number; predicted_failure_date: string | null; }
+export interface FailureSignature { equipment_type: string; failure_mode: string; sensor_pattern: string; lead_time_hours: number; confidence_pct: number; }
+export interface EquipmentKPI { site_id: string; total: number; critical: number; warning: number; healthy: number; avg_health_score: number; avg_rul_hours: number | null; }
+export interface DriftMetric { id: string; model_id: string; metric_name: string; value: number; threshold: number; drift_detected: boolean; recorded_at: string; }
+export interface ShapImportance { id: string; model_id: string; feature_name: string; importance_score: number; rank: number; }
+export interface OTSource { id: string; source_code: string; source_type: string; site_id: string; tag_count: number; latency_ms: number; status: string; quality_score_pct: number; last_poll_at: string | null; }
+export interface OTQualityIssue { id: string; source_id: string; tag_name: string; issue_type: string; description: string; severity: string; resolution_status: string; detected_at: string; resolved_at: string | null; }
+export interface AdoptionBarrier { id: string; theme: string; description: string | null; priority: string; vote_count: number; status: string; }
+export interface ChangeChampion { id: string; user_id: string; site_id: string; role: string; sessions_count: number; alerts_actioned_count: number; training_completion_pct: number; }
+export interface WaveMilestone { id: string; milestone_code: string; wave_id: string; description: string; due_date: string; status: string; owner: string | null; }
+export interface DeliveryRisk { id: string; risk_code: string; wave_id: string; description: string; probability: string; status: string; }
+export interface DeliveryRiskCreate { risk_code: string; description: string; probability?: string; status?: string; }
+export interface BlendSpec { id: string; grade_name: string; viscosity_target: number; viscosity_tol_low: number; viscosity_tol_high: number; pour_point_target: number; tbn_target: number; }
+export interface BlendRun { id: string; batch_code: string; grade_name: string; site_id: string; target_volume_liters: number; progress_pct: number; status: string; started_at: string; }
+export interface BlendQuality { id: string; blend_id: string; predicted_at: string; viscosity_predicted: number; pour_point_predicted: number; tbn_predicted: number; confidence_low: number | null; confidence_high: number | null; prediction_status: string; }
+export interface TwinAsset { id: string; equipment_id: string; twin_type: string; fidelity: string; last_sync: string; status: string; sync_latency_ms: number | null; }
+export interface EnvelopeParam { id: string; twin_id: string; parameter_name: string; current_value: number; normal_range_low: number; normal_range_high: number; unit: string; status: string; }
+export interface TwinScenario { id: string; twin_id: string; name: string; description: string | null; rul_delta_hours: number | null; impact: string; created_at: string; }
+export interface ScenarioRunResult { scenario_id: string; status: string; rul_delta_hours: number; impact: string; message: string; }
+export interface FMEAEntry { id: string; equipment_type: string; failure_mode: string; cause: string; effect: string; severity: number; occurrence: number; detection: number; rpn: number; current_controls: string; recommended_action: string; }
+export interface ReliabilityKPI { site_id: string; mtbf_hours: number; mttr_hours: number; availability_pct: number; failure_rate_per_year: number; }
+export interface RiskMatrixEntry { equipment_id: string; tag: string; name: string; site_id: string; severity: number; probability: number; risk_score: number; risk_level: string; }
+export interface InspectionRoute { id: string; route_code: string; name: string; priority: string; site_id: string; distance_km: number | null; estimated_duration_min: number | null; inspector_name: string | null; status: string; scheduled_date: string | null; completed_at: string | null; }
+export interface ChecklistItem { id: string; route_id: string; asset_tag: string; check_description: string; iso_standard: string | null; sort_order: number; is_completed: boolean; completed_at: string | null; pass_fail: string | null; observation_notes: string | null; }
+export interface Contractor { id: string; company_name: string; specialty: string; site_id: string | null; }
