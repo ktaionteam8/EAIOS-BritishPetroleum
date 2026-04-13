@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { DomainDropdown } from './DomainDropdown';
 import { ApplicationCard } from './ApplicationCard';
-import { Domain, DOMAINS, APPLICATIONS } from '../types';
+import { AgentCard } from './AgentCard';
+import { Domain, DOMAINS, APPLICATIONS, AGENTS } from '../types';
 
 const DOMAIN_BG_COLORS: Record<string, string> = {
   '01-finance-accounting':             'from-emerald-900/20 to-transparent border-emerald-800/20',
@@ -36,6 +37,9 @@ export const LandingPage: React.FC = () => {
 
   const domainApps = APPLICATIONS.filter(
     (app) => app.domainId === selectedDomain.id
+  );
+  const domainAgents = AGENTS.filter(
+    (a) => a.domainId === selectedDomain.id
   );
 
   const accentColor = DOMAIN_ACCENT[selectedDomain.id];
@@ -128,6 +132,38 @@ export const LandingPage: React.FC = () => {
               </button>
             </div>
           )}
+        </section>
+
+        {/* Agents section */}
+        <section className="mt-10">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Agents</h2>
+              <p className="text-gray-500 text-sm">
+                {domainAgents.length} worker agent{domainAgents.length !== 1 ? 's' : ''} deployed in this domain
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              {(['active', 'idle', 'training'] as const).map(s => {
+                const count = domainAgents.filter(a => a.status === s).length;
+                if (!count) return null;
+                const cls = s === 'active' ? 'text-emerald-400 bg-emerald-900/20 border-emerald-800/30'
+                          : s === 'idle'   ? 'text-gray-400 bg-gray-800/40 border-gray-700/30'
+                          :                  'text-amber-400 bg-amber-900/20 border-amber-800/30';
+                return (
+                  <span key={s} className={`text-xs font-semibold px-2 py-1 rounded-full border ${cls}`}>
+                    {count} {s}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {domainAgents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} accentClass={accentColor} />
+            ))}
+          </div>
         </section>
       </main>
     </div>
