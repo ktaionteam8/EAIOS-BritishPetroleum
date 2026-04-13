@@ -26,7 +26,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 /** Decode JWT payload (client-side only — no signature verification). */
 function tokenToUser(token: string): User | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    // Fix base64url → base64 before decoding (JWT uses URL-safe alphabet without padding)
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
+    // Reject expired tokens (exp is in seconds)
+    if (payload.exp && Date.now() / 1000 > (payload.exp as number)) return null;
     return {
       email: String(payload.sub ?? 'user'),
       loginTime: payload.iat
@@ -40,7 +44,10 @@ function tokenToUser(token: string): User | null {
 
 function loadUserFromStorage(): User | null {
   const token = localStorage.getItem(STORAGE_KEY);
-  return token ? tokenToUser(token) : null;
+  if (!token) return null;
+  const user = tokenToUser(token);
+  if (!user) localStorage.removeItem(STORAGE_KEY); // clean up expired/invalid token
+  return user;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
