@@ -24,6 +24,7 @@ from src.routers.ot_adoption_wave_edge import (
 from src.routers.digital_twin import router as digital_twin_router
 from src.routers.reliability import router as reliability_router
 from src.routers.field_ops import router as field_ops_router
+from src.routers.artemis import router as artemis_router
 
 app = FastAPI(
     title="EAIOS BP API",
@@ -58,6 +59,7 @@ app.include_router(edge_router)
 app.include_router(digital_twin_router)
 app.include_router(reliability_router)
 app.include_router(field_ops_router)
+app.include_router(artemis_router)
 
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
 _anthropic = AsyncAnthropic()
