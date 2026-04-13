@@ -1,8 +1,16 @@
-from fastapi import FastAPI
+import logging
+from typing import Literal
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from anthropic import AsyncAnthropic
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+logger = logging.getLogger(__name__)
 
 from src.config import settings
 
@@ -25,12 +33,17 @@ from src.routers.digital_twin import router as digital_twin_router
 from src.routers.reliability import router as reliability_router
 from src.routers.field_ops import router as field_ops_router
 from src.routers.artemis import router as artemis_router
+from src.routers.auth_router import router as auth_router
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="EAIOS BP API",
     version="0.1.0",
     description="Enterprise AI Operating System — British Petroleum",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,6 +73,7 @@ app.include_router(digital_twin_router)
 app.include_router(reliability_router)
 app.include_router(field_ops_router)
 app.include_router(artemis_router)
+app.include_router(auth_router)
 
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
 _anthropic = AsyncAnthropic()
@@ -83,8 +97,8 @@ _SYSTEM_PROMPT = (
 
 
 class _ChatMessage(BaseModel):
-    role: str  # 'user' or 'assistant'
-    content: str
+    role: Literal["user", "assistant"]
+    content: str = Field(..., max_length=32_000)
 
 
 class ChatRequest(BaseModel):
@@ -92,12 +106,13 @@ class ChatRequest(BaseModel):
 
 
 @app.post("/api/chat")
-async def chat(request: ChatRequest):
+@limiter.limit("20/minute")
+async def chat(request: Request, body: ChatRequest):
     """
     Streaming proxy to Claude API for the RefinerAI Advisor tab.
     Requires ANTHROPIC_API_KEY to be set in the environment.
     """
-    messages = [{"role": m.role, "content": m.content} for m in request.messages]
+    messages = [{"role": m.role, "content": m.content} for m in body.messages]
 
     async def generate():
         try:
@@ -111,7 +126,8 @@ async def chat(request: ChatRequest):
                 async for text in stream.text_stream:
                     yield text
         except Exception as exc:
-            yield f"\n\n⚠️ Error contacting AI: {exc}"
+            logger.error("Anthropic API error in /api/chat: %s", exc, exc_info=True)
+            yield "\n\n⚠️ The AI advisor is temporarily unavailable. Please try again."
 
     return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")
 
