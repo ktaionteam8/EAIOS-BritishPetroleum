@@ -156,8 +156,8 @@ export interface TarEvent { id: string; tar_code: string; site_id: string; unit_
 export interface Platform { id: string; name: string; field_name: string; status: string; production_bopd: number; uptime_pct: number; }
 export interface WellIntegrity { id: string; well_name: string; barrier_type: string; status: string; }
 export interface SubseaAlert { id: string; platform_id: string; asset_name: string; asset_type: string; issue_description: string; failure_probability_pct: number; eta_days: number; }
-export interface AdoptionMetric { id: string; site_id: string; adoption_score: number; active_users: number; total_users: number; avg_alert_action_rate_pct: number; }
-export interface TrainingModule { id: string; code: string; name: string; module_type: string; estimated_duration_hours: number; }
+export interface AdoptionMetric { id: string; site_id: string; metric_date: string; adoption_score: number; active_users: number; total_users: number; avg_alert_action_rate_pct: number; avg_response_time_min: number; training_completion_rate_pct: number; }
+export interface TrainingModule { id: string; code: string; name: string; module_type: string; estimated_duration_hours: number; target_completion_pct: number; is_active: boolean; }
 export interface Wave { id: string; wave_number: number; wave_name: string; period_start: string; period_end: string; status: string; pct_complete: number; budget_usd: number; actual_spent_usd: number; }
 export interface EdgeNode { id: string; node_code: string; site_id: string; hardware_spec: string; status: string; avg_latency_ms: number; inference_offload_pct: number; last_sync_label: string | null; }
 export interface LatencyBenchmark { id: string; scenario_description: string; edge_latency_ms: number; cloud_latency_ms: number; latency_saving_pct: number; }
