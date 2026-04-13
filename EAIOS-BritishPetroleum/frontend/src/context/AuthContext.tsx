@@ -29,8 +29,8 @@ function tokenToUser(token: string): User | null {
     // Fix base64url → base64 before decoding (JWT uses URL-safe alphabet without padding)
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(atob(base64)) as Record<string, unknown>;
-    // Reject expired tokens (exp is in seconds)
-    if (payload.exp && Date.now() / 1000 > (payload.exp as number)) return null;
+    // Reject tokens with no exp claim or where exp is exceeded (exp is in seconds)
+    if (!payload.exp || Date.now() / 1000 > (payload.exp as number)) return null;
     return {
       email: String(payload.sub ?? 'user'),
       loginTime: payload.iat
