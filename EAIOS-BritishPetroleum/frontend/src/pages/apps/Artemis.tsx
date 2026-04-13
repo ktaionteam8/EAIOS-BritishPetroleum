@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useArtemisData, ArtemisData } from '../../hooks/useArtemisData';
+import {
+  ArtemisAgentStatus, ArtemisComplianceEvent,
+  ArbitrageOpportunity, BaseOilPrice, CastrolPricingRec,
+  AviationForecast, AviationContract,
+  CarbonPosition, CarbonRecommendation,
+  ArtemisModelRegistry, ArtemisAuditLog,
+} from '../../api/client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId = 'command-centre' | 'arbitrage' | 'castrol' | 'aviation' | 'carbon' | 'compliance';
@@ -14,6 +22,14 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, sub, accent, border }) 
     <p className="text-xs text-gray-500">{sub}</p>
   </div>
 );
+
+function fmtLastSignal(ts: string | null): string {
+  if (!ts) return '—';
+  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  if (diff < 1) return 'just now';
+  if (diff < 60) return `${diff}m ago`;
+  return `${Math.floor(diff / 60)}h ago`;
+}
 
 interface AgentPanelProps {
   name: string; scope: string; status: 'active' | 'idle';
@@ -52,15 +68,19 @@ const AgentPanel: React.FC<AgentPanelProps> = ({ name, scope, status, signals, l
 );
 
 // ── Command Centre Tab ────────────────────────────────────────────────────────
-const RECENT_SIGNALS = [
-  { agent: 'Trade', type: 'Arbitrage', detail: 'TTF Gas ↔ UK Power spread at 94th percentile', pnl: '+$2.1M', time: '4m ago', color: 'text-emerald-400' },
-  { agent: 'Carbon', type: 'Portfolio', detail: 'EU ETS Dec-26 below 30-day MA — accumulation window', pnl: '-€0.8M risk', time: '11m ago', color: 'text-blue-400' },
-  { agent: 'Castrol', type: 'Pricing', detail: 'Group II base oil +1.2% intraday — 14 SKU updates queued', pnl: 'Margin impact', time: '18m ago', color: 'text-amber-400' },
-  { agent: 'Aviation', type: 'Contract', detail: 'Lufthansa FRA renewal due in 87 days — forecast ready', pnl: '$4.3M contract', time: '1h ago', color: 'text-purple-400' },
-  { agent: 'Trade', type: 'Arbitrage', detail: 'Brent/Dubai crude quality differential at 18-month wide', pnl: '+$3.6M', time: '1h 22m ago', color: 'text-emerald-400' },
-];
+const AGENT_COLOR: Record<string, string> = {
+  'artemis-trade': 'text-emerald-400',
+  'artemis-castrol': 'text-amber-400',
+  'artemis-aviation': 'text-purple-400',
+  'artemis-carbon': 'text-blue-400',
+};
 
-const CommandCentreTab: React.FC = () => (
+interface CommandCentreProps {
+  agents: ArtemisAgentStatus[];
+  auditLog: ArtemisAuditLog[];
+  complianceEvents: ArtemisComplianceEvent[];
+}
+const CommandCentreTab: React.FC<CommandCentreProps> = ({ agents, auditLog, complianceEvents }) => (
   <div className="space-y-8">
     {/* KPI Strip */}
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -74,27 +94,38 @@ const CommandCentreTab: React.FC = () => (
     <div>
       <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Agent Status</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AgentPanel name="ARTEMIS-Trade" scope="Crude · Gas · LNG · Power" status="active" signals={23} lastSignal="4m ago" metric="180" metricLabel="Spreads" />
-        <AgentPanel name="ARTEMIS-Castrol" scope="B2B Pricing · 120+ Markets" status="active" signals={14} lastSignal="18m ago" metric="1,240" metricLabel="SKUs Priced" />
-        <AgentPanel name="ARTEMIS-Aviation" scope="Jet A-1 · 600+ Airports" status="active" signals={6} lastSignal="1h ago" metric="88%" metricLabel="Forecast Acc." />
-        <AgentPanel name="ARTEMIS-Carbon" scope="EU ETS · VCS · CORSIA" status="active" signals={9} lastSignal="11m ago" metric="€42.3" metricLabel="ETS Price" />
+        {agents.map(a => (
+          <AgentPanel key={a.id}
+            name={a.agent_name}
+            scope={a.scope}
+            status={a.status === 'active' ? 'active' : 'idle'}
+            signals={a.signals_today}
+            lastSignal={fmtLastSignal(a.last_signal_at)}
+            metric={a.primary_metric_value ?? '—'}
+            metricLabel={a.primary_metric_label ?? ''}
+          />
+        ))}
       </div>
     </div>
 
-    {/* Recent Signals */}
+    {/* Recent Signals — from SOX audit log */}
     <div>
       <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Recent Intelligence Signals</h2>
       <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800">
-        {RECENT_SIGNALS.map((s, i) => (
-          <div key={i} className="flex items-center justify-between gap-4 px-5 py-3">
+        {auditLog.slice(0, 5).map((s) => (
+          <div key={s.id} className="flex items-center justify-between gap-4 px-5 py-3">
             <div className="flex items-center gap-3 min-w-0">
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-gray-800 ${s.color} shrink-0`}>{s.agent}</span>
-              <span className="text-gray-500 text-xs shrink-0">{s.type}</span>
-              <p className="text-gray-300 text-sm truncate">{s.detail}</p>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-gray-800 ${AGENT_COLOR[s.agent_key] ?? 'text-gray-400'} shrink-0`}>
+                {s.agent_key.replace('artemis-', '').replace(/^\w/, c => c.toUpperCase())}
+              </span>
+              <span className="text-gray-500 text-xs shrink-0">{s.action_type.replace(/_/g, ' ')}</span>
+              <p className="text-gray-300 text-sm truncate">{s.recommendation_summary ?? '—'}</p>
             </div>
             <div className="flex items-center gap-4 shrink-0">
-              <span className="text-emerald-400 text-xs font-mono">{s.pnl}</span>
-              <span className="text-gray-600 text-xs">{s.time}</span>
+              {s.estimated_pnl_usd != null && (
+                <span className="text-emerald-400 text-xs font-mono">${(s.estimated_pnl_usd / 1000).toFixed(0)}k</span>
+              )}
+              <span className="text-gray-600 text-xs">{fmtLastSignal(s.created_at)}</span>
               <button className="text-xs border border-amber-800/40 text-amber-400 hover:bg-amber-900/20 px-2 py-0.5 rounded transition-colors">Review</button>
             </div>
           </div>
@@ -106,14 +137,10 @@ const CommandCentreTab: React.FC = () => (
     <div>
       <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Compliance Rail</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { label: 'SOX Audit Log', status: 'COMPLIANT', detail: 'Immutable WORM — 14,820 records today', color: 'text-emerald-400 border-emerald-800/30' },
-          { label: 'UK FCA Supervisory Record', status: 'COMPLIANT', detail: 'All Tier 2 decisions logged · No MAR alerts', color: 'text-emerald-400 border-emerald-800/30' },
-          { label: 'EU AI Act — Tier 2', status: 'COMPLIANT', detail: 'Models validated · Next review in 18 days', color: 'text-emerald-400 border-emerald-800/30' },
-        ].map(c => (
-          <div key={c.label} className={`bg-gray-900 border rounded-xl p-4 ${c.color.split(' ')[1]}`}>
-            <p className={`text-xs font-bold uppercase tracking-widest ${c.color.split(' ')[0]} mb-1`}>{c.status}</p>
-            <p className="text-white text-sm font-semibold">{c.label}</p>
+        {complianceEvents.slice(0, 3).map(c => (
+          <div key={c.id} className="bg-gray-900 border border-amber-800/30 rounded-xl p-4">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">{c.framework}</p>
+            <p className="text-white text-sm font-semibold">{c.status.toUpperCase()}</p>
             <p className="text-gray-500 text-xs mt-1">{c.detail}</p>
           </div>
         ))}
@@ -123,15 +150,8 @@ const CommandCentreTab: React.FC = () => (
 );
 
 // ── Arbitrage Intelligence Tab ────────────────────────────────────────────────
-const OPPORTUNITIES = [
-  { spread: 'TTF Gas ↔ UK Power (NBP spark)',     level: '£38.4/MWh', pct: '94th',  pnl: '+$2.1M', window: '2–6h',    conf: 91, tier: 'Tier 2' },
-  { spread: 'Brent/Dubai Quality Differential',   level: '$3.82/bbl', pct: '88th',  pnl: '+$3.6M', window: '1–3 days', conf: 84, tier: 'Tier 2' },
-  { spread: 'LNG JKM ↔ TTF Cargo Arb',            level: '$4.10/mmBtu', pct: '79th', pnl: '+$1.8M', window: '4–8h',  conf: 76, tier: 'Tier 2' },
-  { spread: 'EU ETS vs Carbon-Adjusted Gas Margin', level: '€6.2/tonne', pct: '72nd', pnl: '+$0.9M', window: '1–2 days', conf: 71, tier: 'Tier 2' },
-  { spread: 'Brent M1–M3 Contango',                level: '$1.44/bbl', pct: '61st',  pnl: '+$1.2M', window: '3–5 days', conf: 68, tier: 'Tier 2' },
-];
-
-const ArbitrageTab: React.FC = () => (
+interface ArbitrageTabProps { opportunities: ArbitrageOpportunity[]; }
+const ArbitrageTab: React.FC<ArbitrageTabProps> = ({ opportunities }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KPICard label="Spreads Monitored" value="180" sub="Real-time, sub-60s latency" accent="text-amber-400" border="border-amber-800/30" />
@@ -149,17 +169,17 @@ const ArbitrageTab: React.FC = () => (
         <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
           <span className="col-span-2">Spread</span><span>Level</span><span>Percentile</span><span>Est. P&amp;L</span><span>Confidence</span>
         </div>
-        {OPPORTUNITIES.map((o, i) => (
-          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
-            <span className="col-span-2 text-white text-sm font-medium">{o.spread}</span>
-            <span className="text-amber-400 font-mono text-sm">{o.level}</span>
-            <span className="text-gray-300 text-sm">{o.pct}</span>
-            <span className="text-emerald-400 font-mono text-sm font-semibold">{o.pnl}</span>
+        {opportunities.map((o) => (
+          <div key={o.id} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+            <span className="col-span-2 text-white text-sm font-medium">{o.spread_name}</span>
+            <span className="text-amber-400 font-mono text-sm">{o.current_level}</span>
+            <span className="text-gray-300 text-sm">{o.percentile_rank}th</span>
+            <span className="text-emerald-400 font-mono text-sm font-semibold">${(o.estimated_pnl_usd / 1000).toFixed(0)}k</span>
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-gray-800 rounded-full h-1.5">
-                <div className="bg-amber-400 h-1.5 rounded-full" style={{ width: `${o.conf}%` }} />
+                <div className="bg-amber-400 h-1.5 rounded-full" style={{ width: `${o.confidence_pct}%` }} />
               </div>
-              <span className="text-xs text-gray-400 font-mono w-8">{o.conf}%</span>
+              <span className="text-xs text-gray-400 font-mono w-8">{o.confidence_pct.toFixed(0)}%</span>
             </div>
           </div>
         ))}
@@ -174,20 +194,8 @@ const ArbitrageTab: React.FC = () => (
 );
 
 // ── Castrol Pricing Tab ───────────────────────────────────────────────────────
-const BASE_OIL = [
-  { grade: 'Group I SN 150',  price: '$862/MT',  change: '+0.4%', status: 'Normal' },
-  { grade: 'Group II 100N',   price: '$894/MT',  change: '+1.2%', status: 'Alert'  },
-  { grade: 'Group III 4cSt',  price: '$1,108/MT', change: '+0.7%', status: 'Normal' },
-];
-const PRICING_SKU = [
-  { sku: 'Castrol Hyspin AWS 46',   segment: 'Industrial',  curr: '$3.42/L', rec: '$3.49/L', margin: '+2.0%', status: 'Update Available' },
-  { sku: 'Castrol Optigear 320',    segment: 'Industrial',  curr: '$6.18/L', rec: '$6.18/L', margin: 'Stable', status: 'At Recommended' },
-  { sku: 'Castrol Syntilo 9954',    segment: 'Metalworking', curr: '$4.85/L', rec: '$4.72/L', margin: '-2.7%', status: 'Overpriced' },
-  { sku: 'Castrol Tribol 800/W',    segment: 'Industrial',  curr: '$9.10/L', rec: '$9.32/L', margin: '+2.4%', status: 'Update Available' },
-  { sku: 'Castrol Perfecto T 46',   segment: 'Power Gen',   curr: '$4.20/L', rec: '$4.20/L', margin: 'Stable', status: 'At Recommended' },
-];
-
-const CastrolTab: React.FC = () => (
+interface CastrolTabProps { baseOil: BaseOilPrice[]; pricingRecs: CastrolPricingRec[]; }
+const CastrolTab: React.FC<CastrolTabProps> = ({ baseOil, pricingRecs }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KPICard label="SKUs Monitored" value="1,240" sub="Across 120+ global markets" accent="text-amber-400" border="border-amber-800/30" />
@@ -199,11 +207,13 @@ const CastrolTab: React.FC = () => (
     <div>
       <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Base Oil Cost Monitor</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {BASE_OIL.map(b => (
-          <div key={b.grade} className={`bg-gray-900 border rounded-xl p-4 ${b.status === 'Alert' ? 'border-orange-800/40' : 'border-gray-800'}`}>
+        {baseOil.map(b => (
+          <div key={b.id} className={`bg-gray-900 border rounded-xl p-4 ${b.alert_status === 'alert' ? 'border-orange-800/40' : 'border-gray-800'}`}>
             <p className="text-white text-sm font-semibold">{b.grade}</p>
-            <p className="text-amber-400 text-2xl font-bold font-mono mt-2">{b.price}</p>
-            <p className={`text-xs mt-1 font-semibold ${b.change.startsWith('+') ? 'text-orange-400' : 'text-emerald-400'}`}>{b.change} today {b.status === 'Alert' && '· Intraday update triggered'}</p>
+            <p className="text-amber-400 text-2xl font-bold font-mono mt-2">{b.price_display}</p>
+            <p className={`text-xs mt-1 font-semibold ${b.change_pct >= 0 ? 'text-orange-400' : 'text-emerald-400'}`}>
+              {b.change_display} today {b.alert_status === 'alert' && '· Intraday update triggered'}
+            </p>
           </div>
         ))}
       </div>
@@ -215,19 +225,19 @@ const CastrolTab: React.FC = () => (
         <div className="grid grid-cols-5 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
           <span className="col-span-2">SKU</span><span>Current</span><span>Recommended</span><span>Status</span>
         </div>
-        {PRICING_SKU.map((s, i) => (
-          <div key={i} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+        {pricingRecs.map((s) => (
+          <div key={s.id} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
             <div className="col-span-2">
-              <p className="text-white text-sm font-medium">{s.sku}</p>
-              <p className="text-gray-500 text-xs">{s.segment}</p>
+              <p className="text-white text-sm font-medium">{s.sku_name}</p>
+              <p className="text-gray-500 text-xs">{s.segment} · {s.geography}</p>
             </div>
-            <span className="text-gray-400 font-mono text-sm">{s.curr}</span>
-            <span className="text-amber-400 font-mono text-sm font-semibold">{s.rec}</span>
+            <span className="text-gray-400 font-mono text-sm">{s.current_display}</span>
+            <span className="text-amber-400 font-mono text-sm font-semibold">{s.recommended_display}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${
-              s.status === 'Update Available' ? 'bg-amber-900/30 text-amber-400' :
-              s.status === 'Overpriced'       ? 'bg-red-900/30 text-red-400' :
-                                               'bg-gray-800 text-gray-400'
-            }`}>{s.status}</span>
+              s.rec_status === 'update_available' ? 'bg-amber-900/30 text-amber-400' :
+              s.rec_status === 'overpriced'       ? 'bg-red-900/30 text-red-400' :
+                                                   'bg-gray-800 text-gray-400'
+            }`}>{s.rec_status.replace(/_/g, ' ')}</span>
           </div>
         ))}
       </div>
@@ -236,15 +246,8 @@ const CastrolTab: React.FC = () => (
 );
 
 // ── Aviation Fuel Tab ─────────────────────────────────────────────────────────
-const AIRPORTS = [
-  { airport: 'London Heathrow (LHR)', airline: 'British Airways, Virgin',  d30: '42.8ML',  d90: '41.2ML', delta: '-3.7%', renewal: '87 days' },
-  { airport: 'Frankfurt (FRA)',        airline: 'Lufthansa, Ryanair',        d30: '38.1ML',  d90: '39.4ML', delta: '+3.4%', renewal: '87 days' },
-  { airport: 'Dubai (DXB)',            airline: 'Emirates, flydubai',        d30: '61.4ML',  d90: '64.2ML', delta: '+4.6%', renewal: '194 days' },
-  { airport: 'Singapore (SIN)',        airline: 'Singapore Airlines, Scoot', d30: '29.7ML',  d90: '31.1ML', delta: '+4.7%', renewal: '241 days' },
-  { airport: 'Chicago O\'Hare (ORD)',  airline: 'United, American',          d30: '33.5ML',  d90: '32.8ML', delta: '-2.1%', renewal: '312 days' },
-];
-
-const AviationTab: React.FC = () => (
+interface AviationTabProps { forecasts: AviationForecast[]; contracts: AviationContract[]; }
+const AviationTab: React.FC<AviationTabProps> = ({ forecasts, contracts }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KPICard label="Airports Covered" value="600+" sub="Daily demand forecast" accent="text-purple-400" border="border-purple-800/30" />
@@ -262,20 +265,27 @@ const AviationTab: React.FC = () => (
         <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
           <span className="col-span-2">Airport</span><span>Airlines</span><span>30-Day Actual</span><span>90-Day Forecast</span><span>Contract Renewal</span>
         </div>
-        {AIRPORTS.map((a, i) => (
-          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
-            <div className="col-span-2">
-              <p className="text-white text-sm font-medium">{a.airport}</p>
+        {forecasts.map((a) => {
+          const contract = contracts.find(c => c.iata_code === a.iata_code);
+          return (
+            <div key={a.id} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+              <div className="col-span-2">
+                <p className="text-white text-sm font-medium">{a.airport_name ?? a.iata_code}</p>
+                <p className="text-gray-500 text-xs">{a.iata_code}</p>
+              </div>
+              <span className="text-gray-400 text-xs">{contract?.airline ?? '—'}</span>
+              <span className="text-amber-400 font-mono text-sm">{a.d30_display}</span>
+              <div>
+                <span className="text-purple-400 font-mono text-sm">{a.d90_display}</span>
+                <span className={`ml-2 text-xs font-semibold ${a.d90_delta_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{a.d90_delta_display}</span>
+              </div>
+              {contract
+                ? <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${contract.days_to_renewal < 100 ? 'bg-orange-900/30 text-orange-400' : 'bg-gray-800 text-gray-400'}`}>{contract.days_to_renewal} days</span>
+                : <span className="text-gray-600 text-xs">—</span>
+              }
             </div>
-            <span className="text-gray-400 text-xs">{a.airline}</span>
-            <span className="text-amber-400 font-mono text-sm">{a.d30}</span>
-            <div>
-              <span className="text-purple-400 font-mono text-sm">{a.d90}</span>
-              <span className={`ml-2 text-xs font-semibold ${a.delta.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>{a.delta}</span>
-            </div>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${parseInt(a.renewal) < 100 ? 'bg-orange-900/30 text-orange-400' : 'bg-gray-800 text-gray-400'}`}>{a.renewal}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
 
@@ -288,14 +298,8 @@ const AviationTab: React.FC = () => (
 );
 
 // ── Carbon Portfolio Tab ──────────────────────────────────────────────────────
-const CARBON_CREDITS = [
-  { type: 'EU ETS Dec-25',  holdings: '180,000t',  obligation: '210,000t', surplus: '-30,000t', price: '€48.20', action: 'BUY', urgency: 'High'   },
-  { type: 'EU ETS Dec-26',  holdings: '420,000t',  obligation: '380,000t', surplus: '+40,000t', price: '€45.80', action: 'HOLD', urgency: 'Low'   },
-  { type: 'VCS Forestry',   holdings: '85,000t',   obligation: 'Voluntary',surplus: '+85,000t', price: '$14.20', action: 'SELL', urgency: 'Medium' },
-  { type: 'Gold Standard',  holdings: '32,000t',   obligation: 'Voluntary',surplus: '+32,000t', price: '$16.80', action: 'HOLD', urgency: 'Low'   },
-];
-
-const CarbonTab: React.FC = () => (
+interface CarbonTabProps { positions: CarbonPosition[]; recs: CarbonRecommendation[]; }
+const CarbonTab: React.FC<CarbonTabProps> = ({ positions, recs }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       <KPICard label="EU ETS Net Position" value="-30kt" sub="Dec-25 deficit — purchase recommended" accent="text-red-400" border="border-red-800/30" />
@@ -310,46 +314,45 @@ const CarbonTab: React.FC = () => (
         <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
           <span className="col-span-2">Credit Type</span><span>Holdings</span><span>Obligation</span><span>Net Position</span><span>Agent Action</span>
         </div>
-        {CARBON_CREDITS.map((c, i) => (
-          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
-            <div className="col-span-2">
-              <p className="text-white text-sm font-medium">{c.type}</p>
-              <p className="text-gray-500 text-xs">{c.price}</p>
-            </div>
-            <span className="text-gray-300 font-mono text-sm">{c.holdings}</span>
-            <span className="text-gray-400 font-mono text-sm">{c.obligation}</span>
-            <span className={`font-mono text-sm font-semibold ${c.surplus.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>{c.surplus}</span>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit ${
-              c.action === 'BUY'  ? 'bg-emerald-900/30 text-emerald-400' :
-              c.action === 'SELL' ? 'bg-amber-900/30 text-amber-400' :
+        {positions.map((c) => {
+          const rec = recs.find(r => r.credit_type === c.credit_type);
+          const action = rec?.action.toUpperCase() ?? 'HOLD';
+          const urgency = rec?.urgency ?? '';
+          return (
+            <div key={c.id} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+              <div className="col-span-2">
+                <p className="text-white text-sm font-medium">{c.credit_type}</p>
+                <p className="text-gray-500 text-xs">{c.price_display}</p>
+              </div>
+              <span className="text-gray-300 font-mono text-sm">{c.holdings_display}</span>
+              <span className="text-gray-400 font-mono text-sm">{c.obligation_display}</span>
+              <span className={`font-mono text-sm font-semibold ${c.net_position_tonnes >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{c.net_position_display}</span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit ${
+                action === 'BUY'  ? 'bg-emerald-900/30 text-emerald-400' :
+                action === 'SELL' ? 'bg-amber-900/30 text-amber-400' :
                                    'bg-gray-800 text-gray-400'
-            }`}>{c.action} · {c.urgency}</span>
-          </div>
-        ))}
+              }`}>{action}{urgency && ` · ${urgency}`}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   </div>
 );
 
 // ── Compliance Tab ────────────────────────────────────────────────────────────
-const MODELS = [
-  { name: 'Arbitrage Detection Model v2.4',   status: 'Validated',  nextReview: '18 days', drift: 'None',     accuracy: '91.3%' },
-  { name: 'Castrol Pricing Model v1.8',        status: 'Validated',  nextReview: '22 days', drift: 'None',     accuracy: '88.7%' },
-  { name: 'Aviation Demand Forecast v3.1',     status: 'Validated',  nextReview: '31 days', drift: 'Minimal',  accuracy: '88.0%' },
-  { name: 'Carbon Portfolio Optimiser v1.2',   status: 'Validated',  nextReview: '9 days',  drift: 'None',     accuracy: '92.1%' },
-];
-
-const ComplianceTab: React.FC = () => (
+interface ComplianceTabProps {
+  complianceEvents: ArtemisComplianceEvent[];
+  models: ArtemisModelRegistry[];
+  auditLog: ArtemisAuditLog[];
+}
+const ComplianceTab: React.FC<ComplianceTabProps> = ({ complianceEvents, models, auditLog }) => (
   <div className="space-y-8">
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {[
-        { framework: 'SOX — NYSE Listing',     status: 'COMPLIANT', detail: '14,820 audit records today · WORM S3 · CloudTrail enabled', color: 'emerald' },
-        { framework: 'UK FCA SYSC 10A',        status: 'COMPLIANT', detail: 'Supervisory record current · No MAR alerts · SM&CR mapped', color: 'emerald' },
-        { framework: 'EU AI Act — Tier 2 HR',  status: 'COMPLIANT', detail: 'Technical file current · Art.14 human oversight active',     color: 'emerald' },
-      ].map(f => (
-        <div key={f.framework} className={`bg-gray-900 border border-${f.color}-800/30 rounded-xl p-5`}>
-          <p className={`text-xs font-bold uppercase tracking-widest text-${f.color}-400 mb-1`}>{f.status}</p>
-          <p className="text-white font-semibold text-sm">{f.framework}</p>
+      {complianceEvents.slice(0, 3).map(f => (
+        <div key={f.id} className="bg-gray-900 border border-amber-800/30 rounded-xl p-5">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">{f.framework}</p>
+          <p className="text-white font-semibold text-sm">{f.status.toUpperCase()}</p>
           <p className="text-gray-500 text-xs mt-2 leading-relaxed">{f.detail}</p>
         </div>
       ))}
@@ -361,15 +364,15 @@ const ComplianceTab: React.FC = () => (
         <div className="grid grid-cols-5 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
           <span className="col-span-2">Model</span><span>Status</span><span>Accuracy</span><span>Next Review</span>
         </div>
-        {MODELS.map((m, i) => (
-          <div key={i} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 items-center">
+        {models.map((m) => (
+          <div key={m.id} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 items-center">
             <div className="col-span-2">
-              <p className="text-white text-sm font-medium">{m.name}</p>
-              <p className="text-gray-500 text-xs">Drift: {m.drift}</p>
+              <p className="text-white text-sm font-medium">{m.model_name} <span className="text-gray-600 text-xs">{m.version}</span></p>
+              <p className="text-gray-500 text-xs">Drift: {m.drift_status}</p>
             </div>
             <span className="text-emerald-400 text-xs font-bold">{m.status}</span>
-            <span className="text-amber-400 font-mono text-sm">{m.accuracy}</span>
-            <span className={`text-xs font-semibold ${parseInt(m.nextReview) < 15 ? 'text-orange-400' : 'text-gray-400'}`}>{m.nextReview}</span>
+            <span className="text-amber-400 font-mono text-sm">{m.accuracy_pct.toFixed(1)}%</span>
+            <span className={`text-xs font-semibold ${m.next_review_days < 15 ? 'text-orange-400' : 'text-gray-400'}`}>{m.next_review_days} days</span>
           </div>
         ))}
       </div>
@@ -377,17 +380,14 @@ const ComplianceTab: React.FC = () => (
 
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Audit Log — Today</p>
-        {[
-          { label: 'Recommendations Generated', value: '52' },
-          { label: 'Human Approvals', value: '38' },
-          { label: 'Human Overrides (with rationale)', value: '7' },
-          { label: 'Compliance Screenings Passed', value: '52 / 52' },
-          { label: 'MAR Violation Flags', value: '0' },
-        ].map(r => (
-          <div key={r.label} className="flex justify-between py-1.5 border-b border-gray-800/50 last:border-0">
-            <span className="text-gray-400 text-sm">{r.label}</span>
-            <span className="text-white font-mono text-sm">{r.value}</span>
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Audit Log — Recent</p>
+        {auditLog.slice(0, 5).map(r => (
+          <div key={r.id} className="flex justify-between py-1.5 border-b border-gray-800/50 last:border-0">
+            <div className="min-w-0 mr-2">
+              <span className="text-gray-400 text-sm truncate block">{r.recommendation_summary ?? r.action_type.replace(/_/g,' ')}</span>
+              <span className="text-gray-600 text-xs">{r.agent_key} · {r.regulatory_tier}</span>
+            </div>
+            <span className="text-white font-mono text-xs shrink-0">{fmtLastSignal(r.created_at)}</span>
           </div>
         ))}
       </div>
@@ -427,6 +427,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
 const Artemis: React.FC = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>('command-centre');
+  const d: ArtemisData = useArtemisData();
 
   return (
     <div className="min-h-screen bg-bp-dark font-sans">
@@ -447,9 +448,9 @@ const Artemis: React.FC = () => {
               <p className="text-gray-400 text-sm mt-1">Autonomous Real-Time Energy Market Intelligence System</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-900/30 text-emerald-400 border border-emerald-800/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Live — 4 Agents Active
+              <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${d.loading ? 'bg-gray-800/30 text-gray-500 border-gray-700' : 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${d.loading ? 'bg-gray-500' : 'bg-emerald-400 animate-pulse'}`} />
+                {d.loading ? 'Loading…' : `Live — ${d.agents.filter(a => a.status === 'active').length} Agents Active`}
               </span>
               <span className="text-xs text-gray-500 hidden sm:block">AWS · Capgemini Resonance</span>
             </div>
@@ -472,12 +473,12 @@ const Artemis: React.FC = () => {
 
       {/* Tab Content */}
       <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
-        {tab === 'command-centre' && <CommandCentreTab />}
-        {tab === 'arbitrage'      && <ArbitrageTab />}
-        {tab === 'castrol'        && <CastrolTab />}
-        {tab === 'aviation'       && <AviationTab />}
-        {tab === 'carbon'         && <CarbonTab />}
-        {tab === 'compliance'     && <ComplianceTab />}
+        {tab === 'command-centre' && <CommandCentreTab agents={d.agents} auditLog={d.auditLog} complianceEvents={d.complianceEvents} />}
+        {tab === 'arbitrage'      && <ArbitrageTab opportunities={d.opportunities} />}
+        {tab === 'castrol'        && <CastrolTab baseOil={d.baseOil} pricingRecs={d.pricingRecs} />}
+        {tab === 'aviation'       && <AviationTab forecasts={d.forecasts} contracts={d.contracts} />}
+        {tab === 'carbon'         && <CarbonTab positions={d.carbonPositions} recs={d.carbonRecs} />}
+        {tab === 'compliance'     && <ComplianceTab complianceEvents={d.complianceEvents} models={d.models} auditLog={d.auditLog} />}
       </main>
     </div>
   );
