@@ -5914,23 +5914,20 @@ const RefinerAIPage: React.FC = () => {
           <div style={{ marginBottom: 24 }}>
             <p style={{ fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600, marginBottom: 8 }}>Specialty</p>
             {[
-              { id: 'castrol',      label: 'Castrol Blending', icon: '⬡', badge: 'NEW' },
-              { id: 'offshore',     label: 'North Sea Ops',    icon: '⛽', badge: 'NEW' },
-              { id: 'ot-data',      label: 'OT Data',          icon: '⊡', badge: 'NEW' },
-              { id: 'adoption',     label: 'Adoption',         icon: '◑', badge: 'NEW' },
-              { id: 'wave-tracker', label: 'Wave Tracker',     icon: '≋', badge: 'NEW' },
-              { id: 'edge-ai',      label: 'Edge AI',          icon: '⬡', badge: 'NEW' },
+              { id: 'castrol',      label: 'Castrol Blending', icon: '⬡' },
+              { id: 'offshore',     label: 'North Sea Ops',    icon: '⛽' },
+              { id: 'ot-data',      label: 'OT Data',          icon: '⊡' },
+              { id: 'adoption',     label: 'Adoption',         icon: '◑' },
+              { id: 'wave-tracker', label: 'Wave Tracker',     icon: '≋' },
+              { id: 'edge-ai',      label: 'Edge AI',          icon: '⬡' },
             ].map(item => (
               <button key={item.id} onClick={() => setActiveTab(item.id as TabId)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all .15s',
+                style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 10px', borderRadius: 6, marginBottom: 2, fontSize: 13, fontWeight: 500, cursor: 'pointer', gap: 8, transition: 'all .15s',
                   background: activeTab === item.id ? '#1e1b4b' : 'transparent',
                   color: activeTab === item.id ? '#a78bfa' : '#9ca3af',
                   border: activeTab === item.id ? '1px solid #3730a3' : '1px solid transparent',
                 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>{item.icon}</span>{item.label}
-                </span>
-                {item.badge && <span style={{ fontSize: 10, background: '#7c3aed', color: '#fff', borderRadius: 10, padding: '1px 6px', fontWeight: 700 }}>{item.badge}</span>}
+                <span>{item.icon}</span>{item.label}
               </button>
             ))}
           </div>
