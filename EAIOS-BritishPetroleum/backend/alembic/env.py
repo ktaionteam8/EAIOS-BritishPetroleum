@@ -38,8 +38,13 @@ import src.models.field_ops     # noqa: F401
 import src.models.castrol       # noqa: F401
 import src.models.offshore      # noqa: F401
 import src.models.adoption      # noqa: F401
-import src.models.wave_tracker  # noqa: F401
-import src.models.edge_ai       # noqa: F401
+import src.models.wave_tracker     # noqa: F401
+import src.models.edge_ai          # noqa: F401
+import src.models.artemis_core     # noqa: F401
+import src.models.artemis_arbitrage  # noqa: F401
+import src.models.artemis_castrol  # noqa: F401
+import src.models.artemis_aviation # noqa: F401
+import src.models.artemis_carbon   # noqa: F401
 
 target_metadata = Base.metadata
 
