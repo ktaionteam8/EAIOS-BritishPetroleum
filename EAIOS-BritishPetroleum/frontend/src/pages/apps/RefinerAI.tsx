@@ -1601,7 +1601,27 @@ const OP_ENVELOPE: { param: string; current: number; normal_lo: number; normal_h
   { param:'Motor Current',        current:142,  normal_lo:95,   normal_hi:110,  unit:'A'     },
 ];
 
-const DigitalTwinEnhancementsPanel: React.FC = () => (
+const DigitalTwinEnhancementsPanel: React.FC = () => {
+  const [twinAssets, setTwinAssets] = useState(TWIN_ASSETS);
+  const [scenarios, setScenarios] = useState(TWIN_SCENARIOS);
+  useEffect(() => {
+    API.fetchDigitalTwinRegistry().then(list => {
+      if (list.length > 0) setTwinAssets(list.map(a => ({
+        id: a.equipment_id, name: `Twin — ${a.equipment_id}`, type: a.twin_type,
+        site: 'N/A', fidelity: a.fidelity.charAt(0).toUpperCase() + a.fidelity.slice(1),
+        lastSync: a.last_sync, status: a.status,
+      })));
+    }).catch(() => {});
+    API.fetchScenarios().then(list => {
+      if (list.length > 0) setScenarios(list.map(s => ({
+        scenario: s.name,
+        outcome: s.description ?? `RUL delta: ${(s.rul_delta_hours ?? 0).toFixed(0)}h`,
+        impact: s.impact === 'positive' ? 'positive' : 'negative',
+        runTime: '1.0s',
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     {/* K-01: Twin registry */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -1610,7 +1630,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
         <p className="text-gray-500 text-xs">Live fidelity status · Sync frequency · Physics-based models</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
-        {TWIN_ASSETS.map(a => {
+        {twinAssets.map(a => {
           const sc = { critical:'border-t-red-500 text-red-400', warning:'border-t-amber-500 text-amber-400', healthy:'border-t-green-500 text-green-400' };
           return (
             <div key={a.id} className={`p-4 border-t-2 ${a.status==='critical'?'border-t-red-500':a.status==='warning'?'border-t-amber-500':'border-t-green-500'}`}>
@@ -1661,7 +1681,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
         <p className="text-gray-500 text-xs">Physics-based simulation · Real-time scenario evaluation</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {TWIN_SCENARIOS.map((s,i) => (
+        {scenarios.map((s,i) => (
           <div key={i} className="px-5 py-4 flex items-start gap-4">
             <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${s.impact==='positive'?'bg-green-900/40 text-green-400':'bg-red-900/40 text-red-400'}`}>SIM {i+1}</span>
             <div className="flex-1">
@@ -1674,7 +1694,8 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const DigitalTwinTab: React.FC = () => (
   <div className="space-y-4">
@@ -4237,14 +4258,28 @@ const ROUTE_PRI: Record<string,{bg:string;color:string}> = {
 };
 const ROUTE_ST: Record<string,string> = { 'In Progress':'#fbbf24', Scheduled:'#60a5fa', Completed:'#4ade80' };
 
-const FieldOpsTab: React.FC = () => (
+const FieldOpsTab: React.FC = () => {
+  const [routes, setRoutes] = useState(INSPECTION_ROUTES);
+  useEffect(() => {
+    API.fetchInspectionRoutes().then(list => {
+      if (list.length > 0) setRoutes(list.map(r => ({
+        id: r.route_code, name: r.name, assets: [] as string[],
+        inspector: r.inspector_name ?? 'TBA',
+        duration: r.estimated_duration_min ? `${r.estimated_duration_min}min` : 'N/A',
+        distance: r.distance_km ? `${r.distance_km} km` : 'N/A',
+        status: r.status === 'in-progress' ? 'In Progress' : r.status.charAt(0).toUpperCase() + r.status.slice(1),
+        priority: r.priority,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        [String(INSPECTION_ROUTES.length),                                              'ROUTES TODAY',  'text-white',   'border-gray-800'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='In Progress').length),        'IN PROGRESS',   'text-amber-400','border-amber-900/50'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='Scheduled').length),          'SCHEDULED',     'text-blue-400', 'border-blue-900/50'],
-        [String(INSPECTION_ROUTES.filter(r => r.status==='Completed').length),          'COMPLETED',     'text-green-400','border-green-900/50'],
+        [String(routes.length),                                              'ROUTES TODAY',  'text-white',   'border-gray-800'],
+        [String(routes.filter(r => r.status==='In Progress').length),        'IN PROGRESS',   'text-amber-400','border-amber-900/50'],
+        [String(routes.filter(r => r.status==='Scheduled').length),          'SCHEDULED',     'text-blue-400', 'border-blue-900/50'],
+        [String(routes.filter(r => r.status==='Completed').length),          'COMPLETED',     'text-green-400','border-green-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4258,7 +4293,7 @@ const FieldOpsTab: React.FC = () => (
         <p className="text-gray-500 text-xs mt-0.5">AI-optimised inspection sequences · Shortest path · Priority weighted</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {INSPECTION_ROUTES.map(route => (
+        {routes.map(route => (
           <div key={route.id} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -4305,7 +4340,8 @@ const FieldOpsTab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-08: FMEA Failure Mode Library ────────────────────────────────────────
 const FMEA_DATA = [
@@ -4318,13 +4354,24 @@ const FMEA_DATA = [
   { type:'Separator Vessel',       mode:'Overpressure',      effect:'Vessel rupture, HSE catastrophe',     cause:'PSV failure / instrumentation fault',  control:'PSV testing, PLC interlocks',          s:5, o:1, d:1, action:'Redundant PSV, SIL-2 interlock review' },
 ];
 
-const FMEATab: React.FC = () => (
+const FMEATab: React.FC = () => {
+  const [fmeaData, setFmeaData] = useState(FMEA_DATA);
+  useEffect(() => {
+    API.fetchFMEA().then(list => {
+      if (list.length > 0) setFmeaData(list.map(f => ({
+        type: f.equipment_type, mode: f.failure_mode, effect: f.effect, cause: f.cause,
+        control: f.current_controls, s: f.severity, o: f.occurrence, d: f.detection,
+        action: f.recommended_action,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        ['7','FAILURE MODES','text-white','border-gray-800'],
-        [String(FMEA_DATA.filter(f => f.s*f.o*f.d >= 15).length),'CRITICAL RPN ≥15','text-red-400','border-red-900/50'],
-        [String(FMEA_DATA.filter(f => { const r=f.s*f.o*f.d; return r>=10&&r<15; }).length),'HIGH RPN 10–14','text-amber-400','border-amber-900/50'],
+        [String(fmeaData.length),'FAILURE MODES','text-white','border-gray-800'],
+        [String(fmeaData.filter(f => f.s*f.o*f.d >= 15).length),'CRITICAL RPN ≥15','text-red-400','border-red-900/50'],
+        [String(fmeaData.filter(f => { const r=f.s*f.o*f.d; return r>=10&&r<15; }).length),'HIGH RPN 10–14','text-amber-400','border-amber-900/50'],
         ['IEC 60812','FMEA STANDARD','text-purple-400','border-purple-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
@@ -4346,7 +4393,7 @@ const FMEATab: React.FC = () => (
             ))}
           </tr></thead>
           <tbody>
-            {FMEA_DATA.map((f, i) => {
+            {fmeaData.map((f, i) => {
               const rpn = f.s * f.o * f.d;
               const rpnCol = rpn >= 15 ? '#f87171' : rpn >= 10 ? '#fb923c' : rpn >= 5 ? '#fbbf24' : '#4ade80';
               return (
@@ -4371,7 +4418,8 @@ const FMEATab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── Tab content router ────────────────────────────────────────────────────────
 const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
@@ -4465,8 +4513,18 @@ const DOSING_OPTS = [
 ];
 
 const CastrolTab: React.FC = () => {
+  const [blends, setBlends] = useState(CASTROL_BLENDS);
   const [selectedBlend, setSelectedBlend] = useState(CASTROL_BLENDS[0].id);
-  const blend   = CASTROL_BLENDS.find(b => b.id === selectedBlend) ?? CASTROL_BLENDS[0];
+  useEffect(() => {
+    API.fetchCastrolRuns().then(list => {
+      if (list.length > 0) setBlends(list.map(r => ({
+        id: r.batch_code, grade: r.grade_name, tank: 'N/A',
+        vol: Math.round(r.target_volume_liters),
+        elapsed: Math.round(r.progress_pct), total: 100, site: r.site_id,
+      })));
+    }).catch(() => {});
+  }, []);
+  const blend   = blends.find(b => b.id === selectedBlend) ?? blends[0];
   const quality = CASTROL_QUALITY[selectedBlend];
   const sensors = CASTROL_SENSORS[selectedBlend];
   const corrections = CASTROL_CORRECTIONS[selectedBlend] ?? [];
@@ -4491,7 +4549,7 @@ const CastrolTab: React.FC = () => {
       {/* C-06: Off-spec rate KPI strip */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(CASTROL_BLENDS.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
+          [String(blends.length), 'ACTIVE BLENDS',   'text-blue-400',   'border-blue-900/50'  ],
           [`${offSpecRate}%`,             'OFF-SPEC RATE',    offSpecRate < 5 ? 'text-green-400' : 'text-red-400', offSpecRate < 5 ? 'border-green-900/50' : 'border-red-900/50'],
           ['2%',                          'TARGET OFF-SPEC',  'text-gray-400',   'border-gray-800'     ],
           [String(LIMS_RECORDS.filter(r => r.rework).length), 'REWORK BATCHES', 'text-amber-400', 'border-amber-900/50'],
@@ -4511,7 +4569,7 @@ const CastrolTab: React.FC = () => {
             <p className="text-gray-500 text-xs">Real-time in-process quality prediction · updated every 60s</p>
           </div>
           <div className="flex gap-2">
-            {CASTROL_BLENDS.map(b => (
+            {blends.map(b => (
               <button key={b.id} onClick={() => setSelectedBlend(b.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selectedBlend === b.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
                 {b.id}
@@ -4974,6 +5032,24 @@ const OTDataTab: React.FC = () => {
   const statusC = { connected:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
   const sevC    = { critical:'text-red-400', warning:'text-amber-400', advisory:'text-blue-400' };
   const normC   = { success:'#22c55e', warn:'#f59e0b', error:'#ef4444' };
+  const [sources, setSources] = useState(OT_SOURCES);
+  const [qualityIssues, setQualityIssues] = useState(OT_QUALITY_ISSUES);
+  useEffect(() => {
+    API.fetchOTSources().then(list => {
+      if (list.length > 0) setSources(list.map(s => ({
+        id: s.source_code, type: s.source_type, site: s.site_id,
+        tags: s.tag_count, latency: `${s.latency_ms}ms`, status: s.status,
+        lastPoll: s.last_poll_at ? new Date(s.last_poll_at).toLocaleTimeString() : 'N/A',
+        qScore: Math.round(s.quality_score_pct),
+      })));
+    }).catch(() => {});
+    API.fetchOTQualityIssues().then(list => {
+      if (list.length > 0) setQualityIssues(list.map(i => ({
+        tag: i.tag_name, site: i.source_id, issue: i.description,
+        severity: i.severity, impact: i.issue_type,
+      })));
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -5001,7 +5077,7 @@ const OTDataTab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {OT_SOURCES.map(s => (
+            {sources.map(s => (
               <tr key={s.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-4 py-2 text-purple-400 font-mono">{s.id}</td>
                 <td className="px-4 py-2 text-gray-300">{s.type}</td>
@@ -5032,11 +5108,11 @@ const OTDataTab: React.FC = () => {
             <p className="text-gray-500 text-xs">Frozen values, out-of-range, stale timestamps, missing data</p>
           </div>
           <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded px-2 py-1 font-bold">
-            {OT_QUALITY_ISSUES.filter(i=>i.severity==='critical').length} CRITICAL
+            {qualityIssues.filter(i=>i.severity==='critical').length} CRITICAL
           </span>
         </div>
         <div className="divide-y divide-gray-800">
-          {OT_QUALITY_ISSUES.map(q => (
+          {qualityIssues.map(q => (
             <div key={q.tag} className="px-5 py-4 flex items-start gap-4">
               <span className={`flex-shrink-0 font-mono font-bold text-xs pt-0.5 ${sevC[q.severity as keyof typeof sevC]}`}>{q.tag}</span>
               <div className="flex-1">
@@ -5128,15 +5204,46 @@ const CHAMPIONS = [
   { name:'K. Johnson', site:'Houston',  role:'Maintenance Supervisor',    sessions:22, alertsActioned:48  },
 ];
 
-const AdoptionTab: React.FC = () => (
+const AdoptionTab: React.FC = () => {
+  const [metrics, setMetrics] = useState(ADOPTION_METRICS);
+  const [trainingMods, setTrainingMods] = useState(TRAINING_MODULES);
+  const [barriers, setBarriers] = useState(ADOPTION_BARRIERS);
+  const [champions, setChampions] = useState(CHAMPIONS);
+  useEffect(() => {
+    API.fetchAdoptionMetrics().then(list => {
+      if (list.length > 0) setMetrics(list.map(a => ({
+        site: a.site_id, users: a.total_users, active: a.active_users,
+        alertsActioned: Math.round(a.avg_alert_action_rate_pct),
+        avgResponseMin: a.avg_response_time_min,
+        training: Math.round(a.training_completion_rate_pct),
+        score: Math.round(a.adoption_score),
+      })));
+    }).catch(() => {});
+    API.fetchTrainingModules().then(list => {
+      if (list.length > 0) setTrainingMods(list.map(m => ({
+        module: m.name, type: m.module_type,
+        completionPct: Math.round(m.target_completion_pct), avgScore: 0, dueDate: '—',
+      })));
+    }).catch(() => {});
+    API.fetchAdoptionBarriers().then(list => {
+      if (list.length > 0) setBarriers(list.map(b => ({ theme: b.theme, votes: b.vote_count, priority: b.priority })));
+    }).catch(() => {});
+    API.fetchAdoptionChampions().then(list => {
+      if (list.length > 0) setChampions(list.map(c => ({
+        name: c.user_id, site: c.site_id, role: c.role,
+        sessions: c.sessions_count, alertsActioned: c.alerts_actioned_count,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-5">
     {/* M-01: KPIs */}
     <div className="grid grid-cols-4 gap-3">
       {([
-        [String(ADOPTION_METRICS.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.alertsActioned,0)/ADOPTION_METRICS.length))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.avgResponseMin,0)/ADOPTION_METRICS.length))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
-        [String(Math.round(ADOPTION_METRICS.reduce((s,a)=>s+a.training,0)/ADOPTION_METRICS.length))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
+        [String(metrics.reduce((s,a)=>s+a.active,0)), 'ACTIVE USERS',     'text-blue-400',  'border-blue-900/50'  ],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.alertsActioned,0)/Math.max(metrics.length,1)))+'%','AVG ALERT ACTION RATE','text-green-400','border-green-900/50'],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.avgResponseMin,0)/Math.max(metrics.length,1)))+'m','AVG RESPONSE TIME','text-amber-400','border-amber-900/50'],
+        [String(Math.round(metrics.reduce((s,a)=>s+a.training,0)/Math.max(metrics.length,1)))+'%','TRAINING COMPLETION','text-purple-400','border-purple-900/50'],
       ] as [string,string,string,string][]).map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -5158,7 +5265,7 @@ const AdoptionTab: React.FC = () => (
           ))}
         </tr></thead>
         <tbody>
-          {ADOPTION_METRICS.sort((a,b)=>b.score-a.score).map(a => (
+          {[...metrics].sort((a,b)=>b.score-a.score).map(a => (
             <tr key={a.site} className="border-b border-gray-800/50 hover:bg-gray-800/20">
               <td className="px-4 py-2 text-white font-semibold">{a.site}</td>
               <td className="px-4 py-2 text-gray-400">{a.users}</td>
@@ -5186,7 +5293,7 @@ const AdoptionTab: React.FC = () => (
           <p className="text-gray-500 text-xs">Completion rate · Average assessment score</p>
         </div>
         <div className="divide-y divide-gray-800">
-          {TRAINING_MODULES.map(t => (
+          {trainingMods.map(t => (
             <div key={t.module} className="px-4 py-3">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-white text-xs font-semibold">{t.module}</p>
@@ -5214,7 +5321,7 @@ const AdoptionTab: React.FC = () => (
           <p className="text-gray-500 text-xs">Aggregated from in-app feedback surveys</p>
         </div>
         <div className="divide-y divide-gray-800">
-          {ADOPTION_BARRIERS.map((b,i) => {
+          {barriers.map((b,i) => {
             const c = { high:'text-red-400', medium:'text-amber-400', low:'text-gray-500' };
             return (
               <div key={i} className="px-4 py-3 flex items-center gap-3">
@@ -5237,7 +5344,7 @@ const AdoptionTab: React.FC = () => (
         <p className="text-gray-500 text-xs">Power users driving adoption across sites</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
-        {CHAMPIONS.map(c => (
+        {champions.map(c => (
           <div key={c.name} className="p-4 text-center">
             <div className="w-10 h-10 rounded-full bg-purple-900/40 border border-purple-800 flex items-center justify-center text-purple-400 font-bold text-lg mx-auto mb-2">
               {c.name[0]}
@@ -5254,7 +5361,8 @@ const AdoptionTab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── Block O: Implementation Wave Tracker ─────────────────────────────────────
 
@@ -5294,6 +5402,19 @@ const WaveTrackerTab: React.FC = () => {
   const msC = { done:'text-green-400', 'in-progress':'text-blue-400', pending:'text-gray-500' };
   const msDot = { done:'#22c55e', 'in-progress':'#60a5fa', pending:'#374151' };
   const probC = { high:'text-red-400 bg-red-900/40', medium:'text-amber-400 bg-amber-900/30', low:'text-gray-500 bg-gray-800' };
+  const [wavePlan, setWavePlan] = useState(WAVE_PLAN);
+  useEffect(() => {
+    API.fetchWaves().then(list => {
+      if (list.length > 0) setWavePlan(list.map(w => ({
+        wave: w.wave_name,
+        period: `${new Date(w.period_start).toLocaleDateString('en-GB',{month:'short',year:'numeric'})} – ${new Date(w.period_end).toLocaleDateString('en-GB',{month:'short',year:'numeric'})}`,
+        sites: [] as string[], status: w.status,
+        pctDone: Math.round(w.pct_complete),
+        budget: `$${(w.budget_usd/1_000_000).toFixed(1)}M`,
+        modules: [] as string[],
+      })));
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -5314,7 +5435,7 @@ const WaveTrackerTab: React.FC = () => {
 
       {/* O-01: Wave cards */}
       <div className="space-y-4">
-        {WAVE_PLAN.map(w => (
+        {wavePlan.map(w => (
           <div key={w.wave} className={`bg-gray-900 border rounded-xl p-5 ${w.status==='in-progress'?'border-blue-800':'border-gray-800'}`}>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -5518,15 +5639,35 @@ const EDGE_MODELS = [
 
 const EdgeAITab: React.FC = () => {
   const nodeC = { online:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  const [edgeNodes, setEdgeNodes] = useState(EDGE_NODES);
+  const [latencyData, setLatencyData] = useState(LATENCY_COMPARISON);
+  useEffect(() => {
+    API.fetchEdgeNodes().then(list => {
+      if (list.length > 0) setEdgeNodes(list.map(n => ({
+        id: n.node_code, site: n.site_id, hw: n.hardware_spec,
+        models: 0, inferencePct: Math.round(n.inference_offload_pct),
+        latency: Math.round(n.avg_latency_ms), status: n.status,
+        lastSync: n.last_sync_label ?? 'N/A',
+      })));
+    }).catch(() => {});
+    API.fetchLatencyBenchmarks().then(list => {
+      if (list.length > 0) setLatencyData(list.map(b => ({
+        scenario: b.scenario_description,
+        edge: Math.round(b.edge_latency_ms), cloud: Math.round(b.cloud_latency_ms),
+        saving: `${b.latency_saving_pct.toFixed(1)}%`,
+      })));
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-5">
       {/* Q-01: KPI strip */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(EDGE_NODES.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
-          [String(EDGE_NODES.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
-          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.inferencePct,0)/EDGE_NODES.length)+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
-          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.latency,0)/EDGE_NODES.length)+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
+          [String(edgeNodes.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
+          [String(edgeNodes.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
+          [Math.round(edgeNodes.reduce((s,n)=>s+n.inferencePct,0)/Math.max(edgeNodes.length,1))+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
+          [Math.round(edgeNodes.reduce((s,n)=>s+n.latency,0)/Math.max(edgeNodes.length,1))+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -5548,7 +5689,7 @@ const EdgeAITab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {EDGE_NODES.map(n => (
+            {edgeNodes.map(n => (
               <tr key={n.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-3 py-2 text-purple-400 font-mono">{n.id}</td>
                 <td className="px-3 py-2 text-white">{n.site}</td>
@@ -5582,7 +5723,7 @@ const EdgeAITab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {LATENCY_COMPARISON.map(l => (
+            {latencyData.map(l => (
               <tr key={l.scenario} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-4 py-2 text-white">{l.scenario}</td>
                 <td className="px-4 py-2 text-green-400 font-mono font-bold">{l.edge}ms</td>
