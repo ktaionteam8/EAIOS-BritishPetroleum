@@ -12,6 +12,7 @@ import {
   Gauge,
   Globe,
   LineChart,
+  Radar,
   Shield,
   ShoppingCart,
   Users,
@@ -73,6 +74,16 @@ export function Sidebar() {
         )}
         <NavItem href="/tasks" label="Tasks" icon={CheckSquare} active={isActive("/tasks")} />
 
+        {(!role || canAccessDomain(role, userDomain, "manufacturing")) && (
+          <NavItem
+            href="/apps/manufacturing-ai"
+            label="Manufacturing AI"
+            icon={Radar}
+            active={isActive("/apps/manufacturing-ai")}
+            accent="#06b6d4"
+          />
+        )}
+
         {role && (role === "admin" || (role === "manager" && userDomain === "hr-safety")) && (
           <NavItem href="/hr/jobs" label="HR Jobs" icon={Briefcase} active={isActive("/hr/jobs")} />
         )}
@@ -107,7 +118,7 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-bg-700 text-[10px] text-slate-600">
-        <div>36 microservices</div>
+        <div>36 AI agents</div>
         <div>1 master orchestrator</div>
       </div>
     </aside>

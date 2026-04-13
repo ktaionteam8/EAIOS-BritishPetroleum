@@ -2,26 +2,46 @@ import { NextResponse } from "next/server";
 import { geminiJSON } from "@/lib/gemini";
 import { fetchAllDomains } from "@/lib/api";
 
-const PROMPT = `You are the enterprise AI decision system for a global oil & gas company (British Petroleum).
+/**
+ * Cached master decision.
+ *
+ * Design: Gemini is NOT called on every poll. The master decision is computed
+ * at most once every CACHE_TTL_MS. Dashboard polls at 8s but only refreshes
+ * the Gemini call every 60s — rule-based result used in between.
+ */
 
-You will receive multi-domain operational snapshots. Analyze them and produce a SINGLE enterprise-level decision.
+const CACHE_TTL_MS = 60_000;
 
-Respond ONLY with valid JSON in this exact shape:
-{
-  "final_decision": "SHORT_UPPERCASE_SNAKE_CASE_LABEL",
-  "confidence": 0.85,
-  "reason": "One concise sentence explaining the primary driver.",
-  "actions": ["Actionable step 1", "Actionable step 2"]
+declare global {
+  // eslint-disable-next-line no-var
+  var __master_cache: { data: any; at: number } | undefined;
 }
 
-Prioritize safety-critical and compliance signals above commercial gains.
+const PROMPT = `You are the enterprise AI decision system for British Petroleum.
 
-DOMAIN DATA:
+Analyze the multi-domain snapshot and produce a SINGLE enterprise-level decision.
+Respond ONLY with valid JSON:
+{
+  "final_decision": "SHORT_UPPERCASE_LABEL",
+  "confidence": 0.85,
+  "reason": "One concise sentence.",
+  "actions": ["Action 1", "Action 2"]
+}
+
+Priority: safety/compliance > ops > commercial.
+
+DATA:
 `;
 
 export async function GET() {
-  const domains = await fetchAllDomains();
+  const now = Date.now();
+  const cached = globalThis.__master_cache;
 
+  if (cached && now - cached.at < CACHE_TTL_MS) {
+    return NextResponse.json({ ...cached.data, cached: true, cache_age_ms: now - cached.at });
+  }
+
+  const domains = await fetchAllDomains();
   const compact = domains.map((d) => ({
     domain: d.name,
     status: d.status,
@@ -31,16 +51,19 @@ export async function GET() {
   }));
 
   const fallback = buildFallback(domains);
-
   const { data, source, model } = await geminiJSON(PROMPT + JSON.stringify(compact, null, 2), fallback);
 
-  return NextResponse.json({
+  const result = {
     ...data,
     source,
     model_used: model || "rule-engine",
     timestamp: new Date().toISOString(),
     domain_inputs: compact,
-  });
+  };
+
+  globalThis.__master_cache = { data: result, at: now };
+
+  return NextResponse.json({ ...result, cached: false });
 }
 
 function buildFallback(domains: any[]): { final_decision: string; confidence: number; reason: string; actions: string[] } {

@@ -20,11 +20,14 @@ export function readSession(): Session | null {
   }
 }
 
-export async function login(username: string, password: string): Promise<Session | null> {
+export async function login(identifier: string, password: string): Promise<Session | null> {
+  // Accept either username or email — server decides
+  const isEmail = identifier.includes("@");
+  const body = isEmail ? { email: identifier, password } : { username: identifier, password };
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) return null;
   const data = await res.json();

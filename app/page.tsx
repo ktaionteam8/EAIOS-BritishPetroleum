@@ -39,7 +39,7 @@ export default function OverviewPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-100">Enterprise Overview</h1>
             <p className="text-sm text-slate-400 mt-1">
-              Cross-domain intelligence across 36 microservices + 1 master orchestrator
+              Cross-domain intelligence across 36 AI agents + 1 master orchestrator
             </p>
           </div>
           {aiSource && (
@@ -51,7 +51,7 @@ export default function OverviewPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard label="Active Services" value={totalServices || 36} icon={Boxes} tone="blue" />
+          <KpiCard label="Active Agents" value={totalServices || 36} icon={Boxes} tone="blue" />
           <KpiCard label="Active Alerts" value={totalAlerts} delta="last 5m" icon={AlertTriangle} tone="amber" />
           <KpiCard label="Critical Domains" value={criticalCount} icon={ShieldAlert} tone="red" />
           <KpiCard label="System Health" value={`${health}%`} icon={Heart} tone="emerald" />

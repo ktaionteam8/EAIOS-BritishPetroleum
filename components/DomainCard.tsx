@@ -38,7 +38,7 @@ export function DomainCard({ domain }: { domain: DomainSummary }) {
       <div className="mt-4 flex items-center justify-between pt-3 border-t border-bg-700">
         <div className="flex items-center gap-4 text-xs">
           <div>
-            <div className="text-slate-500">Services</div>
+            <div className="text-slate-500">Agents</div>
             <div className="text-slate-200 font-medium">{domain.activeServices}</div>
           </div>
           <div>

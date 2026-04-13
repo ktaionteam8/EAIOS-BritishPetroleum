@@ -44,7 +44,7 @@ export default function DomainPage() {
             <div>
               <h1 className="text-2xl font-semibold text-slate-100">{domain.name}</h1>
               <p className="text-sm text-slate-400 mt-0.5">
-                {domain.activeServices} services · {domain.alertCount} alerts
+                {domain.activeServices} agents · {domain.alertCount} alerts
               </p>
             </div>
           </div>
@@ -60,7 +60,7 @@ export default function DomainPage() {
             />
 
             <div className="rounded-2xl bg-bg-800 border border-bg-700 p-5 shadow-card">
-              <h3 className="text-sm font-semibold text-slate-100 mb-4">Applications</h3>
+              <h3 className="text-sm font-semibold text-slate-100 mb-4">Agents</h3>
               <div className="space-y-2">
                 {domain.services.map((s) => (
                   <div

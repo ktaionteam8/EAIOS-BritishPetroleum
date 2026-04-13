@@ -4,10 +4,12 @@ import { store } from "@/lib/store";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const user = authenticate(body.username || "", body.password || "");
+  // Accept either `email` (new) or `username` (legacy) as identifier
+  const identifier = body.email || body.username || "";
+  const user = authenticate(identifier, body.password || "");
   if (!user) {
     store.audit.add({
-      actor: body.username || "anonymous",
+      actor: identifier || "anonymous",
       action: "LOGIN_FAIL",
       detail: "Invalid credentials",
     });
