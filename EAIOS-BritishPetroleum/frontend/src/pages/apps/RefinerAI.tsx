@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as API from '../../api/client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -219,6 +220,81 @@ const ALERT_DATA: AlertData[] = [
     time: '2h ago',
   },
 ];
+
+// ── Live-data hooks ───────────────────────────────────────────────────────────
+/** Map API AlertDetail → local AlertData, falling back to existing if fields missing */
+function mapApiAlert(a: API.AlertDetail): AlertData {
+  return {
+    id: a.alert_code,
+    severity: a.severity as AlertData['severity'],
+    title: a.title,
+    site: a.site_id,           // site name resolved server-side in future
+    details: a.details ?? '',
+    failureMode: a.failure_mode,
+    probability: Math.round(a.probability * 100),
+    etfDays: a.etf_days,
+    etfMin: a.etf_min,
+    etfMax: a.etf_max,
+    recommendation: a.recommendation as AlertData['recommendation'],
+    shapSignals: (a.shap_signals ?? []).map(s => ({
+      name: s.signal_name,
+      values: s.values as number[],
+      contribution: s.contribution,
+      unit: s.unit,
+    })),
+    analogues: (a.analogues ?? []).map(an => ({
+      site: an.site_name,
+      date: an.event_date,
+      outcome: an.outcome,
+      daysToFailure: an.days_to_failure,
+      match: an.match_score,
+    })),
+    time: 'live',
+  };
+}
+
+/** Fetch all alert details from the backend and merge with ALERT_DATA fallback */
+function useApiAlerts(): AlertData[] {
+  const [alerts, setAlerts] = useState<AlertData[]>(ALERT_DATA);
+  useEffect(() => {
+    API.fetchAlerts({ status: 'active' })
+      .then(list =>
+        Promise.all(list.map(a => API.fetchAlert(a.id)))
+      )
+      .then(details => {
+        if (details.length > 0) setAlerts(details.map(mapApiAlert));
+      })
+      .catch(() => { /* keep hardcoded fallback */ });
+  }, []);
+  return alerts;
+}
+
+/** Fetch dashboard stats, returns null while loading */
+function useApiDashboard() {
+  const [data, setData] = useState<API.DashboardOut | null>(null);
+  useEffect(() => {
+    API.fetchDashboard().then(setData).catch(() => {});
+  }, []);
+  return data;
+}
+
+/** Fetch equipment list with hardcoded fallback */
+const EQ_FALLBACK: API.Equipment[] = [
+  { id: '1', tag: 'C-101', name: 'Centrifugal Compressor · MAN Turbomachinery Series-7', equipment_type: 'compressor', site_id: 'Ruwais, UAE',     health_score: 38, rul_hours: 48,   ai_status: 'critical' },
+  { id: '2', tag: 'E-212', name: 'Shell & Tube Exchanger · Lummus 400v Series',           equipment_type: 'exchanger',  site_id: 'Houston, USA',     health_score: 52, rul_hours: 72,   ai_status: 'critical' },
+  { id: '3', tag: 'P-205', name: 'Centrifugal Pump · KSB Multitec 100-8',                 equipment_type: 'pump',       site_id: 'Houston, USA',     health_score: 64, rul_hours: 192,  ai_status: 'warning'  },
+  { id: '4', tag: 'T-405', name: 'Gas Turbine · GE Onsite-100A',                          equipment_type: 'turbine',    site_id: 'Ras Tanura, KSA',  health_score: 72, rul_hours: 336,  ai_status: 'warning'  },
+  { id: '5', tag: 'K-302', name: 'Centrifugal Compressor · Siemens SGT-800',              equipment_type: 'compressor', site_id: 'Jamnagar, India',  health_score: 91, rul_hours: 1080, ai_status: 'healthy'  },
+];
+function useApiEquipment(): API.Equipment[] {
+  const [equipment, setEquipment] = useState<API.Equipment[]>(EQ_FALLBACK);
+  useEffect(() => {
+    API.fetchEquipment()
+      .then(list => { if (list.length > 0) setEquipment(list); })
+      .catch(() => {});
+  }, []);
+  return equipment;
+}
 
 // ── A-01: SHAP Sparkline mini-chart ──────────────────────────────────────────
 const ShapSparkline: React.FC<{ values: number[]; color: string }> = ({ values, color }) => {
@@ -692,13 +768,16 @@ const EnterpriseIntelligencePanel: React.FC = () => {
   );
 };
 
-const DashboardTab: React.FC = () => (
+const DashboardTab: React.FC = () => {
+  const dash = useApiDashboard();
+  const s = dash?.stats;
+  return (
   <div className="space-y-6">
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <KPICard label="Unplanned Events Avoided" value="38.2%" sub="↑ Target: 40% — on track" accent="text-green-400" border="border-green-900/50" />
-      <KPICard label="Equipment Monitored"      value="6,842"  sub="↑ 312 newly onboarded"   accent="text-blue-400"  border="border-blue-900/50"  />
-      <KPICard label="Critical Alerts (24h)"    value="14"     sub="↑ 3 from yesterday"      accent="text-orange-400" border="border-orange-900/50" />
-      <KPICard label="AI Model Accuracy"        value="94.7%"  sub="↑ +1.2% from last retrain" accent="text-purple-400" border="border-purple-900/50" />
+      <KPICard label="Equipment Monitored"  value={s ? s.total_equipment.toLocaleString() : '6,842'}                     sub={s ? `${s.critical_count} critical · ${s.warning_count} warning` : '↑ 312 newly onboarded'}   accent="text-blue-400"   border="border-blue-900/50"   />
+      <KPICard label="Active Alerts"        value={s ? String(s.active_alerts) : '14'}                                    sub={s ? `${s.open_work_orders} open work orders` : '↑ 3 from yesterday'}                           accent="text-orange-400" border="border-orange-900/50" />
+      <KPICard label="Avoided Cost (USD)"   value={s ? `$${(s.avoided_cost_usd / 1e6).toFixed(1)}M` : '$2.4M'}           sub="AI-driven interventions YTD"                                                                    accent="text-green-400"  border="border-green-900/50"  />
+      <KPICard label="Fleet OEE"            value={s ? `${s.fleet_oee_pct.toFixed(1)}%` : '94.7%'}                       sub="↑ Target: 95%"                                                                                  accent="text-purple-400" border="border-purple-900/50" />
     </div>
 
     {/* World Map */}
@@ -748,24 +827,26 @@ const DashboardTab: React.FC = () => (
     {/* Block P — Cross-Domain Orchestration */}
     <CrossDomainPanel />
   </div>
-);
+  );
+};
 
 // ── Live Alerts Tab ───────────────────────────────────────────────────────────
 const LiveAlertsTab: React.FC = () => {
+  const liveAlerts = useApiAlerts();        // ← live data from backend
   const [decisions,  setDecisions]  = useState<Record<string, AlertDecision>>({});
   const [woNumbers,  setWoNumbers]  = useState<Record<string, string>>({});
   const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([]);
   const [pushNotifs, setPushNotifs] = useState<PushNotification[]>([]);
   const [showAudit,  setShowAudit]  = useState(false);
 
-  // A-07: fire push banners on mount for alerts with probability > 80%
+  // A-07: fire push banners when alerts load (probability > 80%)
   useEffect(() => {
     setPushNotifs(
-      ALERT_DATA
+      liveAlerts
         .filter(a => a.probability > 80)
         .map(a => ({ id: `push-${a.id}`, title: a.title, probability: a.probability, etfDays: a.etfDays, site: a.site, severity: a.severity }))
     );
-  }, []);
+  }, [liveAlerts]);
 
   const dismissNotif = useCallback((id: string) => {
     setPushNotifs(prev => prev.filter(n => n.id !== id));
@@ -776,24 +857,28 @@ const LiveAlertsTab: React.FC = () => {
 
   const handleAccept = (id: string) => {
     const wo  = genWO();
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'accepted' }));
     setWoNumbers(p => ({ ...p, [id]: wo }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'accepted',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:'',    woNumber:wo }]);
+    // Persist decision to backend
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'accepted', reason_code: '' }).catch(() => {});
   };
 
   const handleModify = (id: string, action: string, timing: string) => {
     const wo  = genWO();
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'modified' }));
     setWoNumbers(p => ({ ...p, [id]: wo }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'modified',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:`${action} — ${timing}`, woNumber:wo }]);
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'modified', modified_action: action, modified_timing: timing }).catch(() => {});
   };
 
   const handleOverride = (id: string, reason: string) => {
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'overridden' }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'overridden', timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:reason, woNumber:'' }]);
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'overridden', reason_code: reason }).catch(() => {});
   };
 
   const accepted   = auditTrail.filter(e => e.decision === 'accepted').length;
@@ -815,9 +900,9 @@ const LiveAlertsTab: React.FC = () => {
       {/* KPI strip — live counters */}
       <div className="grid grid-cols-5 gap-3">
         {([
-          [String(ALERT_DATA.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
-          [String(ALERT_DATA.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
-          [String(ALERT_DATA.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
+          [String(liveAlerts.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
+          [String(liveAlerts.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
+          [String(liveAlerts.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
           [String(accepted + modified),                                       'ACTIONED TODAY','text-green-400',  'border-green-900/50' ],
           [String(overridden),                                                'OVERRIDDEN',    'text-gray-400',   'border-gray-800'     ],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
@@ -829,7 +914,7 @@ const LiveAlertsTab: React.FC = () => {
       </div>
 
       {/* A-08: Alert fatigue meter */}
-      <AlertFatigueMeter total={ALERT_DATA.length} accepted={accepted} modified={modified} overridden={overridden} />
+      <AlertFatigueMeter total={liveAlerts.length} accepted={accepted} modified={modified} overridden={overridden} />
 
       {/* A-01/02/03/04/06: Alert-to-Action Cards */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
@@ -841,7 +926,7 @@ const LiveAlertsTab: React.FC = () => {
           <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
         </div>
         <div className="space-y-4">
-          {ALERT_DATA.map(alert => (
+          {liveAlerts.map(alert => (
             <AlertCard
               key={alert.id}
               alert={alert}
@@ -1368,15 +1453,17 @@ const FleetHeatmap: React.FC = () => {
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset,    setFftAsset]    = useState('C-101');
   const [healthAsset, setHealthAsset] = useState('C-101');
+  const equipment = useApiEquipment();
+  const healthy  = equipment.filter(e => e.ai_status === 'healthy').length;
+  const warning  = equipment.filter(e => e.ai_status === 'warning').length;
+  const critical = equipment.filter(e => e.ai_status === 'critical').length;
   return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['6,321','HEALTHY','text-green-400','border-green-900/50'],['387','WARNING','text-amber-400','border-amber-900/50'],['134','ACTION REQUIRED','text-red-400','border-red-900/50'],['6,842','TOTAL ASSETS','text-white','border-gray-800']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
-        </div>
-      ))}
+      <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-green-400">{healthy.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Healthy</p></div>
+      <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-amber-400">{warning.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Warning</p></div>
+      <div className="bg-gray-900 border border-red-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-red-400">{critical.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Action Required</p></div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4"><p className="text-2xl font-bold text-white">{equipment.length.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Total Assets</p></div>
     </div>
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
@@ -1392,11 +1479,12 @@ const EquipmentHealthTab: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          <EquipmentRow tag="C-101" name="Centrifugal Compressor · MAN Turbomachinery Series-7" site="Ruwais, UAE"     health={38} rul="48h"  aiStatus="CRITICAL" action="Dispatch" />
-          <EquipmentRow tag="E-212" name="Shell & Tube Exchanger · Lummus 400v Series"           site="Houston, USA"   health={52} rul="3d"   aiStatus="CRITICAL" action="Dispatch" />
-          <EquipmentRow tag="P-205" name="Centrifugal Pump · KSB Multitec 100-8"                 site="Houston, USA"   health={64} rul="8d"   aiStatus="WARNING"  action="Schedule" />
-          <EquipmentRow tag="T-405" name="Gas Turbine · GE Onsite-100A"                          site="Ras Tanura, KSA" health={72} rul="14d"  aiStatus="WARNING"  action="Schedule" />
-          <EquipmentRow tag="K-302" name="Centrifugal Compressor · Siemens SGT-800"              site="Jamnagar, India" health={91} rul="45d"  aiStatus="HEALTHY"  action="Monitor"  />
+          {equipment.map(e => {
+            const status = e.ai_status.toUpperCase() as 'CRITICAL' | 'WARNING' | 'HEALTHY';
+            const rul = e.rul_hours == null ? '—' : e.rul_hours < 24 ? `${e.rul_hours}h` : `${Math.round(e.rul_hours / 24)}d`;
+            const action = status === 'CRITICAL' ? 'Dispatch' : status === 'WARNING' ? 'Schedule' : 'Monitor';
+            return <EquipmentRow key={e.id} tag={e.tag} name={e.name} site={e.site_id} health={e.health_score} rul={rul} aiStatus={status} action={action} />;
+          })}
         </tbody>
       </table>
     </div>
@@ -2232,10 +2320,24 @@ const ContinuousLearningPanel: React.FC = () => {
   );
 };
 
-const MLModelsTab: React.FC = () => (
+const MLModelsTab: React.FC = () => {
+  const [liveModels, setLiveModels] = useState<API.MLModel[]>([]);
+  useEffect(() => {
+    API.fetchMLModels().then(list => { if (list.length > 0) setLiveModels(list); }).catch(() => {});
+  }, []);
+  const activeCount = liveModels.length > 0 ? liveModels.filter(m => m.status === 'production' || m.is_champion).length : 6;
+  const avgAccuracy = liveModels.length > 0
+    ? (liveModels.reduce((sum, m) => sum + (m.accuracy > 1 ? m.accuracy : m.accuracy * 100), 0) / liveModels.length).toFixed(1) + '%'
+    : '94.7%';
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['6','ACTIVE MODELS','text-purple-400','border-purple-900/50'],['94.7%','AVG ACCURACY','text-green-400','border-green-900/50'],['6,842','ASSETS MONITORED','text-blue-400','border-blue-900/50'],['143K','TRAINING RECORDS','text-white','border-gray-800']].map(([v,l,t,b]) => (
+      {[
+        [String(activeCount), 'ACTIVE MODELS',    'text-purple-400', 'border-purple-900/50'],
+        [avgAccuracy,          'AVG ACCURACY',      'text-green-400',  'border-green-900/50'],
+        ['6,842',              'ASSETS MONITORED',  'text-blue-400',   'border-blue-900/50'],
+        ['143K',               'TRAINING RECORDS',  'text-white',      'border-gray-800'],
+      ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
           <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
@@ -2298,7 +2400,8 @@ const MLModelsTab: React.FC = () => (
       ))}
     </div>
   </div>
-);
+  );
+};
 
 // ── Spare Parts Tab ───────────────────────────────────────────────────────────
 const SPARE_PARTS = [
@@ -2316,15 +2419,34 @@ const PART_STATUS: Record<string, { bg: string; text: string; label: string }> =
   ok:       { bg: '#052e16', text: '#4ade80', label: 'IN STOCK' },
 };
 
-const SparePartsTab: React.FC = () => (
+const SparePartsTab: React.FC = () => {
+  const [parts,  setParts]  = useState(SPARE_PARTS);
+  useEffect(() => {
+    Promise.all([API.fetchSpareParts(), API.fetchStock()])
+      .then(([apiParts, apiStock]) => {
+        if (apiParts.length === 0) return;
+        const stockMap = Object.fromEntries(apiStock.map(s => [s.part_id, s]));
+        setParts(apiParts.map(p => {
+          const s = stockMap[p.id];
+          const onHand = s?.on_hand_qty ?? 0;
+          const minQty = s?.min_qty ?? 1;
+          const onOrder = s?.on_order_qty ?? 0;
+          const status  = onHand === 0 ? 'critical' : onHand < minQty ? 'low' : 'ok';
+          return { part: p.description, equipment: p.part_number, stock: onHand, min: minQty, ordered: onOrder, cost: p.unit_cost, status, urgency: onHand === 0 ? `${p.lead_time_days}d` : '—', supplier: '—' };
+        }));
+      })
+      .catch(() => {});
+  }, []);
+  const critical   = parts.filter(p => p.status === 'critical').length;
+  const low        = parts.filter(p => p.status === 'low').length;
+  const orderValue = parts.reduce((sum, p) => sum + (p.ordered * p.cost), 0);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['2','CRITICAL LOW STOCK','text-red-400','border-red-900/50'],['2','LOW STOCK ITEMS','text-amber-400','border-amber-900/50'],['$284K','OPEN ORDER VALUE','text-blue-400','border-blue-900/50'],['$6.8M','DOWNTIME AVOIDED','text-green-400','border-green-900/50']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
-        </div>
-      ))}
+      <div className="bg-gray-900 border border-red-900/50   rounded-xl p-4"><p className="text-2xl font-bold text-red-400"  >{critical}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Critical Low Stock</p></div>
+      <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-amber-400">{low}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Low Stock Items</p></div>
+      <div className="bg-gray-900 border border-blue-900/50  rounded-xl p-4"><p className="text-2xl font-bold text-blue-400" >{orderValue > 0 ? `$${Math.round(orderValue / 1000)}K` : '$284K'}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Open Order Value</p></div>
+      <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-green-400">$6.8M</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Downtime Avoided</p></div>
     </div>
 
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -2366,7 +2488,8 @@ const SparePartsTab: React.FC = () => (
     {/* REQ-14 — Spare Parts Criticality Matrix */}
     <SpareCriticalityMatrix />
   </div>
-);
+  );
+};
 
 // ── AI Work Orders Tab ────────────────────────────────────────────────────────
 interface WO {
@@ -2517,12 +2640,33 @@ const SAPIntegrationPanel: React.FC<SAPIntegrationPanelProps> = ({ records, tota
   );
 };
 
+function mapApiWO(w: API.WorkOrder): WO {
+  const priorityMap: Record<string, WO['priority']> = { emergency: 'EMERGENCY', high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
+  const statusMap:   Record<string, WO['status']>   = { open: 'Open', in_progress: 'In Progress', scheduled: 'Scheduled', completed: 'Completed' };
+  return {
+    id:          w.wo_number,
+    equipment:   w.title,
+    site:        w.site_id,
+    priority:    priorityMap[w.priority?.toLowerCase() ?? 'medium'] ?? 'MEDIUM',
+    status:      statusMap[w.status?.toLowerCase() ?? 'open'] ?? 'Open',
+    cost:        w.cost_estimate != null ? `$${w.cost_estimate.toLocaleString()}` : '—',
+    due:         w.due_date ? new Date(w.due_date).toLocaleDateString('en-GB') : '—',
+    aiGenerated: w.ai_generated,
+  };
+}
+
 const WorkOrdersTab: React.FC = () => {
   const [wos, setWos] = useState<WO[]>(INITIAL_WOS);
   const [toast, setToast] = useState<string | null>(null);
   const [prCounter, setPrCounter] = useState(1);
   // B-01/02/04: SAP BAPI records
   const [sapRecords, setSapRecords] = useState<SapRecord[]>([]);
+
+  useEffect(() => {
+    API.fetchWorkOrders()
+      .then(list => { if (list.length > 0) setWos(list.map(mapApiWO)); })
+      .catch(() => {});
+  }, []);
 
   const featuredWO = wos.find(w => w.priority === 'EMERGENCY' && w.status === 'Open') ?? null;
 
@@ -2665,7 +2809,7 @@ const WorkOrdersTab: React.FC = () => {
       )}
 
       {/* B-01/02/04/05/07: SAP Integration Panel */}
-      <SAPIntegrationPanel records={sapRecords} totalAlerts={ALERT_DATA.length} />
+      <SAPIntegrationPanel records={sapRecords} totalAlerts={4} />
 
       {/* REQ-13 — Root Cause Analysis */}
       <RCAPanel />
@@ -2737,7 +2881,17 @@ const ROI_BARS = [
   { label: 'Smart Parts Procurement', value: 8, color: '#0891b2' },
 ];
 
-const ROITab: React.FC = () => (
+const ROITab: React.FC = () => {
+  const [kpi, setKpi] = useState<API.KpiSnapshot | null>(null);
+  useEffect(() => {
+    API.fetchKPIs('fleet')
+      .then(list => { if (list.length > 0) setKpi(list[0]); })
+      .catch(() => {});
+  }, []);
+  const mtbf = kpi?.mtbf_hours != null ? `${Math.round(kpi.mtbf_hours).toLocaleString()} h` : '1,173 h';
+  const mttr = kpi?.mttr_hours != null ? `${kpi.mttr_hours.toFixed(2)} h` : '4.68 h';
+  const oee  = kpi?.oee_pct    != null ? `${kpi.oee_pct.toFixed(1)} %`   : '81.4 %';
+  return (
   <div className="space-y-4">
 
     {/* REQ-05 — MTBF / MTTR / OEE */}
@@ -2753,9 +2907,9 @@ const ROITab: React.FC = () => (
       {/* Fleet KPIs */}
       <div className="grid grid-cols-3 divide-x divide-gray-800 border-b border-gray-800">
         {[
-          ['MTBF', '1,173 h', 'Mean Time Between Failures', '↑ +148h vs last year', 'text-blue-400'],
-          ['MTTR', '4.68 h', 'Mean Time To Repair', '↓ −1.2h vs last year', 'text-green-400'],
-          ['OEE',  '81.4 %', 'Overall Equipment Effectiveness', '↑ +3.8% vs last year', 'text-purple-400'],
+          ['MTBF', mtbf, 'Mean Time Between Failures', '↑ +148h vs last year', 'text-blue-400'],
+          ['MTTR', mttr, 'Mean Time To Repair', '↓ −1.2h vs last year', 'text-green-400'],
+          ['OEE',  oee,  'Overall Equipment Effectiveness', '↑ +3.8% vs last year', 'text-purple-400'],
         ].map(([k, v, desc, trend, c]) => (
           <div key={k} className="px-6 py-4">
             <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-1">{k}</p>
@@ -2918,7 +3072,8 @@ const ROITab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-16: Alert Escalation Matrix ──────────────────────────────────────────
 const ESCALATION_MATRIX = [
@@ -3568,13 +3723,33 @@ const ComplianceEnhancementsPanel: React.FC = () => (
   </div>
 );
 
-const ComplianceTab: React.FC = () => (
+type ComplianceItem = typeof COMPLIANCE_ITEMS[0];
+function mapAudit(a: API.ComplianceAudit): ComplianceItem {
+  const today = new Date();
+  const next = a.audit_date || '';
+  const daysLeft = next ? Math.round((new Date(next).getTime() - today.getTime()) / 86400000) : 0;
+  const raw = (a.status || '').toLowerCase();
+  const status = raw === 'pass' || raw === 'compliant' ? 'compliant'
+    : raw === 'warning' || raw === 'due-soon' ? 'due-soon'
+    : raw === 'fail' || raw === 'overdue' ? 'overdue'
+    : daysLeft < 0 ? 'overdue' : daysLeft < 30 ? 'due-soon' : 'compliant';
+  return { reg: a.site_id, site: a.site_id, status, next, daysLeft, inspector: '—', score: Math.round(a.score_pct) };
+}
+
+const ComplianceTab: React.FC = () => {
+  const [items, setItems] = useState<ComplianceItem[]>(COMPLIANCE_ITEMS);
+  useEffect(() => {
+    API.fetchComplianceAudits()
+      .then(list => { if (list.length > 0) setItems(list.map(mapAudit)); })
+      .catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-3 gap-3">
       {[
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='compliant').length), 'COMPLIANT', 'text-green-400','border-green-900/50'],
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='due-soon').length),  'DUE SOON',  'text-amber-400','border-amber-900/50'],
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='overdue').length),   'OVERDUE',   'text-red-400',  'border-red-900/50'],
+        [String(items.filter(i => i.status==='compliant').length), 'COMPLIANT', 'text-green-400','border-green-900/50'],
+        [String(items.filter(i => i.status==='due-soon').length),  'DUE SOON',  'text-amber-400','border-amber-900/50'],
+        [String(items.filter(i => i.status==='overdue').length),   'OVERDUE',   'text-red-400',  'border-red-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -3588,8 +3763,8 @@ const ComplianceTab: React.FC = () => (
         <p className="text-gray-500 text-xs mt-0.5">API · ASME · ISO · PSM standards · Real-time compliance status</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {COMPLIANCE_ITEMS.map(item => {
-          const chip = COMP_CHIP[item.status];
+        {items.map(item => {
+          const chip = COMP_CHIP[item.status] ?? COMP_CHIP['compliant'];
           return (
             <div key={item.reg} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
               <div className="flex items-center gap-4">
@@ -3625,7 +3800,8 @@ const ComplianceTab: React.FC = () => (
     {/* Block N: Compliance Enhancements */}
     <ComplianceEnhancementsPanel />
   </div>
-);
+  );
+};
 
 // ── REQ-23: Live Demo / Guided Tour Mode ─────────────────────────────────────
 const TOUR_STEPS: { tab: TabId; title: string; desc: string }[] = [
@@ -3838,8 +4014,29 @@ const TAR_ITEMS = [
   { id:'TAR-2025-03', site:'Jamnagar, India', unit:'Coker Unit', start:'2025-09-15', end:'2025-10-08', days:23, status:'completed', cost:'$9.3M',  scope:143 },
 ];
 
+type TarItem = typeof TAR_ITEMS[0];
+function mapTar(e: API.TarEvent): TarItem {
+  const days = Math.round((new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 86400000);
+  const cost = e.budget_usd >= 1e6 ? `$${(e.budget_usd / 1e6).toFixed(1)}M` : `$${e.budget_usd.toLocaleString()}`;
+  const status = (e.status || '').toLowerCase() === 'completed' ? 'completed' : 'planned';
+  return { id: e.tar_code, site: e.site_id, unit: e.unit_name, start: e.start_date, end: e.end_date, days: e.duration_days ?? days, status, cost, scope: e.work_scope_count ?? 0 };
+}
+
 const TARTab: React.FC = () => {
-  const upcoming = TAR_ITEMS.filter(t => t.status === 'planned');
+  const [tarItems, setTarItems] = useState<TarItem[]>(TAR_ITEMS);
+  const [liveBudget, setLiveBudget] = useState<number | null>(null);
+  useEffect(() => {
+    API.fetchTarEvents()
+      .then(list => {
+        if (list.length > 0) {
+          setTarItems(list.map(mapTar));
+          setLiveBudget(list.filter(e => e.status !== 'completed').reduce((s, e) => s + e.budget_usd, 0));
+        }
+      })
+      .catch(() => {});
+  }, []);
+  const budgetLabel = liveBudget != null ? `$${(liveBudget / 1e6).toFixed(1)}M` : '$29.4M';
+  const upcoming = tarItems.filter(t => t.status === 'planned');
   const W = 640, HDR = 32, ROW_H = 36;
   const H = HDR + upcoming.length * ROW_H + 8;
   const rangeStart = new Date('2026-05-01').getTime();
@@ -3853,9 +4050,9 @@ const TARTab: React.FC = () => {
       <div className="grid grid-cols-4 gap-3">
         {[
           [String(upcoming.length),                                         'PLANNED 2026',       'text-blue-400',  'border-blue-900/50'  ],
-          ['$29.4M',                                                        'PLANNED BUDGET',     'text-white',     'border-gray-800'     ],
+          [budgetLabel,                                                      'PLANNED BUDGET',     'text-white',     'border-gray-800'     ],
           [String(upcoming.reduce((s,t) => s+t.scope, 0)),                  'WORK SCOPES',        'text-purple-400','border-purple-900/50'],
-          [String(TAR_ITEMS.filter(t => t.status==='completed').length),    'COMPLETED 2025',     'text-green-400', 'border-green-900/50' ],
+          [String(tarItems.filter(t => t.status==='completed').length),     'COMPLETED 2025',     'text-green-400', 'border-green-900/50' ],
         ].map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -3904,7 +4101,7 @@ const TARTab: React.FC = () => {
 
       {/* Cards */}
       <div className="grid grid-cols-2 gap-4">
-        {TAR_ITEMS.map(t => (
+        {tarItems.map(t => (
           <div key={t.id} className={`bg-gray-900 border ${t.status==='completed' ? 'border-green-900/40' : 'border-blue-900/40'} rounded-xl p-4`}>
             <div className="flex items-start justify-between mb-3">
               <div>
@@ -3937,14 +4134,22 @@ const ENERGY_SITES = [
   { site:'Jamnagar, India', gjt:3.76, carbon:0.19, target:3.80, power:498,  steam:760,  trend:-0.18 },
 ];
 
-const EnergyTab: React.FC = () => (
+const EnergyTab: React.FC = () => {
+  const [savingsTotal, setSavingsTotal] = useState<number | null>(null);
+  useEffect(() => {
+    API.fetchEnergySavings()
+      .then(list => { if (list.length > 0) setSavingsTotal(list.reduce((s, e) => s + e.cost_avoided_usd, 0)); })
+      .catch(() => {});
+  }, []);
+  const savingsLabel = savingsTotal != null ? `$${(savingsTotal / 1e6).toFixed(1)}M` : '$12.4M';
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        ['4.24 GJ/t',  'Fleet Energy Intensity',    'YTD 2026 average',          'text-blue-400',  'border-blue-900/50'  ],
-        ['0.24 tCO₂',  'Carbon Intensity',          'tCO₂ per tonne processed',  'text-green-400', 'border-green-900/50' ],
-        ['−8.2%',      'YTD Reduction',             'vs 2025 baseline',          'text-purple-400','border-purple-900/50'],
-        ['$12.4M',     'Energy Cost Savings',       'vs unoptimised baseline',   'text-amber-400', 'border-amber-900/50' ],
+        ['4.24 GJ/t',   'Fleet Energy Intensity', 'YTD 2026 average',         'text-blue-400',   'border-blue-900/50'  ],
+        ['0.24 tCO₂',   'Carbon Intensity',       'tCO₂ per tonne processed', 'text-green-400',  'border-green-900/50' ],
+        ['−8.2%',       'YTD Reduction',          'vs 2025 baseline',         'text-purple-400', 'border-purple-900/50'],
+        [savingsLabel,  'Energy Cost Savings',    'vs unoptimised baseline',  'text-amber-400',  'border-amber-900/50' ],
       ].map(([v,l,s,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4017,7 +4222,8 @@ const EnergyTab: React.FC = () => (
       <p className="text-gray-600 text-xs mt-3">│ amber line = site target</p>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-20: Inspection Route Optimiser (Field Ops tab) ───────────────────────
 const INSPECTION_ROUTES = [
@@ -4516,11 +4722,35 @@ const WELL_INTEGRITY = [
   { well:'C-03', barrier:'Primary', status:'OK',  annPres:11.8, lastTest:'11 Apr', note:'' },
 ];
 
+type OffshorePlatformItem = typeof OFFSHORE_PLATFORMS[0];
+type SubseaAlertItem = typeof SUBSEA_ALERTS[0];
+type WellIntegrityItem = typeof WELL_INTEGRITY[0];
+function mapApiPlatform(p: API.Platform): OffshorePlatformItem {
+  return { id: p.id, name: p.name, field: p.field_name, status: p.status, lat: 0, lon: 0, prod: p.production_bopd, uptime: p.uptime_pct, wells: 0, crew: 0, weatherScore: 0 };
+}
+function mapApiSubseaAlert(a: API.SubseaAlert): SubseaAlertItem {
+  const sev = a.failure_probability_pct >= 70 ? 'critical' : a.failure_probability_pct >= 40 ? 'warning' : 'advisory';
+  return { id: a.id, asset: a.asset_name, platform: a.platform_id, issue: a.issue_description, failProb: a.failure_probability_pct / 100, eta: a.eta_days, sev };
+}
+function mapApiWellIntegrity(w: API.WellIntegrity): WellIntegrityItem {
+  const s = (w.status || '').toLowerCase();
+  const status = s === 'ok' ? 'OK' : s === 'warn' || s === 'warning' ? 'WARN' : s === 'crit' || s === 'critical' ? 'CRIT' : 'OK';
+  return { well: w.well_name, barrier: w.barrier_type, status, annPres: 0, lastTest: '—', note: '' };
+}
+
 const OffshoreTab: React.FC = () => {
+  const [platforms, setPlatforms] = useState<OffshorePlatformItem[]>(OFFSHORE_PLATFORMS);
+  const [subseaAlerts, setSubseaAlerts] = useState<SubseaAlertItem[]>(SUBSEA_ALERTS);
+  const [wellIntegrity, setWellIntegrity] = useState<WellIntegrityItem[]>(WELL_INTEGRITY);
+  useEffect(() => {
+    API.fetchPlatforms().then(list => { if (list.length > 0) setPlatforms(list.map(mapApiPlatform)); }).catch(() => {});
+    API.fetchSubseaAlerts().then(list => { if (list.length > 0) setSubseaAlerts(list.map(mapApiSubseaAlert)); }).catch(() => {});
+    API.fetchWellIntegrity().then(list => { if (list.length > 0) setWellIntegrity(list.map(mapApiWellIntegrity)); }).catch(() => {});
+  }, []);
   const [selPlatform, setSelPlatform] = useState(OFFSHORE_PLATFORMS[0].id);
-  const plat = OFFSHORE_PLATFORMS.find(p => p.id === selPlatform) ?? OFFSHORE_PLATFORMS[0];
+  const plat = platforms.find(p => p.id === selPlatform) ?? platforms[0];
   const weather = OFFSHORE_WEATHER.filter(w => w.platform === selPlatform);
-  const activeAlert = SUBSEA_ALERTS.filter(a => a.platform === selPlatform);
+  const activeAlert = subseaAlerts.filter(a => a.platform === selPlatform);
   const sev = { critical:'#ef4444', warning:'#f59e0b', advisory:'#60a5fa' };
   const pSev = { operational:'#22c55e', warning:'#f59e0b', critical:'#ef4444' };
 
@@ -4529,10 +4759,10 @@ const OffshoreTab: React.FC = () => {
       {/* D-01: Fleet overview KPIs */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(OFFSHORE_PLATFORMS.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
-          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
-          [String(OFFSHORE_PLATFORMS.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
-          [String(SUBSEA_ALERTS.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
+          [String(platforms.length), 'PLATFORMS',         'text-blue-400',   'border-blue-900/50'],
+          [String(platforms.reduce((s,p)=>s+p.prod,0).toLocaleString()), 'TOTAL PROD (BOPD)', 'text-green-400', 'border-green-900/50'],
+          [String(platforms.reduce((s,p)=>s+p.crew,0)), 'TOTAL CREW', 'text-amber-400', 'border-amber-900/50'],
+          [String(subseaAlerts.filter(a=>a.sev==='critical').length), 'CRITICAL ALERTS', 'text-red-400', 'border-red-900/50'],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4549,7 +4779,7 @@ const OffshoreTab: React.FC = () => {
             <p className="text-gray-500 text-xs">UK Continental Shelf · Real-time operations & predictive subsea analytics</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {OFFSHORE_PLATFORMS.map(p => (
+            {platforms.map(p => (
               <button key={p.id} onClick={() => setSelPlatform(p.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${selPlatform === p.id ? 'bg-blue-900/40 text-blue-400 border-blue-800' : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-600'}`}>
                 <span style={{ color: pSev[p.status as keyof typeof pSev], marginRight: 5 }}>●</span>{p.id}
@@ -4599,11 +4829,11 @@ const OffshoreTab: React.FC = () => {
             <p className="text-gray-500 text-xs">ML-driven failure probability · All platforms</p>
           </div>
           <span className="text-xs bg-red-900/40 text-red-400 border border-red-800 rounded-lg px-3 py-1 font-semibold">
-            {SUBSEA_ALERTS.filter(a=>a.sev==='critical').length} CRITICAL
+            {subseaAlerts.filter(a=>a.sev==='critical').length} CRITICAL
           </span>
         </div>
         <div className="divide-y divide-gray-800">
-          {SUBSEA_ALERTS.map(a => (
+          {subseaAlerts.map(a => (
             <div key={a.id} className="px-5 py-4 flex items-start gap-4">
               <span style={{ width:8,height:8,borderRadius:'50%',background:sev[a.sev as keyof typeof sev],flexShrink:0,marginTop:5 }} />
               <div className="flex-1 min-w-0">
@@ -4676,7 +4906,7 @@ const OffshoreTab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {WELL_INTEGRITY.map(w => {
+            {wellIntegrity.map(w => {
               const sc = { OK:'text-green-400', WARN:'text-amber-400', CRIT:'text-red-400' };
               return (
                 <tr key={w.well} className="border-b border-gray-800/50 hover:bg-gray-800/20">

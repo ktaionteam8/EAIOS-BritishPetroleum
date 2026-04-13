@@ -4,6 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## Micro-Task Execution Strategy (PERMANENT — never skip)
+
+This rule prevents context-window exhaustion and keeps every change reviewable.
+
+### Rules
+- **One task = one file change + one commit + one push.** Never batch multiple files into one commit.
+- **Max ~150 lines of new code per task.** If a task would exceed this, split it before starting.
+- **Commit & push immediately** after each file is written — never accumulate uncommitted work.
+- **Split large tasks before starting**, not after hitting an error:
+  - A seed script > 150 lines → split by domain (sites, equipment, alerts, etc.)
+  - A router with > 5 endpoints → split into schemas file + router file
+  - A frontend wiring task → split per screen/tab
+- **Naming convention for split tasks:** MICRO-09 → MICRO-09a, MICRO-09b, MICRO-09c…
+- **If context feels close to full:** finish the current sub-task, commit, push, then stop and summarise remaining work for the next session.
+- **On any error:** read the error, fix root cause in the same task — do NOT switch to a different approach without diagnosing first.
+
+### Why
+Context-window exhaustion loses all in-progress work. Small, committed, pushed tasks mean zero work is ever lost regardless of session length.
+
+---
+
 ## Project
 
 AI Operations System for British Petroleum (EAIOS). Three-layer architecture:
