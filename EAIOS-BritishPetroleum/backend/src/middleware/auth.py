@@ -42,7 +42,7 @@ def create_access_token(sub: str) -> str:
 def decode_token(token: str) -> dict:
     """Decode and verify a JWT. Raises HTTPException on any failure."""
     try:
-        return jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
+        payload = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -56,6 +56,13 @@ def decode_token(token: str) -> dict:
             detail="Invalid authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not payload.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return payload
 
 
 def get_current_user(
