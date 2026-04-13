@@ -4014,8 +4014,29 @@ const TAR_ITEMS = [
   { id:'TAR-2025-03', site:'Jamnagar, India', unit:'Coker Unit', start:'2025-09-15', end:'2025-10-08', days:23, status:'completed', cost:'$9.3M',  scope:143 },
 ];
 
+type TarItem = typeof TAR_ITEMS[0];
+function mapTar(e: API.TarEvent): TarItem {
+  const days = Math.round((new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 86400000);
+  const cost = e.budget_usd >= 1e6 ? `$${(e.budget_usd / 1e6).toFixed(1)}M` : `$${e.budget_usd.toLocaleString()}`;
+  const status = (e.status || '').toLowerCase() === 'completed' ? 'completed' : 'planned';
+  return { id: e.tar_code, site: e.site_id, unit: e.unit_name, start: e.start_date, end: e.end_date, days, status, cost, scope: Math.round(e.pct_complete ?? 0) };
+}
+
 const TARTab: React.FC = () => {
-  const upcoming = TAR_ITEMS.filter(t => t.status === 'planned');
+  const [tarItems, setTarItems] = useState<TarItem[]>(TAR_ITEMS);
+  const [liveBudget, setLiveBudget] = useState<number | null>(null);
+  useEffect(() => {
+    API.fetchTarEvents()
+      .then(list => {
+        if (list.length > 0) {
+          setTarItems(list.map(mapTar));
+          setLiveBudget(list.filter(e => e.status !== 'completed').reduce((s, e) => s + e.budget_usd, 0));
+        }
+      })
+      .catch(() => {});
+  }, []);
+  const budgetLabel = liveBudget != null ? `$${(liveBudget / 1e6).toFixed(1)}M` : '$29.4M';
+  const upcoming = tarItems.filter(t => t.status === 'planned');
   const W = 640, HDR = 32, ROW_H = 36;
   const H = HDR + upcoming.length * ROW_H + 8;
   const rangeStart = new Date('2026-05-01').getTime();
@@ -4029,9 +4050,9 @@ const TARTab: React.FC = () => {
       <div className="grid grid-cols-4 gap-3">
         {[
           [String(upcoming.length),                                         'PLANNED 2026',       'text-blue-400',  'border-blue-900/50'  ],
-          ['$29.4M',                                                        'PLANNED BUDGET',     'text-white',     'border-gray-800'     ],
+          [budgetLabel,                                                      'PLANNED BUDGET',     'text-white',     'border-gray-800'     ],
           [String(upcoming.reduce((s,t) => s+t.scope, 0)),                  'WORK SCOPES',        'text-purple-400','border-purple-900/50'],
-          [String(TAR_ITEMS.filter(t => t.status==='completed').length),    'COMPLETED 2025',     'text-green-400', 'border-green-900/50' ],
+          [String(tarItems.filter(t => t.status==='completed').length),     'COMPLETED 2025',     'text-green-400', 'border-green-900/50' ],
         ].map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4080,7 +4101,7 @@ const TARTab: React.FC = () => {
 
       {/* Cards */}
       <div className="grid grid-cols-2 gap-4">
-        {TAR_ITEMS.map(t => (
+        {tarItems.map(t => (
           <div key={t.id} className={`bg-gray-900 border ${t.status==='completed' ? 'border-green-900/40' : 'border-blue-900/40'} rounded-xl p-4`}>
             <div className="flex items-start justify-between mb-3">
               <div>
