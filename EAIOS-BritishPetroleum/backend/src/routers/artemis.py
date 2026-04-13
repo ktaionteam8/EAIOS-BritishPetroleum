@@ -11,7 +11,7 @@ from src.models.artemis_core import (
 from src.models.artemis_arbitrage import ArtemisArbitrageOpportunity, ArtemisArbitrageMetric
 from src.models.artemis_castrol import ArtemisBaseOilPrice, ArtemisCastrolPricingRec
 from src.models.artemis_aviation import (
-    ArtemisAviationAirport, ArtemisAviationForecast, ArtemisAviationContract,
+    ArtemisAviationForecast, ArtemisAviationContract,
 )
 from src.models.artemis_carbon import ArtemisCarbonPosition, ArtemisCarbonRecommendation
 from src.schemas.artemis import (
