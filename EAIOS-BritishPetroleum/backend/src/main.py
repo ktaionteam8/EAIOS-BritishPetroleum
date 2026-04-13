@@ -124,6 +124,9 @@ async def chat(
                 max_tokens=2048,
                 system=_SYSTEM_PROMPT,
                 messages=messages,
+                # thinking: "adaptive" is the correct value for claude-opus-4-6.
+                # It lets the model decide when to use extended reasoning.
+                # "budget_tokens" is deprecated on Opus 4.6 — do not add it.
                 thinking={"type": "adaptive"},
             ) as stream:
                 async for text in stream.text_stream:
