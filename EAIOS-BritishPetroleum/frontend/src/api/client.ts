@@ -1,24 +1,40 @@
 /**
- * Centralised API client for EAIOS-BP backend (http://localhost:8000).
+ * Centralised API client for EAIOS-BP backend.
  * All domain-specific fetchers live here so components stay thin.
  */
+import { getAuthToken } from '../context/AuthContext';
 
-const BASE = process.env.REACT_APP_API_URL ?? "http://localhost:8000";
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
+  console.error(
+    '[EAIOS] REACT_APP_API_URL is not set. ' +
+    'Set it to your Render backend URL in Vercel project settings.'
+  );
+}
+
+const BASE = process.env.REACT_APP_API_URL ?? 'http://localhost:8000';
+
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const token = getAuthToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
 
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v));
   }
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: authHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
@@ -27,8 +43,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 async function patch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    method: 'PATCH',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`);
