@@ -23,3 +23,12 @@ from .adoption import (AdoptionMetric, TrainingModule, TrainingEnrollment,  # no
                         AdoptionBarrier, ChangeChampion)
 from .wave_tracker import ImplementationWave, WaveMilestone, DeliveryRisk  # noqa: F401
 from .edge_ai import EdgeNode, EdgeModelDeployment, LatencyBenchmark  # noqa: F401
+from .artemis_core import (  # noqa: F401
+    ArtemisAgentStatus, ArtemisModelRegistry, ArtemisAuditLog, ArtemisComplianceEvent,
+)
+from .artemis_arbitrage import ArtemisArbitrageOpportunity, ArtemisArbitrageMetric  # noqa: F401
+from .artemis_castrol import ArtemisBaseOilPrice, ArtemisCastrolPricingRec  # noqa: F401
+from .artemis_aviation import (  # noqa: F401
+    ArtemisAviationAirport, ArtemisAviationForecast, ArtemisAviationContract,
+)
+from .artemis_carbon import ArtemisCarbonPosition, ArtemisCarbonRecommendation  # noqa: F401
