@@ -1,11 +1,11 @@
 """OT Data, Adoption, Wave Tracker, Edge AI routers — combined file."""
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.database import get_db
 from src.models.ot_data import OTDataSource, OTQualityIssue
-from src.models.adoption import AdoptionMetric, TrainingModule, TrainingEnrollment
+from src.models.adoption import AdoptionMetric, TrainingModule, TrainingEnrollment, AdoptionBarrier, ChangeChampion
 from src.models.wave_tracker import ImplementationWave, WaveMilestone, DeliveryRisk
 from src.models.edge_ai import EdgeNode, EdgeModelDeployment, LatencyBenchmark
 from pydantic import BaseModel, ConfigDict
@@ -37,6 +37,34 @@ async def list_ot_sources(
     stmt = select(OTDataSource)
     if site_id:
         stmt = stmt.where(OTDataSource.site_id == site_id)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+class OTQualityIssueOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    source_id: str
+    tag_name: str
+    issue_type: str
+    description: str
+    severity: str
+    resolution_status: str
+    detected_at: datetime
+    resolved_at: Optional[datetime]
+
+
+@ot_router.get("/quality-issues", response_model=list[OTQualityIssueOut])
+async def list_quality_issues(
+    source_id: str | None = Query(None),
+    severity: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(OTQualityIssue).order_by(OTQualityIssue.detected_at.desc())
+    if source_id:
+        stmt = stmt.where(OTQualityIssue.source_id == source_id)
+    if severity:
+        stmt = stmt.where(OTQualityIssue.severity == severity)
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -84,6 +112,48 @@ async def list_adoption_metrics(
 @adoption_router.get("/training", response_model=list[TrainingModuleOut])
 async def list_training_modules(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(TrainingModule))
+    return result.scalars().all()
+
+
+class AdoptionBarrierOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    theme: str
+    description: Optional[str]
+    priority: str
+    vote_count: int
+    status: str
+    created_at: datetime
+
+
+@adoption_router.get("/barriers", response_model=list[AdoptionBarrierOut])
+async def list_barriers(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(AdoptionBarrier).order_by(AdoptionBarrier.vote_count.desc())
+    )
+    return result.scalars().all()
+
+
+class ChangeChampionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    user_id: str
+    site_id: str
+    role: str
+    sessions_count: int
+    alerts_actioned_count: int
+    training_completion_pct: float
+
+
+@adoption_router.get("/champions", response_model=list[ChangeChampionOut])
+async def list_champions(
+    site_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(ChangeChampion).order_by(ChangeChampion.sessions_count.desc())
+    if site_id:
+        stmt = stmt.where(ChangeChampion.site_id == site_id)
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 
@@ -143,6 +213,29 @@ async def list_risks(wave_id: str, db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
+class DeliveryRiskCreate(BaseModel):
+    risk_code: str
+    description: str
+    probability: str = "medium"
+    status: str = "open"
+
+
+@wave_router.post("/{wave_id}/risks", response_model=DeliveryRiskOut, status_code=201)
+async def create_risk(
+    wave_id: str,
+    body: DeliveryRiskCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    wave = await db.get(ImplementationWave, wave_id)
+    if wave is None:
+        raise HTTPException(status_code=404, detail={"detail": "Wave not found", "code": "wave_not_found"})
+    risk = DeliveryRisk(wave_id=wave_id, **body.model_dump())
+    db.add(risk)
+    await db.commit()
+    await db.refresh(risk)
+    return risk
+
+
 # ── Edge AI ──────────────────────────────────────────────────────────────────
 edge_router = APIRouter(prefix="/api/edge", tags=["edge-ai"])
 
@@ -185,5 +278,11 @@ async def list_nodes(
 
 @edge_router.get("/benchmarks", response_model=list[LatencyBenchmarkOut])
 async def list_benchmarks(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(LatencyBenchmark).order_by(LatencyBenchmark.benchmark_date.desc()))
+    return result.scalars().all()
+
+
+@edge_router.get("/latency", response_model=list[LatencyBenchmarkOut])
+async def list_latency(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LatencyBenchmark).order_by(LatencyBenchmark.benchmark_date.desc()))
     return result.scalars().all()
