@@ -2881,7 +2881,17 @@ const ROI_BARS = [
   { label: 'Smart Parts Procurement', value: 8, color: '#0891b2' },
 ];
 
-const ROITab: React.FC = () => (
+const ROITab: React.FC = () => {
+  const [kpi, setKpi] = useState<API.KpiSnapshot | null>(null);
+  useEffect(() => {
+    API.fetchKPIs('fleet')
+      .then(list => { if (list.length > 0) setKpi(list[0]); })
+      .catch(() => {});
+  }, []);
+  const mtbf = kpi?.mtbf_hours != null ? `${Math.round(kpi.mtbf_hours).toLocaleString()} h` : '1,173 h';
+  const mttr = kpi?.mttr_hours != null ? `${kpi.mttr_hours.toFixed(2)} h` : '4.68 h';
+  const oee  = kpi?.oee_pct    != null ? `${kpi.oee_pct.toFixed(1)} %`   : '81.4 %';
+  return (
   <div className="space-y-4">
 
     {/* REQ-05 — MTBF / MTTR / OEE */}
@@ -2897,9 +2907,9 @@ const ROITab: React.FC = () => (
       {/* Fleet KPIs */}
       <div className="grid grid-cols-3 divide-x divide-gray-800 border-b border-gray-800">
         {[
-          ['MTBF', '1,173 h', 'Mean Time Between Failures', '↑ +148h vs last year', 'text-blue-400'],
-          ['MTTR', '4.68 h', 'Mean Time To Repair', '↓ −1.2h vs last year', 'text-green-400'],
-          ['OEE',  '81.4 %', 'Overall Equipment Effectiveness', '↑ +3.8% vs last year', 'text-purple-400'],
+          ['MTBF', mtbf, 'Mean Time Between Failures', '↑ +148h vs last year', 'text-blue-400'],
+          ['MTTR', mttr, 'Mean Time To Repair', '↓ −1.2h vs last year', 'text-green-400'],
+          ['OEE',  oee,  'Overall Equipment Effectiveness', '↑ +3.8% vs last year', 'text-purple-400'],
         ].map(([k, v, desc, trend, c]) => (
           <div key={k} className="px-6 py-4">
             <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold mb-1">{k}</p>
@@ -3062,7 +3072,8 @@ const ROITab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-16: Alert Escalation Matrix ──────────────────────────────────────────
 const ESCALATION_MATRIX = [
