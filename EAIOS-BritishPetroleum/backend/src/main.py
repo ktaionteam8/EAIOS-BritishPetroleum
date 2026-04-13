@@ -21,6 +21,9 @@ from src.routers.castrol import router as castrol_router
 from src.routers.ot_adoption_wave_edge import (
     ot_router, adoption_router, wave_router, edge_router
 )
+from src.routers.digital_twin import router as digital_twin_router
+from src.routers.reliability import router as reliability_router
+from src.routers.field_ops import router as field_ops_router
 
 app = FastAPI(
     title="EAIOS BP API",
@@ -52,6 +55,9 @@ app.include_router(ot_router)
 app.include_router(adoption_router)
 app.include_router(wave_router)
 app.include_router(edge_router)
+app.include_router(digital_twin_router)
+app.include_router(reliability_router)
+app.include_router(field_ops_router)
 
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
 _anthropic = AsyncAnthropic()
