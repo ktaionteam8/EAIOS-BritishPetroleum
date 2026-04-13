@@ -1,5 +1,9 @@
+import logging
+
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -20,11 +24,21 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
     allowed_origins: str = ""
 
+    # Auth users — JSON mapping of username → bcrypt hash.
+    # Generate: python -c "import bcrypt; print(bcrypt.hashpw(b'pw', bcrypt.gensalt()).decode())"
+    # Example: AUTH_USERS='{"admin": "$2b$12$..."}'
+    auth_users: str = "{}"
+
     @model_validator(mode="after")
     def _derive_cors(self) -> "Settings":
-        """If ALLOWED_ORIGINS is not set, fall back to FRONTEND_URL."""
+        """Derive CORS origins and warn if localhost is used in production."""
         if not self.allowed_origins:
             self.allowed_origins = self.frontend_url
+        if self.environment == "production" and "localhost" in self.allowed_origins:
+            logger.warning(
+                "CORS allowed_origins contains 'localhost' in production — "
+                "set FRONTEND_URL to your production domain."
+            )
         return self
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
