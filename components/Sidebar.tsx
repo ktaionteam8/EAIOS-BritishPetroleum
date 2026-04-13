@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   Brain,
+  Briefcase,
+  CheckSquare,
   Factory,
   Gauge,
+  Globe,
   LineChart,
   Shield,
   ShoppingCart,
@@ -13,6 +17,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { DOMAINS } from "@/lib/domains";
+import { readSession, type Session } from "@/lib/session";
+import { canAccessDomain, canSeeMasterDecision } from "@/lib/rbac";
 
 const DOMAIN_ICONS = {
   manufacturing: Factory,
@@ -25,8 +31,15 @@ const DOMAIN_ICONS = {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    setSession(readSession());
+  }, [pathname]);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const role = session?.role;
+  const userDomain = session?.domain;
 
   return (
     <aside className="w-60 bg-bg-800 border-r border-bg-700 flex flex-col h-screen sticky top-0">
@@ -44,19 +57,28 @@ export function Sidebar() {
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         <NavItem href="/" label="Overview" icon={Gauge} active={pathname === "/"} />
-        <NavItem
-          href="/master-decision"
-          label="Master Decision"
-          icon={Brain}
-          active={isActive("/master-decision")}
-          highlight
-        />
+        {role && canSeeMasterDecision(role) && (
+          <NavItem
+            href="/master-decision"
+            label="Master Decision"
+            icon={Brain}
+            active={isActive("/master-decision")}
+            highlight
+          />
+        )}
+        <NavItem href="/tasks" label="My Tasks" icon={CheckSquare} active={isActive("/tasks")} />
+
+        {role && (role === "admin" || (role === "manager" && userDomain === "hr-safety")) && (
+          <NavItem href="/hr/jobs" label="HR Jobs" icon={Briefcase} active={isActive("/hr/jobs")} />
+        )}
 
         <div className="pt-4 pb-1.5 px-3 text-[10px] uppercase tracking-wider text-slate-600 font-medium">
           Domains
         </div>
         {DOMAINS.map((d) => {
           const Icon = DOMAIN_ICONS[d.slug as keyof typeof DOMAIN_ICONS];
+          const visible = !role || canAccessDomain(role, userDomain, d.slug);
+          if (!visible) return null;
           return (
             <NavItem
               key={d.slug}
@@ -68,6 +90,11 @@ export function Sidebar() {
             />
           );
         })}
+
+        <div className="pt-4 pb-1.5 px-3 text-[10px] uppercase tracking-wider text-slate-600 font-medium">
+          Public
+        </div>
+        <NavItem href="/website" label="Company Website" icon={Globe} active={isActive("/website")} />
       </nav>
 
       <div className="p-4 border-t border-bg-700 text-[10px] text-slate-600">

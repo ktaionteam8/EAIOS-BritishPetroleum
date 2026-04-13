@@ -1,7 +1,13 @@
 "use client";
 
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { fetchAllDomains, fetchMasterDecision } from "@/lib/api";
+import { fetchAllDomains } from "@/lib/api";
+import type { MasterDecision } from "@/lib/types";
+
+async function fetchMasterDecision(): Promise<MasterDecision> {
+  const res = await fetch("/api/master");
+  return res.json();
+}
 import { MasterAgentPanel } from "@/components/MasterAgentPanel";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";

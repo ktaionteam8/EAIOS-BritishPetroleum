@@ -1,72 +1,114 @@
-# EAIOS Dashboard — Enterprise UI
+# EAIOS Enterprise Platform — British Petroleum
 
-> **Branch:** `core-dashboard-ui`  
-> **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Recharts · Axios · lucide-react  
+> **Branch:** `core-enterprise-platform`  
+> **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Recharts · Axios · Gemini AI  
 > **Theme:** Dark, enterprise-grade
 
-Modern interactive dashboard for the BP Enterprise AI Operations System.
-Visualises 6 business domains, 36 worker microservices, and the Master
-Agent orchestrator in a single pane of glass.
+Full enterprise platform built on top of the EAIOS dashboard — adds Gemini
+AI, chatbot, RBAC, HR automation, task management, notifications, and a
+public company website. **Zero existing branches modified.**
 
-## Features
+## What's new vs `core-dashboard-ui`
 
-- **Overview page** — KPI cards, 6-domain grid, Master Agent panel, live activity feed
-- **Domain pages** — drill-down per domain showing 6 services with status/confidence/decision plus a 24h trend chart
-- **Master Decision page** — full orchestrator view with contributing domain signals
-- **Auto-refresh every 5s** across all pages
-- **Live + mock fallback** — works offline when backend services aren't running
-- **Dark theme** with green/amber/red status colour coding
-- **Responsive** grid layouts down to tablet
+| Feature | Location |
+|---------|----------|
+| **Gemini master agent** (with rule fallback) | `app/api/master/route.ts` + `backend/gemini_service.py` |
+| **Enterprise chatbot** (Gemini-backed, triggers actions) | `components/Chatbot.tsx` + `app/api/chat/route.ts` |
+| **Role-based access (RBAC)** with hardcoded demo users | `lib/rbac.ts` + `middleware.ts` + `app/login` |
+| **HR job posting & resume screening** (Gemini-powered) | `app/hr/jobs` + `app/api/resume-screen/route.ts` |
+| **Task assignment system** | `app/tasks` + `app/api/tasks/route.ts` |
+| **Notification center** (bell with unread count) | `components/NotificationBell.tsx` + `app/api/notifications/route.ts` |
+| **Public company website** (Home, About, Services, Careers, Contact) | `app/website/*` |
+| **HR → Website integration** (jobs appear live on Careers) | Shared store in `lib/store.ts` |
+
+## Demo Accounts
+
+Click any account on the login page to auto-fill:
+
+| Role | Username | Password | Can see |
+|------|----------|----------|---------|
+| Admin | `admin` | `admin123` | Everything |
+| CEO | `ceo` | `ceo123` | Overview + Master Decision |
+| Mfg Manager | `manager_mfg` | `mfg123` | Manufacturing only |
+| HR Manager | `manager_hr` | `hr123` | HR domain + Jobs page |
+| Employee | `employee_mfg` | `emp123` | My tasks + limited view |
 
 ## Quick Start
 
 ```bash
 npm install
-cp .env.example .env.local   # (optional) point NEXT_PUBLIC_MASTER_URL at your master orchestrator
-npm run dev                   # http://localhost:3000
-npm run build && npm run start
+cp .env.example .env.local
+# Edit .env.local and set GEMINI_API_KEY=...
+npm run dev
 ```
 
-## Environment Variables
+Visit http://localhost:3000/login to sign in, or
+http://localhost:3000/website for the public portal.
 
+## Environment
+
+```bash
+GEMINI_API_KEY=your-key        # required for live AI; system falls back to rules if missing/rate-limited
+NEXT_PUBLIC_MASTER_URL=http://localhost:8000  # optional Python master agent base URL
 ```
-NEXT_PUBLIC_MASTER_URL=http://localhost:8000   # Master Agent base URL
-```
 
-If the Master Agent or domain services are unreachable the dashboard
-renders deterministic mock data so the UI always has something to show.
-
-## Project Structure
+## Architecture
 
 ```
 app/
-  layout.tsx                Sidebar shell
-  page.tsx                  Overview dashboard
-  master-decision/page.tsx  Master Agent focus view
-  domain/[slug]/page.tsx    Dynamic domain detail page
-components/
-  Sidebar.tsx, TopBar.tsx
-  KpiCard.tsx, DomainCard.tsx
-  MasterAgentPanel.tsx, ActivityFeed.tsx
-  StatusBadge.tsx, ConfidenceBar.tsx, DomainChart.tsx
+  (auth)        login/              RBAC login page
+  (public)      website/            Home, About, Services, Careers, Contact
+  (private)     page.tsx            Enterprise overview (KPIs + domain grid)
+                master-decision/    Orchestrator view
+                domain/[slug]/      Per-domain drill-down
+                tasks/              Task board
+                hr/jobs/            HR job management + AI resume screening
+  api/
+    auth/login            Session cookie auth
+    master                Gemini-backed enterprise decision (rule fallback)
+    chat                  Chatbot with Gemini + intent-triggered side effects
+    jobs                  Job posting CRUD (shared by HR + Careers)
+    tasks                 Task assignment CRUD
+    notifications         Notification center + unread count
+    resume-screen         Gemini-powered resume screening
+
+components/                Sidebar, TopBar, Chatbot, NotificationBell,
+                           KpiCard, DomainCard, MasterAgentPanel, ActivityFeed,
+                           DomainChart, StatusBadge, ConfidenceBar, UserChip, AppShell
 lib/
-  api.ts         Axios + mock fallback
-  domains.ts     Domain & service metadata
-  types.ts       Shared types
-hooks/
-  useAutoRefresh.ts   5s polling hook
+  gemini.ts                @google/generative-ai client + JSON/text helpers
+  rbac.ts                  Hardcoded users + permission helpers
+  session.ts               Client-side cookie session
+  store.ts                 Shared in-memory stores (jobs, tasks, notifications, screenings)
+  api.ts                   Dashboard data fetcher (axios + mock fallback)
+  domains.ts               Domain metadata
+backend/
+  gemini_service.py        Python wrapper for the master agent (for the FastAPI orchestrator)
+middleware.ts              Route guard — redirects unauthenticated users to /login
 ```
 
-## API Integration
+## Chatbot Capabilities
 
-| Endpoint | Source | Fallback |
-|----------|--------|----------|
-| Master decision | `GET {MASTER_URL}/api/decision` | Deterministic mock |
-| Domain summaries | Synthesised from service metadata | Deterministic mock |
-| Activity feed | Derived from domain statuses | Deterministic mock |
+The floating chatbot (bottom-right) accepts natural-language queries and can:
 
-Swap the Axios calls in `lib/api.ts` to hit real domain `/api/run`
-endpoints when the microservices are deployed.
+- Summarize domain status: *"Show refinery status"*
+- Analyze performance: *"Analyze last 10 days performance"*
+- Suggest improvements: *"Suggest improvements for supply chain"*
+- **Trigger actions**: *"Assign employee_mfg to inspect Pump P-101"* → creates a real task
+- **Create jobs**: *"Create a job posting for data scientist"* → prompts HR flow
+
+All traffic goes to `/api/chat` which forwards to Gemini with an enterprise
+system prompt. If Gemini is rate-limited or unreachable, the chatbot falls
+back gracefully and the UI tags the response as *offline mode*.
+
+## Safety / Isolation
+
+- Lives entirely on `core-enterprise-platform`
+- Built **on top of** `core-dashboard-ui` — inherits all dashboard work
+- **No changes** to `main`, `develop`, domain branches (01–06), or
+  `core-master-agent-orchestrator`
+- `.env.local` (with real Gemini key) is gitignored; only `.env.example`
+  is committed
 
 ## Authorship
 

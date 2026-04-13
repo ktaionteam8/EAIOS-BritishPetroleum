@@ -1,19 +1,24 @@
 "use client";
 
-import { AlertTriangle, Boxes, Heart, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Boxes, Heart, ShieldAlert, Sparkles } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { fetchActivity, fetchAllDomains, fetchMasterDecision } from "@/lib/api";
+import { fetchActivity, fetchAllDomains } from "@/lib/api";
 import { TopBar } from "@/components/TopBar";
 import { KpiCard } from "@/components/KpiCard";
 import { DomainCard } from "@/components/DomainCard";
 import { MasterAgentPanel } from "@/components/MasterAgentPanel";
 import { ActivityFeed } from "@/components/ActivityFeed";
-import type { Status } from "@/lib/types";
+import type { Status, MasterDecision } from "@/lib/types";
+
+async function fetchGeminiMaster(): Promise<MasterDecision> {
+  const res = await fetch("/api/master");
+  return res.json();
+}
 
 export default function OverviewPage() {
-  const { data: domains } = useAutoRefresh(fetchAllDomains, 5000);
-  const { data: master } = useAutoRefresh(fetchMasterDecision, 5000);
-  const { data: events } = useAutoRefresh(fetchActivity, 5000);
+  const { data: domains } = useAutoRefresh(fetchAllDomains, 4000);
+  const { data: master } = useAutoRefresh(fetchGeminiMaster, 8000);
+  const { data: events } = useAutoRefresh(fetchActivity, 4000);
 
   const doms = domains ?? [];
   const totalServices = doms.reduce((a, d) => a + d.activeServices, 0);
@@ -24,15 +29,25 @@ export default function OverviewPage() {
   const systemStatus: Status =
     criticalCount > 0 ? "critical" : doms.some((d) => d.status === "warning") ? "warning" : "normal";
 
+  const aiSource = (master as any)?.source;
+
   return (
     <>
       <TopBar systemStatus={systemStatus} alertCount={totalAlerts} />
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Enterprise Overview</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Cross-domain intelligence across 36 microservices + 1 master orchestrator
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-100">Enterprise Overview</h1>
+            <p className="text-sm text-slate-400 mt-1">
+              Cross-domain intelligence across 36 microservices + 1 master orchestrator
+            </p>
+          </div>
+          {aiSource && (
+            <div className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
+              <Sparkles className="h-3 w-3" />
+              AI: {aiSource === "gemini" ? "Gemini 2.0 Flash" : "Rule engine fallback"}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
