@@ -1,18 +1,19 @@
 import logging
 from typing import Literal
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from anthropic import AsyncAnthropic
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
 from src.config import settings
+from src.middleware.rate_limiter import limiter
+from src.middleware.auth import get_current_user
 
 # ── Domain routers ────────────────────────────────────────────────────────────
 from src.routers.dashboard import router as dashboard_router
@@ -34,8 +35,6 @@ from src.routers.reliability import router as reliability_router
 from src.routers.field_ops import router as field_ops_router
 from src.routers.artemis import router as artemis_router
 from src.routers.auth_router import router as auth_router
-
-limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="EAIOS BP API",
@@ -107,7 +106,11 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/chat")
 @limiter.limit("20/minute")
-async def chat(request: Request, body: ChatRequest):
+async def chat(
+    request: Request,
+    body: ChatRequest,
+    _: dict = Depends(get_current_user),
+):
     """
     Streaming proxy to Claude API for the RefinerAI Advisor tab.
     Requires ANTHROPIC_API_KEY to be set in the environment.
