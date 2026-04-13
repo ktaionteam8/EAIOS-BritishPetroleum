@@ -6,6 +6,22 @@ from anthropic import AsyncAnthropic
 
 from src.config import settings
 
+# ── Domain routers ────────────────────────────────────────────────────────────
+from src.routers.dashboard import router as dashboard_router
+from src.routers.alerts import router as alerts_router
+from src.routers.equipment import router as equipment_router
+from src.routers.ml_models import router as ml_models_router
+from src.routers.work_orders import router as work_orders_router
+from src.routers.roi import router as roi_router
+from src.routers.energy import router as energy_router
+from src.routers.compliance import router as compliance_router
+from src.routers.tar import router as tar_router
+from src.routers.offshore import router as offshore_router
+from src.routers.castrol import router as castrol_router
+from src.routers.ot_adoption_wave_edge import (
+    ot_router, adoption_router, wave_router, edge_router
+)
+
 app = FastAPI(
     title="EAIOS BP API",
     version="0.1.0",
@@ -19,6 +35,23 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
 )
+
+# ── Register routers ─────────────────────────────────────────────────────────
+app.include_router(dashboard_router)
+app.include_router(alerts_router)
+app.include_router(equipment_router)
+app.include_router(ml_models_router)
+app.include_router(work_orders_router)
+app.include_router(roi_router)
+app.include_router(energy_router)
+app.include_router(compliance_router)
+app.include_router(tar_router)
+app.include_router(offshore_router)
+app.include_router(castrol_router)
+app.include_router(ot_router)
+app.include_router(adoption_router)
+app.include_router(wave_router)
+app.include_router(edge_router)
 
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
 _anthropic = AsyncAnthropic()

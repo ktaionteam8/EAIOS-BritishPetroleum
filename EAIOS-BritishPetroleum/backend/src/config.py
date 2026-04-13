@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # e.g. "https://eaios-bp.vercel.app,http://localhost:3000"
     allowed_origins: str = "http://localhost:3000"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 settings = Settings()
