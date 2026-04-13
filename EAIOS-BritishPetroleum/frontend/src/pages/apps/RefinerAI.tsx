@@ -536,9 +536,10 @@ interface EquipmentRowProps {
   health: number; rul: string;
   aiStatus: 'CRITICAL' | 'WARNING' | 'HEALTHY';
   action: string;
+  onAction: () => void;
 }
 const STATUS_COLOR = { CRITICAL: '#ef4444', WARNING: '#f59e0b', HEALTHY: '#22c55e' };
-const EquipmentRow: React.FC<EquipmentRowProps> = ({ tag, name, site, health, rul, aiStatus, action }) => (
+const EquipmentRow: React.FC<EquipmentRowProps> = ({ tag, name, site, health, rul, aiStatus, action, onAction }) => (
   <tr className="border-b border-gray-800 hover:bg-gray-900/50 transition-colors">
     <td className="py-3 px-4 text-purple-400 text-sm font-mono">{tag}</td>
     <td className="py-3 px-4 text-white text-sm">{name}</td>
@@ -551,10 +552,108 @@ const EquipmentRow: React.FC<EquipmentRowProps> = ({ tag, name, site, health, ru
       <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: `${STATUS_COLOR[aiStatus]}22`, color: STATUS_COLOR[aiStatus] }}>{aiStatus}</span>
     </td>
     <td className="py-3 px-4">
-      <button className="text-xs text-purple-400 border border-purple-800 px-3 py-1 rounded hover:bg-purple-900/30 transition-colors">{action}</button>
+      <button onClick={onAction} className="text-xs text-purple-400 border border-purple-800 px-3 py-1 rounded hover:bg-purple-900/30 transition-colors">{action}</button>
     </td>
   </tr>
 );
+
+// ── Action Modals (Dispatch / Schedule) ──────────────────────────────────────
+interface ActionTarget { tag: string; name: string; equipmentId: string; siteId: string; }
+
+const DispatchModal: React.FC<{ target: ActionTarget; onClose: () => void }> = ({ target, onClose }) => {
+  const [loading, setLoading] = useState(false);
+  const [woNumber, setWoNumber] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const handleDispatch = async () => {
+    setLoading(true); setError(null);
+    try {
+      const wo = await API.createWorkOrder({ title: `Emergency: ${target.tag} — ${target.name}`, equipment_id: target.equipmentId, site_id: target.siteId, priority: 'critical', description: `AI-generated emergency dispatch. Asset in CRITICAL state — immediate intervention required.`, ai_generated: true });
+      setWoNumber(wo.wo_number);
+    } catch { setError('Failed to create work order. Please try again.'); setLoading(false); }
+  };
+  const overlay: React.CSSProperties = { position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center' };
+  const card: React.CSSProperties    = { background:'#0f172a', border:'1px solid #7f1d1d', borderRadius:16, padding:'28px 32px', maxWidth:520, width:'90%', boxShadow:'0 0 60px #ef444433' };
+  return (
+    <div style={overlay}>
+      <div style={card}>
+        {woNumber ? (
+          <>
+            <p style={{ color:'#22c55e', fontSize:18, fontWeight:700, marginBottom:8 }}>✓ Work Order Dispatched</p>
+            <p style={{ color:'#9ca3af', fontSize:13, marginBottom:8 }}>Emergency WO <span style={{ color:'#a78bfa', fontFamily:'monospace' }}>{woNumber}</span> created and dispatched to site crew.</p>
+            <p style={{ color:'#9ca3af', fontSize:12, marginBottom:20 }}>Asset: <strong style={{ color:'#fff' }}>{target.tag} — {target.name}</strong></p>
+            <button onClick={onClose} style={{ width:'100%', padding:'10px', borderRadius:8, background:'#15803d', border:'none', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>Close</button>
+          </>
+        ) : (
+          <>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
+              <div><p style={{ fontSize:10, color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.1em', fontWeight:700, marginBottom:4 }}>Emergency Dispatch</p><p style={{ color:'#fff', fontSize:16, fontWeight:700 }}>{target.tag} — {target.name}</p></div>
+              <button onClick={onClose} style={{ color:'#6b7280', fontSize:18, background:'none', border:'none', cursor:'pointer' }}>✕</button>
+            </div>
+            <div style={{ background:'#1f2937', borderRadius:8, padding:'12px 14px', marginBottom:16 }}>
+              <p style={{ color:'#f87171', fontSize:12, fontWeight:600, marginBottom:4 }}>⚠ CRITICAL — Immediate Action Required</p>
+              <p style={{ color:'#9ca3af', fontSize:12 }}>An emergency work order will be created with <strong style={{ color:'#fff' }}>CRITICAL priority</strong> and dispatched to the on-site maintenance crew immediately.</p>
+            </div>
+            {error && <p style={{ color:'#f87171', fontSize:12, marginBottom:12 }}>{error}</p>}
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={onClose} style={{ flex:1, padding:'10px', borderRadius:8, background:'#1f2937', border:'1px solid #374151', color:'#9ca3af', cursor:'pointer', fontSize:13 }}>Cancel</button>
+              <button onClick={handleDispatch} disabled={loading} style={{ flex:2, padding:'10px', borderRadius:8, background: loading ? '#374151' : '#dc2626', border:'none', color:'#fff', cursor: loading ? 'wait' : 'pointer', fontWeight:600, fontSize:13 }}>{loading ? 'Dispatching…' : '⚡ Dispatch Now'}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const SCHED_WINDOWS = ['Next 7 days', 'Next 14 days', 'Next TAR window'];
+
+const ScheduleModal: React.FC<{ target: ActionTarget; onClose: () => void }> = ({ target, onClose }) => {
+  const [windowIdx, setWindowIdx] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [woNumber, setWoNumber] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const handleSchedule = async () => {
+    setLoading(true); setError(null);
+    try {
+      const wo = await API.createWorkOrder({ title: `Scheduled Maintenance: ${target.tag} — ${target.name}`, equipment_id: target.equipmentId, site_id: target.siteId, priority: 'high', description: `AI-recommended maintenance within ${SCHED_WINDOWS[windowIdx]}. Asset in WARNING state.`, ai_generated: true });
+      setWoNumber(wo.wo_number);
+    } catch { setError('Failed to create work order. Please try again.'); setLoading(false); }
+  };
+  const overlay: React.CSSProperties = { position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center' };
+  const card: React.CSSProperties    = { background:'#0f172a', border:'1px solid #78350f', borderRadius:16, padding:'28px 32px', maxWidth:520, width:'90%', boxShadow:'0 0 60px #f59e0b33' };
+  return (
+    <div style={overlay}>
+      <div style={card}>
+        {woNumber ? (
+          <>
+            <p style={{ color:'#22c55e', fontSize:18, fontWeight:700, marginBottom:8 }}>✓ Maintenance Scheduled</p>
+            <p style={{ color:'#9ca3af', fontSize:13, marginBottom:8 }}>Work order <span style={{ color:'#a78bfa', fontFamily:'monospace' }}>{woNumber}</span> scheduled for {SCHED_WINDOWS[windowIdx]}.</p>
+            <p style={{ color:'#9ca3af', fontSize:12, marginBottom:20 }}>Asset: <strong style={{ color:'#fff' }}>{target.tag} — {target.name}</strong></p>
+            <button onClick={onClose} style={{ width:'100%', padding:'10px', borderRadius:8, background:'#15803d', border:'none', color:'#fff', cursor:'pointer', fontWeight:600, fontSize:13 }}>Close</button>
+          </>
+        ) : (
+          <>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
+              <div><p style={{ fontSize:10, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.1em', fontWeight:700, marginBottom:4 }}>Schedule Maintenance</p><p style={{ color:'#fff', fontSize:16, fontWeight:700 }}>{target.tag} — {target.name}</p></div>
+              <button onClick={onClose} style={{ color:'#6b7280', fontSize:18, background:'none', border:'none', cursor:'pointer' }}>✕</button>
+            </div>
+            <p style={{ color:'#9ca3af', fontSize:12, marginBottom:14 }}>Select maintenance window:</p>
+            <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+              {SCHED_WINDOWS.map((w, i) => (
+                <button key={w} onClick={() => setWindowIdx(i)} style={{ flex:1, padding:'8px 6px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer', transition:'all .15s', background: windowIdx === i ? '#78350f' : '#1f2937', border: windowIdx === i ? '1px solid #f59e0b' : '1px solid #374151', color: windowIdx === i ? '#fbbf24' : '#9ca3af' }}>{w}</button>
+              ))}
+            </div>
+            {error && <p style={{ color:'#f87171', fontSize:12, marginBottom:12 }}>{error}</p>}
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={onClose} style={{ flex:1, padding:'10px', borderRadius:8, background:'#1f2937', border:'1px solid #374151', color:'#9ca3af', cursor:'pointer', fontSize:13 }}>Cancel</button>
+              <button onClick={handleSchedule} disabled={loading} style={{ flex:2, padding:'10px', borderRadius:8, background: loading ? '#374151' : '#d97706', border:'none', color:'#fff', cursor: loading ? 'wait' : 'pointer', fontWeight:600, fontSize:13 }}>{loading ? 'Scheduling…' : '📅 Schedule Maintenance'}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ── REQ-04: Failure Prediction Gantt data ────────────────────────────────────
 interface GanttItem {
@@ -1453,6 +1552,7 @@ const FleetHeatmap: React.FC = () => {
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset,    setFftAsset]    = useState('C-101');
   const [healthAsset, setHealthAsset] = useState('C-101');
+  const [actionTarget, setActionTarget] = useState<(ActionTarget & { type: 'dispatch' | 'schedule' }) | null>(null);
   const equipment = useApiEquipment();
   const healthy  = equipment.filter(e => e.ai_status === 'healthy').length;
   const warning  = equipment.filter(e => e.ai_status === 'warning').length;
@@ -1483,7 +1583,8 @@ const EquipmentHealthTab: React.FC = () => {
             const status = e.ai_status.toUpperCase() as 'CRITICAL' | 'WARNING' | 'HEALTHY';
             const rul = e.rul_hours == null ? '—' : e.rul_hours < 24 ? `${e.rul_hours}h` : `${Math.round(e.rul_hours / 24)}d`;
             const action = status === 'CRITICAL' ? 'Dispatch' : status === 'WARNING' ? 'Schedule' : 'Monitor';
-            return <EquipmentRow key={e.id} tag={e.tag} name={e.name} site={e.site_id} health={e.health_score} rul={rul} aiStatus={status} action={action} />;
+            return <EquipmentRow key={e.id} tag={e.tag} name={e.name} site={e.site_id} health={e.health_score} rul={rul} aiStatus={status} action={action}
+              onAction={() => status !== 'HEALTHY' && setActionTarget({ type: status === 'CRITICAL' ? 'dispatch' : 'schedule', tag: e.tag, name: e.name, equipmentId: e.id, siteId: e.site_id })} />;
           })}
         </tbody>
       </table>
@@ -1569,6 +1670,8 @@ const EquipmentHealthTab: React.FC = () => {
         ))}
       </div>
     </div>
+    {actionTarget?.type === 'dispatch' && <DispatchModal target={actionTarget} onClose={() => setActionTarget(null)} />}
+    {actionTarget?.type === 'schedule' && <ScheduleModal target={actionTarget} onClose={() => setActionTarget(null)} />}
   </div>
   );
 };
