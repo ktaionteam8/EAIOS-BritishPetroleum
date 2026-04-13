@@ -4092,14 +4092,22 @@ const ENERGY_SITES = [
   { site:'Jamnagar, India', gjt:3.76, carbon:0.19, target:3.80, power:498,  steam:760,  trend:-0.18 },
 ];
 
-const EnergyTab: React.FC = () => (
+const EnergyTab: React.FC = () => {
+  const [savingsTotal, setSavingsTotal] = useState<number | null>(null);
+  useEffect(() => {
+    API.fetchEnergySavings()
+      .then(list => { if (list.length > 0) setSavingsTotal(list.reduce((s, e) => s + e.cost_avoided_usd, 0)); })
+      .catch(() => {});
+  }, []);
+  const savingsLabel = savingsTotal != null ? `$${(savingsTotal / 1e6).toFixed(1)}M` : '$12.4M';
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        ['4.24 GJ/t',  'Fleet Energy Intensity',    'YTD 2026 average',          'text-blue-400',  'border-blue-900/50'  ],
-        ['0.24 tCO₂',  'Carbon Intensity',          'tCO₂ per tonne processed',  'text-green-400', 'border-green-900/50' ],
-        ['−8.2%',      'YTD Reduction',             'vs 2025 baseline',          'text-purple-400','border-purple-900/50'],
-        ['$12.4M',     'Energy Cost Savings',       'vs unoptimised baseline',   'text-amber-400', 'border-amber-900/50' ],
+        ['4.24 GJ/t',   'Fleet Energy Intensity', 'YTD 2026 average',         'text-blue-400',   'border-blue-900/50'  ],
+        ['0.24 tCO₂',   'Carbon Intensity',       'tCO₂ per tonne processed', 'text-green-400',  'border-green-900/50' ],
+        ['−8.2%',       'YTD Reduction',          'vs 2025 baseline',         'text-purple-400', 'border-purple-900/50'],
+        [savingsLabel,  'Energy Cost Savings',    'vs unoptimised baseline',  'text-amber-400',  'border-amber-900/50' ],
       ].map(([v,l,s,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -4172,7 +4180,8 @@ const EnergyTab: React.FC = () => (
       <p className="text-gray-600 text-xs mt-3">│ amber line = site target</p>
     </div>
   </div>
-);
+  );
+};
 
 // ── REQ-20: Inspection Route Optimiser (Field Ops tab) ───────────────────────
 const INSPECTION_ROUTES = [
