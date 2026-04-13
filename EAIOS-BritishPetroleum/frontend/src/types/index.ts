@@ -89,6 +89,15 @@ export const APPLICATIONS: Application[] = [
     version: '1.0.0',
     url: '/apps/refiner-ai',
   },
+  {
+    id: 'artemis',
+    name: 'Artemis',
+    description: 'AI-powered trading intelligence platform for Commercial & Trading operations.',
+    domainId: '04-commercial-trading',
+    status: 'active',
+    version: '1.0.0',
+    url: '/apps/artemis',
+  },
 ];
 
 export interface Agent {
