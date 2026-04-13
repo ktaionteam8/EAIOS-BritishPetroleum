@@ -158,8 +158,8 @@ export interface WellIntegrity { id: string; well_name: string; barrier_type: st
 export interface SubseaAlert { id: string; platform_id: string; asset_name: string; asset_type: string; issue_description: string; failure_probability_pct: number; eta_days: number; }
 export interface AdoptionMetric { id: string; site_id: string; adoption_score: number; active_users: number; total_users: number; avg_alert_action_rate_pct: number; }
 export interface TrainingModule { id: string; code: string; name: string; module_type: string; estimated_duration_hours: number; }
-export interface Wave { id: string; wave_number: number; wave_name: string; status: string; pct_complete: number; budget_usd: number; }
-export interface EdgeNode { id: string; node_code: string; site_id: string; status: string; avg_latency_ms: number; inference_offload_pct: number; }
+export interface Wave { id: string; wave_number: number; wave_name: string; period_start: string; period_end: string; status: string; pct_complete: number; budget_usd: number; actual_spent_usd: number; }
+export interface EdgeNode { id: string; node_code: string; site_id: string; hardware_spec: string; status: string; avg_latency_ms: number; inference_offload_pct: number; last_sync_label: string | null; }
 export interface LatencyBenchmark { id: string; scenario_description: string; edge_latency_ms: number; cloud_latency_ms: number; latency_saving_pct: number; }
 
 // ── Dashboard extras ──────────────────────────────────────────────────────────
