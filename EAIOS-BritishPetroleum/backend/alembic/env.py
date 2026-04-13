@@ -2,8 +2,15 @@ import os
 from logging.config import fileConfig
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
+
+# Load .env file so DATABASE_URL is available when running alembic directly
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
+except ImportError:
+    pass
 
 # Alembic Config object
 config = context.config
@@ -12,9 +19,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Override sqlalchemy.url from environment
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/eaios")
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 # Import ALL models so autogenerate can detect them
 from src.models.database import Base  # noqa: F401 — Base must be imported
@@ -58,11 +63,8 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Create engine directly from DATABASE_URL to avoid configparser % interpolation issues
+    connectable = create_async_engine(DATABASE_URL, poolclass=pool.NullPool)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
