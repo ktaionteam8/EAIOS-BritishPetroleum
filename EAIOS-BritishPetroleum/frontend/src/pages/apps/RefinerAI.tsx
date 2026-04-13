@@ -2320,10 +2320,24 @@ const ContinuousLearningPanel: React.FC = () => {
   );
 };
 
-const MLModelsTab: React.FC = () => (
+const MLModelsTab: React.FC = () => {
+  const [liveModels, setLiveModels] = useState<API.MLModel[]>([]);
+  useEffect(() => {
+    API.fetchMLModels().then(list => { if (list.length > 0) setLiveModels(list); }).catch(() => {});
+  }, []);
+  const activeCount = liveModels.length > 0 ? liveModels.filter(m => m.status === 'production' || m.is_champion).length : 6;
+  const avgAccuracy = liveModels.length > 0
+    ? (liveModels.reduce((sum, m) => sum + (m.accuracy > 1 ? m.accuracy : m.accuracy * 100), 0) / liveModels.length).toFixed(1) + '%'
+    : '94.7%';
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['6','ACTIVE MODELS','text-purple-400','border-purple-900/50'],['94.7%','AVG ACCURACY','text-green-400','border-green-900/50'],['6,842','ASSETS MONITORED','text-blue-400','border-blue-900/50'],['143K','TRAINING RECORDS','text-white','border-gray-800']].map(([v,l,t,b]) => (
+      {[
+        [String(activeCount), 'ACTIVE MODELS',    'text-purple-400', 'border-purple-900/50'],
+        [avgAccuracy,          'AVG ACCURACY',      'text-green-400',  'border-green-900/50'],
+        ['6,842',              'ASSETS MONITORED',  'text-blue-400',   'border-blue-900/50'],
+        ['143K',               'TRAINING RECORDS',  'text-white',      'border-gray-800'],
+      ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
           <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
@@ -2386,7 +2400,8 @@ const MLModelsTab: React.FC = () => (
       ))}
     </div>
   </div>
-);
+  );
+};
 
 // ── Spare Parts Tab ───────────────────────────────────────────────────────────
 const SPARE_PARTS = [
