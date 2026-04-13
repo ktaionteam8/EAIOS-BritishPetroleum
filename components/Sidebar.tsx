@@ -7,6 +7,7 @@ import {
   Brain,
   Briefcase,
   CheckSquare,
+  Crown,
   Factory,
   Gauge,
   Globe,
@@ -15,6 +16,7 @@ import {
   ShoppingCart,
   Users,
   Wallet,
+  ScrollText,
 } from "lucide-react";
 import { DOMAINS } from "@/lib/domains";
 import { readSession, type Session } from "@/lib/session";
@@ -66,10 +68,17 @@ export function Sidebar() {
             highlight
           />
         )}
-        <NavItem href="/tasks" label="My Tasks" icon={CheckSquare} active={isActive("/tasks")} />
+        {(role === "ceo" || role === "admin") && (
+          <NavItem href="/ceo" label="CEO Dashboard" icon={Crown} active={isActive("/ceo")} />
+        )}
+        <NavItem href="/tasks" label="Tasks" icon={CheckSquare} active={isActive("/tasks")} />
 
         {role && (role === "admin" || (role === "manager" && userDomain === "hr-safety")) && (
           <NavItem href="/hr/jobs" label="HR Jobs" icon={Briefcase} active={isActive("/hr/jobs")} />
+        )}
+
+        {role === "admin" && (
+          <NavItem href="/audit" label="Audit Log" icon={ScrollText} active={isActive("/audit")} />
         )}
 
         <div className="pt-4 pb-1.5 px-3 text-[10px] uppercase tracking-wider text-slate-600 font-medium">

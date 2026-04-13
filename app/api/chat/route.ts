@@ -12,53 +12,60 @@ You have awareness of 6 business domains with 36 microservices:
 - IT & Cybersecurity (service desk, threat detection, OT security, shadow IT, infra monitoring, compliance)
 - Finance (financial close, JV accounting, cost forecasting, tax, treasury, revenue)
 
-When the user asks you to:
-- Show status → summarize what the relevant domain is doing
-- Analyze performance → give concise insights with numbers
-- Suggest improvements → 3 actionable bullet points
-- Assign engineer/technician to X → confirm the task and note it will be created
-- Create job posting → confirm the posting and note it will be added
+Actions you can trigger:
+- "assign <username> to <task description>" → create a new task
+- "create job posting for <title>" → flag HR to post a job
+- "show <domain> status" → summarize the domain
 
-Keep responses concise (under 150 words), professional, and action-oriented. Use markdown sparingly.`;
+Keep responses concise (under 150 words), professional, action-oriented. Never use markdown headers.`;
 
 export async function POST(req: Request) {
   const body = await req.json();
   const message: string = body.message || "";
   const username: string = body.username || "user";
 
-  // Side-effect detection — simple intent routing
-  const lower = message.toLowerCase();
   const sideEffects: any[] = [];
 
-  if (/assign\s+(\w+)\s+to\s+(.+)/i.test(message)) {
-    const m = message.match(/assign\s+([\w-]+)\s+to\s+(.+)/i);
+  // Intent: assign task
+  const assignMatch = message.match(/assign\s+([\w-]+)\s+(?:to|for)?\s*(.+)/i);
+  if (assignMatch) {
+    const task = store.tasks.create({
+      title: `${assignMatch[2].slice(0, 80)}`,
+      description: `Auto-created from chatbot by ${username}`,
+      assignee: assignMatch[1],
+      domain: "manufacturing",
+      priority: "medium",
+      created_by: username,
+    });
+    sideEffects.push({ type: "task_created", task_id: task.id, assignee: task.assignee });
+    store.audit.add({ actor: username, action: "TASK_CREATE_VIA_CHAT", target: task.id, detail: task.title });
+  }
+
+  // Intent: create job
+  if (/(?:create|post)\s+job\s+(?:posting\s+)?(?:for\s+)?([a-z\s]+?)(?:\.|$)/i.test(message)) {
+    const m = message.match(/(?:create|post)\s+job\s+(?:posting\s+)?(?:for\s+)?([a-z\s]+?)(?:\.|$)/i);
     if (m) {
-      const task = store.tasks.create({
-        title: `Inspect / attend: ${m[2].slice(0, 80)}`,
-        description: `Auto-created from chatbot by ${username}`,
-        assignee: m[1],
-        domain: "manufacturing",
-        priority: "medium",
-        created_by: username,
+      const title = m[1].trim().replace(/\b\w/g, (c) => c.toUpperCase());
+      const job = store.jobs.create({
+        title,
+        domain: "hr-safety",
+        location: "To be confirmed",
+        description: `Auto-drafted from chatbot by ${username}. HR to review and publish.`,
+        skills: [],
       });
-      sideEffects.push({ type: "task_created", task });
+      sideEffects.push({ type: "job_drafted", job_id: job.id, title: job.title });
+      store.audit.add({ actor: username, action: "JOB_DRAFT_VIA_CHAT", target: job.id, detail: title });
     }
   }
 
-  if (/create\s+job|post\s+job|job\s+posting/i.test(message)) {
-    store.notifications.add({
-      title: "Chat hint: create job",
-      detail: "Use the HR Jobs page to finalise the posting",
-      severity: "info",
-      target_domain: "hr-safety",
-    });
-  }
-
-  const { text, source } = await geminiText(message, SYSTEM);
+  const { text, source, model, failure, error_detail } = await geminiText(message, SYSTEM);
 
   return NextResponse.json({
     reply: text,
     source,
+    model,
+    failure,
+    error_detail,
     side_effects: sideEffects,
     timestamp: new Date().toISOString(),
   });

@@ -14,5 +14,11 @@ export async function POST(req: Request) {
     description: body.description || "",
     skills: Array.isArray(body.skills) ? body.skills : String(body.skills || "").split(",").map((s) => s.trim()).filter(Boolean),
   });
+  store.audit.add({
+    actor: body.created_by || "hr",
+    action: "JOB_CREATE",
+    target: job.id,
+    detail: job.title,
+  });
   return NextResponse.json({ ok: true, job });
 }

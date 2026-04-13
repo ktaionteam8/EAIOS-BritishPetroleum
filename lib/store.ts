@@ -1,6 +1,14 @@
 /**
- * Module-scoped in-memory stores. Persists across requests within a
- * single Next.js dev/runtime process. For production, swap with Postgres/Redis.
+ * Module-scoped in-memory stores.
+ *
+ * Design:
+ *  - Singleton via globalThis so state survives HMR in dev
+ *  - Append-only audit log for admin observability
+ *  - Task workflow: CREATED → APPROVED → IN_PROGRESS → COMPLETED / REJECTED
+ *  - Jobs + Applications shared by HR dashboard and public Careers page
+ *
+ * For production: replace with Postgres + Redis. Interface already abstracts
+ * the consumers from the storage layer.
  */
 
 export type JobStatus = "open" | "closed";
@@ -16,7 +24,7 @@ export interface Job {
   applications: number;
 }
 
-export type TaskStatus = "open" | "in_progress" | "done";
+export type TaskStatus = "created" | "approved" | "in_progress" | "completed" | "rejected";
 export interface Task {
   id: string;
   title: string;
@@ -27,6 +35,8 @@ export interface Task {
   priority: "low" | "medium" | "high" | "critical";
   created_at: string;
   created_by: string;
+  approved_by?: string;
+  approved_at?: string;
 }
 
 export type NotificationSeverity = "info" | "warning" | "critical";
@@ -39,6 +49,25 @@ export interface Notification {
   read: boolean;
   target_role?: string;
   target_domain?: string;
+  target_user?: string;
+}
+
+export type ApplicationStatus = "APPLIED" | "SCREENING" | "SHORTLISTED" | "REJECTED";
+export interface Application {
+  id: string;
+  job_id: string;
+  job_title: string;
+  candidate_name: string;
+  candidate_email: string;
+  resume_text: string;
+  status: ApplicationStatus;
+  score: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  gemini_reason: string;
+  ai_source: "gemini" | "fallback";
+  ai_failure?: string;
+  created_at: string;
 }
 
 export interface ResumeScreeningResult {
@@ -52,7 +81,15 @@ export interface ResumeScreeningResult {
   created_at: string;
 }
 
-// ---- globals (preserved across hot reloads in dev) ----
+export interface AuditEntry {
+  id: string;
+  actor: string;
+  action: string;
+  target?: string;
+  detail?: string;
+  timestamp: string;
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __eaios_store: {
@@ -60,19 +97,32 @@ declare global {
     tasks: Task[];
     notifications: Notification[];
     screenings: ResumeScreeningResult[];
+    applications: Application[];
+    audit: AuditEntry[];
   } | undefined;
 }
 
 function init() {
-  if (!globalThis.__eaios_store) {
+  const existing: any = globalThis.__eaios_store;
+  if (!existing) {
     globalThis.__eaios_store = {
       jobs: seedJobs(),
       tasks: seedTasks(),
       notifications: seedNotifications(),
       screenings: [],
+      applications: [],
+      audit: [],
     };
+  } else {
+    // Forward-compat migration for HMR-preserved globals
+    if (!existing.jobs) existing.jobs = seedJobs();
+    if (!existing.tasks) existing.tasks = seedTasks();
+    if (!existing.notifications) existing.notifications = seedNotifications();
+    if (!existing.screenings) existing.screenings = [];
+    if (!existing.applications) existing.applications = [];
+    if (!existing.audit) existing.audit = [];
   }
-  return globalThis.__eaios_store;
+  return globalThis.__eaios_store!;
 }
 
 function seedJobs(): Job[] {
@@ -121,10 +171,12 @@ function seedTasks(): Task[] {
       description: "Vibration sensor flagged anomaly — perform on-site inspection",
       assignee: "employee_mfg",
       domain: "manufacturing",
-      status: "open",
+      status: "approved",
       priority: "high",
       created_at: new Date(Date.now() - 3600000).toISOString(),
       created_by: "manager_mfg",
+      approved_by: "manager_mfg",
+      approved_at: new Date(Date.now() - 3500000).toISOString(),
     },
   ];
 }
@@ -142,7 +194,10 @@ function seedNotifications(): Notification[] {
   ];
 }
 
-// ---- Accessors ----
+function nextId(prefix: string, count: number): string {
+  return `${prefix}-${String(count + 1).padStart(3, "0")}`;
+}
+
 export const store = {
   jobs: {
     list: () => init().jobs,
@@ -150,67 +205,151 @@ export const store = {
     get: (id: string) => init().jobs.find((j) => j.id === id),
     create: (job: Omit<Job, "id" | "created_at" | "applications" | "status">): Job => {
       const s = init();
-      const id = `JOB-${String(s.jobs.length + 1).padStart(3, "0")}`;
-      const full: Job = { ...job, id, created_at: new Date().toISOString(), applications: 0, status: "open" };
+      const full: Job = {
+        ...job,
+        id: nextId("JOB", s.jobs.length),
+        created_at: new Date().toISOString(),
+        applications: 0,
+        status: "open",
+      };
       s.jobs.unshift(full);
       store.notifications.add({
         title: `New job posted: ${full.title}`,
         detail: `${full.location} · ${full.domain}`,
         severity: "info",
+        target_domain: "hr-safety",
       });
       return full;
     },
+    incrementApplications: (id: string) => {
+      const job = init().jobs.find((j) => j.id === id);
+      if (job) job.applications++;
+    },
   },
+
   tasks: {
     list: () => init().tasks,
     forUser: (username: string) => init().tasks.filter((t) => t.assignee === username),
+    byDomain: (domain: string) => init().tasks.filter((t) => t.domain === domain),
     create: (task: Omit<Task, "id" | "created_at" | "status">): Task => {
       const s = init();
-      const id = `TSK-${String(s.tasks.length + 1).padStart(3, "0")}`;
-      const full: Task = { ...task, id, status: "open", created_at: new Date().toISOString() };
+      const full: Task = {
+        ...task,
+        id: nextId("TSK", s.tasks.length),
+        status: "created",
+        created_at: new Date().toISOString(),
+      };
       s.tasks.unshift(full);
       store.notifications.add({
-        title: `Task assigned: ${full.title}`,
-        detail: `Assigned to ${full.assignee} · priority ${full.priority}`,
+        title: `Task awaiting approval: ${full.title}`,
+        detail: `For ${full.assignee} · priority ${full.priority}`,
         severity: full.priority === "critical" ? "critical" : "info",
+        target_user: full.assignee,
       });
       return full;
     },
-    updateStatus: (id: string, status: TaskStatus) => {
-      const s = init();
-      const t = s.tasks.find((x) => x.id === id);
-      if (t) t.status = status;
+    approve: (id: string, approver: string): Task | undefined => {
+      const t = init().tasks.find((x) => x.id === id);
+      if (!t) return undefined;
+      t.status = "approved";
+      t.approved_by = approver;
+      t.approved_at = new Date().toISOString();
+      store.notifications.add({
+        title: `Task approved: ${t.title}`,
+        detail: `${approver} approved assignment to ${t.assignee}`,
+        severity: "info",
+        target_user: t.assignee,
+      });
+      return t;
+    },
+    updateStatus: (id: string, status: TaskStatus): Task | undefined => {
+      const t = init().tasks.find((x) => x.id === id);
+      if (!t) return undefined;
+      t.status = status;
+      if (status === "completed") {
+        store.notifications.add({
+          title: `Task completed: ${t.title}`,
+          detail: `By ${t.assignee}`,
+          severity: "info",
+          target_role: "manager",
+          target_domain: t.domain,
+        });
+      }
       return t;
     },
   },
+
   notifications: {
     list: () => init().notifications.slice(0, 25),
+    forUser: (username: string, role?: string, domain?: string) => {
+      return init().notifications
+        .filter((n) => {
+          if (n.target_user && n.target_user === username) return true;
+          if (n.target_role && n.target_role === role) return true;
+          if (n.target_domain && n.target_domain === domain) return true;
+          return !n.target_user && !n.target_role && !n.target_domain;
+        })
+        .slice(0, 25);
+    },
     unreadCount: () => init().notifications.filter((n) => !n.read).length,
     add: (n: Omit<Notification, "id" | "created_at" | "read">): Notification => {
       const s = init();
-      const id = `NOT-${String(s.notifications.length + 1).padStart(3, "0")}`;
-      const full: Notification = { ...n, id, created_at: new Date().toISOString(), read: false };
+      const full: Notification = {
+        ...n,
+        id: nextId("NOT", s.notifications.length),
+        created_at: new Date().toISOString(),
+        read: false,
+      };
       s.notifications.unshift(full);
-      if (s.notifications.length > 100) s.notifications.pop();
+      if (s.notifications.length > 200) s.notifications.length = 200;
       return full;
     },
     markAllRead: () => {
       init().notifications.forEach((n) => (n.read = true));
     },
   },
+
   screenings: {
     list: () => init().screenings,
     add: (r: Omit<ResumeScreeningResult, "id" | "created_at">): ResumeScreeningResult => {
       const s = init();
-      const id = `SCR-${String(s.screenings.length + 1).padStart(3, "0")}`;
-      const full: ResumeScreeningResult = { ...r, id, created_at: new Date().toISOString() };
+      const full: ResumeScreeningResult = {
+        ...r,
+        id: nextId("SCR", s.screenings.length),
+        created_at: new Date().toISOString(),
+      };
       s.screenings.unshift(full);
-      store.notifications.add({
-        title: `Resume screened: ${r.candidate}`,
-        detail: `${r.decision} · score ${r.score}/100 for ${r.job_title}`,
-        severity: r.decision === "SELECTED" ? "info" : r.decision === "REJECTED" ? "warning" : "info",
-        target_domain: "hr-safety",
-      });
+      return full;
+    },
+  },
+
+  applications: {
+    list: () => init().applications,
+    forJob: (jobId: string) => init().applications.filter((a) => a.job_id === jobId),
+    add: (a: Omit<Application, "id" | "created_at">): Application => {
+      const s = init();
+      const full: Application = {
+        ...a,
+        id: nextId("APP", s.applications.length),
+        created_at: new Date().toISOString(),
+      };
+      s.applications.unshift(full);
+      store.jobs.incrementApplications(a.job_id);
+      return full;
+    },
+  },
+
+  audit: {
+    list: (limit = 100) => init().audit.slice(0, limit),
+    add: (e: Omit<AuditEntry, "id" | "timestamp">): AuditEntry => {
+      const s = init();
+      const full: AuditEntry = {
+        ...e,
+        id: nextId("AUD", s.audit.length),
+        timestamp: new Date().toISOString(),
+      };
+      s.audit.unshift(full);
+      if (s.audit.length > 500) s.audit.length = 500;
       return full;
     },
   },

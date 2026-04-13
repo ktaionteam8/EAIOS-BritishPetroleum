@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Briefcase, MapPin } from "lucide-react";
+import { ApplyModal } from "@/components/ApplyModal";
 
 interface Job {
   id: string;
@@ -17,6 +18,7 @@ interface Job {
 
 export default function CareersPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [applyJob, setApplyJob] = useState<Job | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -34,7 +36,7 @@ export default function CareersPage() {
       <div className="max-w-2xl mb-10">
         <div className="text-xs tracking-widest text-emerald-400 uppercase mb-2">Careers</div>
         <h1 className="text-4xl font-semibold text-slate-100">Build the future of energy with us.</h1>
-        <p className="text-slate-400 mt-3">Open positions — updated live from our HR system.</p>
+        <p className="text-slate-400 mt-3">Open positions — updated live from our HR system. Every application is screened instantly by our AI.</p>
       </div>
 
       <div className="space-y-3">
@@ -51,6 +53,8 @@ export default function CareersPage() {
                   <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{j.location}</span>
                   <span>·</span>
                   <span className="capitalize">{j.domain.replace("-", " ")}</span>
+                  <span>·</span>
+                  <span>{j.applications} applications</span>
                 </div>
                 <p className="text-sm text-slate-300 mt-3 leading-relaxed">{j.description}</p>
                 <div className="flex flex-wrap gap-1.5 mt-3">
@@ -59,7 +63,10 @@ export default function CareersPage() {
                   ))}
                 </div>
               </div>
-              <button className="bg-emerald-500 hover:bg-emerald-400 text-white text-sm px-4 py-2 rounded-lg whitespace-nowrap">
+              <button
+                onClick={() => setApplyJob(j)}
+                className="bg-emerald-500 hover:bg-emerald-400 text-white text-sm px-5 py-2 rounded-lg whitespace-nowrap font-medium"
+              >
                 Apply
               </button>
             </div>
@@ -69,6 +76,8 @@ export default function CareersPage() {
           <div className="text-center text-slate-500 py-12">No open positions at the moment.</div>
         )}
       </div>
+
+      {applyJob && <ApplyModal job={applyJob} onClose={() => setApplyJob(null)} />}
     </section>
   );
 }
