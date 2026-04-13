@@ -5344,6 +5344,19 @@ const WaveTrackerTab: React.FC = () => {
   const msC = { done:'text-green-400', 'in-progress':'text-blue-400', pending:'text-gray-500' };
   const msDot = { done:'#22c55e', 'in-progress':'#60a5fa', pending:'#374151' };
   const probC = { high:'text-red-400 bg-red-900/40', medium:'text-amber-400 bg-amber-900/30', low:'text-gray-500 bg-gray-800' };
+  const [wavePlan, setWavePlan] = useState(WAVE_PLAN);
+  useEffect(() => {
+    API.fetchWaves().then(list => {
+      if (list.length > 0) setWavePlan(list.map(w => ({
+        wave: w.wave_name,
+        period: `${new Date(w.period_start).toLocaleDateString('en-GB',{month:'short',year:'numeric'})} – ${new Date(w.period_end).toLocaleDateString('en-GB',{month:'short',year:'numeric'})}`,
+        sites: [] as string[], status: w.status,
+        pctDone: Math.round(w.pct_complete),
+        budget: `$${(w.budget_usd/1_000_000).toFixed(1)}M`,
+        modules: [] as string[],
+      })));
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -5364,7 +5377,7 @@ const WaveTrackerTab: React.FC = () => {
 
       {/* O-01: Wave cards */}
       <div className="space-y-4">
-        {WAVE_PLAN.map(w => (
+        {wavePlan.map(w => (
           <div key={w.wave} className={`bg-gray-900 border rounded-xl p-5 ${w.status==='in-progress'?'border-blue-800':'border-gray-800'}`}>
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -5568,15 +5581,35 @@ const EDGE_MODELS = [
 
 const EdgeAITab: React.FC = () => {
   const nodeC = { online:'text-green-400', degraded:'text-amber-400', offline:'text-red-400' };
+  const [edgeNodes, setEdgeNodes] = useState(EDGE_NODES);
+  const [latencyData, setLatencyData] = useState(LATENCY_COMPARISON);
+  useEffect(() => {
+    API.fetchEdgeNodes().then(list => {
+      if (list.length > 0) setEdgeNodes(list.map(n => ({
+        id: n.node_code, site: n.site_id, hw: n.hardware_spec,
+        models: 0, inferencePct: Math.round(n.inference_offload_pct),
+        latency: Math.round(n.avg_latency_ms), status: n.status,
+        lastSync: n.last_sync_label ?? 'N/A',
+      })));
+    }).catch(() => {});
+    API.fetchLatencyBenchmarks().then(list => {
+      if (list.length > 0) setLatencyData(list.map(b => ({
+        scenario: b.scenario_description,
+        edge: Math.round(b.edge_latency_ms), cloud: Math.round(b.cloud_latency_ms),
+        saving: `${b.latency_saving_pct.toFixed(1)}%`,
+      })));
+    }).catch(() => {});
+  }, []);
+
   return (
     <div className="space-y-5">
       {/* Q-01: KPI strip */}
       <div className="grid grid-cols-4 gap-3">
         {([
-          [String(EDGE_NODES.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
-          [String(EDGE_NODES.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
-          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.inferencePct,0)/EDGE_NODES.length)+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
-          [Math.round(EDGE_NODES.reduce((s,n)=>s+n.latency,0)/EDGE_NODES.length)+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
+          [String(edgeNodes.length),                                   'EDGE NODES',         'text-blue-400',   'border-blue-900/50'  ],
+          [String(edgeNodes.filter(n=>n.status==='online').length),    'ONLINE',             'text-green-400',  'border-green-900/50' ],
+          [Math.round(edgeNodes.reduce((s,n)=>s+n.inferencePct,0)/Math.max(edgeNodes.length,1))+'%', 'AVG INFERENCE OFFLOAD', 'text-purple-400', 'border-purple-900/50'],
+          [Math.round(edgeNodes.reduce((s,n)=>s+n.latency,0)/Math.max(edgeNodes.length,1))+'ms',     'AVG INFERENCE LATENCY', 'text-amber-400',  'border-amber-900/50' ],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
           <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
             <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -5598,7 +5631,7 @@ const EdgeAITab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {EDGE_NODES.map(n => (
+            {edgeNodes.map(n => (
               <tr key={n.id} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-3 py-2 text-purple-400 font-mono">{n.id}</td>
                 <td className="px-3 py-2 text-white">{n.site}</td>
@@ -5632,7 +5665,7 @@ const EdgeAITab: React.FC = () => {
             ))}
           </tr></thead>
           <tbody>
-            {LATENCY_COMPARISON.map(l => (
+            {latencyData.map(l => (
               <tr key={l.scenario} className="border-b border-gray-800/50 hover:bg-gray-800/20">
                 <td className="px-4 py-2 text-white">{l.scenario}</td>
                 <td className="px-4 py-2 text-green-400 font-mono font-bold">{l.edge}ms</td>
