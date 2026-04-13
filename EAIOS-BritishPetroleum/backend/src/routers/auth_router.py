@@ -14,14 +14,19 @@ import json
 import logging
 
 import bcrypt
-from fastapi import APIRouter, Form, HTTPException, status
+from fastapi import APIRouter, Form, HTTPException, Request, status
 from pydantic import BaseModel
 
 from src.config import settings
 from src.middleware.auth import create_access_token
+from src.middleware.rate_limiter import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# Pre-computed dummy hash — used for constant-time rejection of unknown usernames.
+# Computing once at startup avoids per-request bcrypt cost that could enable DoS.
+_DUMMY_HASH: bytes = bcrypt.hashpw(b"dummy", bcrypt.gensalt())
 
 
 class TokenResponse(BaseModel):
@@ -43,7 +48,9 @@ def _load_users() -> dict[str, str]:
 
 
 @router.post("/token", response_model=TokenResponse)
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     username: str = Form(...),
     password: str = Form(...),
 ) -> TokenResponse:
@@ -53,7 +60,7 @@ async def login(
     stored_hash = users.get(username)
     if not stored_hash:
         # Constant-time rejection to prevent username enumeration
-        bcrypt.checkpw(b"dummy", bcrypt.hashpw(b"dummy", bcrypt.gensalt()))
+        bcrypt.checkpw(b"dummy", _DUMMY_HASH)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password.",
@@ -77,6 +84,6 @@ async def login(
 
 
 @router.get("/me")
-async def whoami(username: str = ""):
-    """Public endpoint — confirms the auth router is reachable."""
+async def whoami():
+    """Public health-check — confirms the auth router is reachable."""
     return {"status": "auth service online"}
