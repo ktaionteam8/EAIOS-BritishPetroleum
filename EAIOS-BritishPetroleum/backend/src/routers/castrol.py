@@ -8,6 +8,7 @@ from src.models.castrol import BlendSpecification, BlendRun, BlendQualityPredict
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/castrol", tags=["castrol"])
 
@@ -49,7 +50,10 @@ class BlendQualityOut(BaseModel):
 
 
 @router.get("/specs", response_model=list[BlendSpecOut])
-async def list_specs(db: AsyncSession = Depends(get_db)):
+async def list_specs(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(BlendSpecification).order_by(BlendSpecification.grade_name))
     return result.scalars().all()
 
@@ -59,6 +63,7 @@ async def list_runs(
     site_id: str | None = Query(None),
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(BlendRun).order_by(BlendRun.started_at.desc())
     if site_id:
@@ -70,7 +75,11 @@ async def list_runs(
 
 
 @router.get("/runs/{run_id}/quality", response_model=list[BlendQualityOut])
-async def get_quality_predictions(run_id: str, db: AsyncSession = Depends(get_db)):
+async def get_quality_predictions(
+    run_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(
         select(BlendQualityPrediction)
         .where(BlendQualityPrediction.blend_id == run_id)

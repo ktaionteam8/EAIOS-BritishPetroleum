@@ -10,6 +10,7 @@ from src.models.alerts import Alert
 from src.models.work_orders import WorkOrder
 from src.models.roi import KpiSnapshot
 from src.schemas.dashboard import DashboardOut, DashboardStats, SiteSummary, EquipmentSummary
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -32,7 +33,10 @@ class EnterpriseScore(BaseModel):
 
 
 @router.get("", response_model=DashboardOut)
-async def get_dashboard(db: AsyncSession = Depends(get_db)):
+async def get_dashboard(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     # Equipment counts by ai_status
     eq_rows = await db.execute(
         select(Equipment.ai_status, func.count()).group_by(Equipment.ai_status)
@@ -104,13 +108,19 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/sites", response_model=list[SiteSummary])
-async def list_sites(db: AsyncSession = Depends(get_db)):
+async def list_sites(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     site_rows = (await db.execute(select(Site).where(Site.is_active == True))).scalars().all()
     return [SiteSummary.model_validate(s) for s in site_rows]
 
 
 @router.get("/fleet-heatmap", response_model=list[SiteHeatmapEntry])
-async def fleet_heatmap(db: AsyncSession = Depends(get_db)):
+async def fleet_heatmap(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     stmt = select(
         Site.id,
         Site.name,
@@ -131,7 +141,10 @@ async def fleet_heatmap(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/enterprise-score", response_model=EnterpriseScore)
-async def enterprise_score(db: AsyncSession = Depends(get_db)):
+async def enterprise_score(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     rows = (await db.execute(
         select(Equipment.ai_status, func.count(), func.avg(Equipment.health_score))
         .group_by(Equipment.ai_status)

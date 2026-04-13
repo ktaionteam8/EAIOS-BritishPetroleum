@@ -8,6 +8,7 @@ from datetime import datetime
 
 from src.models.database import get_db
 from src.models.digital_twin import DigitalTwinAsset, OperatingEnvelopeParam, TwinScenario
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/digital-twin", tags=["digital-twin"])
 
@@ -58,6 +59,7 @@ class ScenarioRunResult(BaseModel):
 async def list_registry(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(DigitalTwinAsset).order_by(DigitalTwinAsset.equipment_id)
     if status:
@@ -67,7 +69,11 @@ async def list_registry(
 
 
 @router.get("/{twin_id}/envelope", response_model=list[EnvelopeParamOut])
-async def get_envelope(twin_id: str, db: AsyncSession = Depends(get_db)):
+async def get_envelope(
+    twin_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     twin = await db.get(DigitalTwinAsset, twin_id)
     if twin is None:
         raise HTTPException(status_code=404, detail={"detail": "Twin not found", "code": "twin_not_found"})
@@ -83,6 +89,7 @@ async def get_envelope(twin_id: str, db: AsyncSession = Depends(get_db)):
 async def list_scenarios(
     twin_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(TwinScenario).order_by(TwinScenario.created_at.desc())
     if twin_id:
@@ -92,7 +99,11 @@ async def list_scenarios(
 
 
 @router.post("/scenarios/{scenario_id}/run", response_model=ScenarioRunResult)
-async def run_scenario(scenario_id: str, db: AsyncSession = Depends(get_db)):
+async def run_scenario(
+    scenario_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     scenario = await db.get(TwinScenario, scenario_id)
     if scenario is None:
         raise HTTPException(status_code=404, detail={"detail": "Scenario not found", "code": "scenario_not_found"})

@@ -11,6 +11,7 @@ from src.schemas.alerts import (
     AlertListItem, AlertDetail,
     DecisionCreate, DecisionOut, AuditLogOut,
 )
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
@@ -21,6 +22,7 @@ async def list_alerts(
     severity: str | None = Query(None, description="Filter by severity: critical|warning|advisory"),
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(Alert).order_by(Alert.created_at.desc())
     if status:
@@ -34,7 +36,11 @@ async def list_alerts(
 
 
 @router.get("/{alert_id}", response_model=AlertDetail)
-async def get_alert(alert_id: str, db: AsyncSession = Depends(get_db)):
+async def get_alert(
+    alert_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     stmt = (
         select(Alert)
         .where(Alert.id == alert_id)
@@ -55,6 +61,7 @@ async def post_decision(
     alert_id: str,
     body: DecisionCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     # Verify alert exists
     alert = await db.get(Alert, alert_id)
@@ -99,6 +106,7 @@ async def post_decision(
 async def get_audit_log(
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit)
     result = await db.execute(stmt)

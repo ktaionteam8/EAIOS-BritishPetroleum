@@ -8,6 +8,7 @@ from src.models.compliance import ComplianceStandard, ComplianceAudit, Complianc
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 
@@ -45,7 +46,10 @@ class ComplianceActionOut(BaseModel):
 
 
 @router.get("/standards", response_model=list[ComplianceStandardOut])
-async def list_standards(db: AsyncSession = Depends(get_db)):
+async def list_standards(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(ComplianceStandard))
     return result.scalars().all()
 
@@ -55,6 +59,7 @@ async def list_audits(
     site_id: str | None = Query(None),
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(ComplianceAudit).order_by(ComplianceAudit.audit_date.desc())
     if site_id:
@@ -69,6 +74,7 @@ async def list_audits(
 async def list_actions(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(ComplianceAction).order_by(ComplianceAction.due_date.asc())
     if status:

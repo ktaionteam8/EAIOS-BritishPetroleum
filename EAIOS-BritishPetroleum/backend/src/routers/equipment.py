@@ -12,6 +12,7 @@ from src.schemas.equipment import (
     EquipmentOut, EquipmentUpdate,
     SensorReadingOut, SensorReadingCreate,
 )
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/equipment", tags=["equipment"])
 
@@ -57,7 +58,7 @@ class EquipmentKPI(BaseModel):
 
 # Static routes MUST come before /{equipment_id}/* dynamic routes
 @router.get("/failure-signatures", response_model=list[FailureSignature])
-async def failure_signatures():
+async def failure_signatures(_: dict = Depends(get_current_user)):
     return [
         FailureSignature(equipment_type="Centrifugal Compressor", failure_mode="Bearing Failure", sensor_pattern="Vibration 1x↑ + temp↑", lead_time_hours=72, confidence_pct=87.0),
         FailureSignature(equipment_type="Centrifugal Pump", failure_mode="Cavitation", sensor_pattern="Flow↓ + suction pressure↓", lead_time_hours=24, confidence_pct=91.0),
@@ -67,7 +68,11 @@ async def failure_signatures():
 
 
 @router.get("/kpis", response_model=list[EquipmentKPI])
-async def equipment_kpis(site_id: str | None = Query(None), db: AsyncSession = Depends(get_db)):
+async def equipment_kpis(
+    site_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     stmt = select(
         Equipment.site_id,
         func.count().label("total"),
@@ -91,6 +96,7 @@ async def list_equipment(
     site_id: str | None = Query(None),
     ai_status: str | None = Query(None, description="critical|warning|healthy"),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(Equipment).where(Equipment.is_active == True).order_by(Equipment.health_score.asc())
     if site_id:
@@ -102,7 +108,11 @@ async def list_equipment(
 
 
 @router.get("/{equipment_id}", response_model=EquipmentOut)
-async def get_equipment(equipment_id: str, db: AsyncSession = Depends(get_db)):
+async def get_equipment(
+    equipment_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
         raise HTTPException(status_code=404, detail={"detail": "Equipment not found", "code": "equipment_not_found"})
@@ -114,6 +124,7 @@ async def update_equipment(
     equipment_id: str,
     body: EquipmentUpdate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
@@ -131,6 +142,7 @@ async def list_readings(
     limit: int = Query(100, ge=1, le=1000),
     sensor_type: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = (
         select(SensorReading)
@@ -149,6 +161,7 @@ async def add_reading(
     equipment_id: str,
     body: SensorReadingCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
@@ -161,7 +174,12 @@ async def add_reading(
 
 
 @router.get("/{equipment_id}/health-trend", response_model=list[HealthPoint])
-async def health_trend(equipment_id: str, days: int = Query(30, ge=1, le=365), db: AsyncSession = Depends(get_db)):
+async def health_trend(
+    equipment_id: str,
+    days: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
         raise HTTPException(status_code=404, detail={"detail": "Equipment not found", "code": "equipment_not_found"})
@@ -176,7 +194,11 @@ async def health_trend(equipment_id: str, days: int = Query(30, ge=1, le=365), d
 
 
 @router.get("/{equipment_id}/fft", response_model=list[FFTPoint])
-async def get_fft(equipment_id: str, db: AsyncSession = Depends(get_db)):
+async def get_fft(
+    equipment_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
         raise HTTPException(status_code=404, detail={"detail": "Equipment not found", "code": "equipment_not_found"})
@@ -192,7 +214,11 @@ async def get_fft(equipment_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{equipment_id}/rul", response_model=RULOut)
-async def get_rul(equipment_id: str, db: AsyncSession = Depends(get_db)):
+async def get_rul(
+    equipment_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     eq = await db.get(Equipment, equipment_id)
     if eq is None:
         raise HTTPException(status_code=404, detail={"detail": "Equipment not found", "code": "equipment_not_found"})

@@ -7,6 +7,7 @@ from typing import Optional
 
 from src.models.database import get_db
 from src.models.core import Equipment
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/reliability", tags=["reliability"])
 
@@ -59,6 +60,7 @@ _FMEA: list[dict] = [
 async def list_fmea(
     equipment_type: str | None = Query(None),
     min_rpn: int | None = Query(None),
+    _: dict = Depends(get_current_user),
 ):
     entries = _FMEA
     if equipment_type:
@@ -72,6 +74,7 @@ async def list_fmea(
 async def list_reliability_kpis(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(Equipment.site_id, func.avg(Equipment.health_score)).group_by(Equipment.site_id)
     if site_id:
@@ -96,6 +99,7 @@ async def list_reliability_kpis(
 async def get_risk_matrix(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(Equipment).where(Equipment.is_active == True)
     if site_id:

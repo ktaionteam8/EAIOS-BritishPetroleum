@@ -8,6 +8,7 @@ from typing import Optional
 
 from src.models.database import get_db
 from src.models.field_ops import InspectionRoute, InspectionItem, Contractor
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/field-ops", tags=["field-ops"])
 
@@ -59,6 +60,7 @@ async def list_routes(
     site_id: str | None = Query(None),
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(InspectionRoute).order_by(InspectionRoute.scheduled_date.asc())
     if site_id:
@@ -70,7 +72,11 @@ async def list_routes(
 
 
 @router.get("/routes/{route_id}/checklist", response_model=list[ChecklistItemOut])
-async def get_checklist(route_id: str, db: AsyncSession = Depends(get_db)):
+async def get_checklist(
+    route_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     route = await db.get(InspectionRoute, route_id)
     if route is None:
         raise HTTPException(status_code=404, detail={"detail": "Route not found", "code": "route_not_found"})
@@ -88,6 +94,7 @@ async def complete_item(
     item_id: str,
     body: ChecklistCompleteBody,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     item = await db.get(InspectionItem, item_id)
     if item is None or item.route_id != route_id:
@@ -105,6 +112,7 @@ async def complete_item(
 async def list_contractors(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(Contractor).order_by(Contractor.company_name)
     if site_id:

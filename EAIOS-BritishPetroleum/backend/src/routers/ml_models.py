@@ -10,6 +10,7 @@ from typing import Optional
 from src.models.database import get_db
 from src.models.ml_models import MLModel, ModelFeedback, ModelDriftMetric, ShapFeatureImportance
 from src.schemas.ml_models import MLModelOut, MLModelDetail, ModelFeedbackCreate, ModelFeedbackOut
+from src.middleware.auth import get_current_user
 
 
 class DriftMetricOut(BaseModel):
@@ -38,6 +39,7 @@ router = APIRouter(prefix="/api/ml-models", tags=["ml-models"])
 async def list_models(
     status: str | None = Query(None, description="production|staging|retired"),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(MLModel).order_by(MLModel.is_champion.desc(), MLModel.accuracy.desc())
     if status:
@@ -47,7 +49,11 @@ async def list_models(
 
 
 @router.get("/{model_id}", response_model=MLModelDetail)
-async def get_model(model_id: str, db: AsyncSession = Depends(get_db)):
+async def get_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     stmt = (
         select(MLModel)
         .where(MLModel.id == model_id)
@@ -65,6 +71,7 @@ async def add_feedback(
     model_id: str,
     body: ModelFeedbackCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     model = await db.get(MLModel, model_id)
     if model is None:
@@ -77,7 +84,11 @@ async def add_feedback(
 
 
 @router.patch("/{model_id}/approve", response_model=MLModelOut)
-async def approve_model(model_id: str, db: AsyncSession = Depends(get_db)):
+async def approve_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     model = await db.get(MLModel, model_id)
     if model is None:
         raise HTTPException(status_code=404, detail={"detail": "Model not found", "code": "model_not_found"})
@@ -89,7 +100,11 @@ async def approve_model(model_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{model_id}/retire", response_model=MLModelOut)
-async def retire_model(model_id: str, db: AsyncSession = Depends(get_db)):
+async def retire_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     model = await db.get(MLModel, model_id)
     if model is None:
         raise HTTPException(status_code=404, detail={"detail": "Model not found", "code": "model_not_found"})
@@ -101,7 +116,11 @@ async def retire_model(model_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{model_id}/drift", response_model=list[DriftMetricOut])
-async def get_drift(model_id: str, db: AsyncSession = Depends(get_db)):
+async def get_drift(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     model = await db.get(MLModel, model_id)
     if model is None:
         raise HTTPException(status_code=404, detail={"detail": "Model not found", "code": "model_not_found"})
@@ -113,7 +132,11 @@ async def get_drift(model_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{model_id}/shap", response_model=list[ShapOut])
-async def get_shap(model_id: str, db: AsyncSession = Depends(get_db)):
+async def get_shap(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     model = await db.get(MLModel, model_id)
     if model is None:
         raise HTTPException(status_code=404, detail={"detail": "Model not found", "code": "model_not_found"})
@@ -125,7 +148,11 @@ async def get_shap(model_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{model_id}/feedback", response_model=list[ModelFeedbackOut])
-async def get_feedback(model_id: str, db: AsyncSession = Depends(get_db)):
+async def get_feedback(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     model = await db.get(MLModel, model_id)
     if model is None:
         raise HTTPException(status_code=404, detail={"detail": "Model not found", "code": "model_not_found"})

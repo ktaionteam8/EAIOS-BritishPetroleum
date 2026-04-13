@@ -21,20 +21,27 @@ from src.schemas.artemis import (
     AviationForecastOut, AviationContractOut,
     CarbonPositionOut, CarbonRecommendationOut,
 )
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/artemis", tags=["artemis"])
 
 
 # ── Core / Command Centre ─────────────────────────────────────────────────────
 @router.get("/agents", response_model=list[AgentStatusOut])
-async def list_agents(db: AsyncSession = Depends(get_db)):
+async def list_agents(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """All 4 ARTEMIS agent statuses for the Command Centre dashboard."""
     result = await db.execute(select(ArtemisAgentStatus).order_by(ArtemisAgentStatus.agent_key))
     return result.scalars().all()
 
 
 @router.get("/models", response_model=list[ModelRegistryOut])
-async def list_models(db: AsyncSession = Depends(get_db)):
+async def list_models(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """SageMaker model registry — all ARTEMIS models in production."""
     result = await db.execute(
         select(ArtemisModelRegistry).order_by(ArtemisModelRegistry.next_review_days)
@@ -46,6 +53,7 @@ async def list_models(db: AsyncSession = Depends(get_db)):
 async def list_audit_log(
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """SOX immutable audit log — most recent decisions first."""
     result = await db.execute(
@@ -55,7 +63,10 @@ async def list_audit_log(
 
 
 @router.get("/compliance", response_model=list[ComplianceEventOut])
-async def list_compliance_events(db: AsyncSession = Depends(get_db)):
+async def list_compliance_events(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """Active compliance events across SOX/FCA/EU AI Act frameworks."""
     result = await db.execute(
         select(ArtemisComplianceEvent)
@@ -71,6 +82,7 @@ async def list_compliance_events(db: AsyncSession = Depends(get_db)):
 async def list_opportunities(
     status: str = Query("open"),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """Live arbitrage opportunities — default returns only open signals."""
     result = await db.execute(
@@ -85,6 +97,7 @@ async def list_opportunities(
 async def list_arb_metrics(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """Daily arbitrage pipeline metrics for the last N days."""
     result = await db.execute(
@@ -97,7 +110,10 @@ async def list_arb_metrics(
 
 # ── Castrol ───────────────────────────────────────────────────────────────────
 @router.get("/castrol/base-oil", response_model=list[BaseOilPriceOut])
-async def list_base_oil_prices(db: AsyncSession = Depends(get_db)):
+async def list_base_oil_prices(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """Latest base oil prices — one row per grade."""
     result = await db.execute(
         select(ArtemisBaseOilPrice).order_by(desc(ArtemisBaseOilPrice.price_date))
@@ -115,6 +131,7 @@ async def list_base_oil_prices(db: AsyncSession = Depends(get_db)):
 async def list_castrol_pricing(
     geography: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """Current Castrol B2B pricing recommendations."""
     stmt = select(ArtemisCastrolPricingRec).order_by(
@@ -131,6 +148,7 @@ async def list_castrol_pricing(
 async def list_forecasts(
     limit: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """Latest aviation demand forecasts, sorted by 30-day volume descending."""
     result = await db.execute(
@@ -145,6 +163,7 @@ async def list_forecasts(
 async def list_contracts(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     """Aviation contract pipeline — optionally filtered by status."""
     stmt = select(ArtemisAviationContract).order_by(ArtemisAviationContract.days_to_renewal)
@@ -156,7 +175,10 @@ async def list_contracts(
 
 # ── Carbon ────────────────────────────────────────────────────────────────────
 @router.get("/carbon/positions", response_model=list[CarbonPositionOut])
-async def list_carbon_positions(db: AsyncSession = Depends(get_db)):
+async def list_carbon_positions(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """Current carbon credit portfolio positions."""
     result = await db.execute(
         select(ArtemisCarbonPosition).order_by(ArtemisCarbonPosition.credit_type)
@@ -165,7 +187,10 @@ async def list_carbon_positions(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/carbon/recommendations", response_model=list[CarbonRecommendationOut])
-async def list_carbon_recs(db: AsyncSession = Depends(get_db)):
+async def list_carbon_recs(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     """Open carbon portfolio recommendations from ARTEMIS-Carbon Agent."""
     result = await db.execute(
         select(ArtemisCarbonRecommendation)

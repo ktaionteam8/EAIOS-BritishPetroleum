@@ -9,6 +9,7 @@ from src.models.tar import TurnaroundEvent, TarTask, MaintenanceScheduleRecommen
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/tar", tags=["tar"])
 
@@ -55,6 +56,7 @@ async def list_tar_events(
     site_id: str | None = Query(None),
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(TurnaroundEvent).order_by(TurnaroundEvent.start_date.asc())
     if site_id:
@@ -66,13 +68,21 @@ async def list_tar_events(
 
 
 @router.get("/{tar_id}/tasks", response_model=list[TarTaskOut])
-async def list_tar_tasks(tar_id: str, db: AsyncSession = Depends(get_db)):
+async def list_tar_tasks(
+    tar_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(TarTask).where(TarTask.tar_id == tar_id))
     return result.scalars().all()
 
 
 @router.get("/{tar_id}/recommendations", response_model=list[RecommendationOut])
-async def list_recommendations(tar_id: str, db: AsyncSession = Depends(get_db)):
+async def list_recommendations(
+    tar_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(
         select(MaintenanceScheduleRecommendation)
         .where(MaintenanceScheduleRecommendation.tar_id == tar_id)
