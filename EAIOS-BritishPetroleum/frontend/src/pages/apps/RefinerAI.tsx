@@ -750,13 +750,16 @@ const EnterpriseIntelligencePanel: React.FC = () => {
   );
 };
 
-const DashboardTab: React.FC = () => (
+const DashboardTab: React.FC = () => {
+  const dash = useApiDashboard();
+  const s = dash?.stats;
+  return (
   <div className="space-y-6">
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <KPICard label="Unplanned Events Avoided" value="38.2%" sub="↑ Target: 40% — on track" accent="text-green-400" border="border-green-900/50" />
-      <KPICard label="Equipment Monitored"      value="6,842"  sub="↑ 312 newly onboarded"   accent="text-blue-400"  border="border-blue-900/50"  />
-      <KPICard label="Critical Alerts (24h)"    value="14"     sub="↑ 3 from yesterday"      accent="text-orange-400" border="border-orange-900/50" />
-      <KPICard label="AI Model Accuracy"        value="94.7%"  sub="↑ +1.2% from last retrain" accent="text-purple-400" border="border-purple-900/50" />
+      <KPICard label="Equipment Monitored"  value={s ? s.total_equipment.toLocaleString() : '6,842'}                     sub={s ? `${s.critical_count} critical · ${s.warning_count} warning` : '↑ 312 newly onboarded'}   accent="text-blue-400"   border="border-blue-900/50"   />
+      <KPICard label="Active Alerts"        value={s ? String(s.active_alerts) : '14'}                                    sub={s ? `${s.open_work_orders} open work orders` : '↑ 3 from yesterday'}                           accent="text-orange-400" border="border-orange-900/50" />
+      <KPICard label="Avoided Cost (USD)"   value={s ? `$${(s.avoided_cost_usd / 1e6).toFixed(1)}M` : '$2.4M'}           sub="AI-driven interventions YTD"                                                                    accent="text-green-400"  border="border-green-900/50"  />
+      <KPICard label="Fleet OEE"            value={s ? `${s.fleet_oee_pct.toFixed(1)}%` : '94.7%'}                       sub="↑ Target: 95%"                                                                                  accent="text-purple-400" border="border-purple-900/50" />
     </div>
 
     {/* World Map */}
@@ -806,7 +809,8 @@ const DashboardTab: React.FC = () => (
     {/* Block P — Cross-Domain Orchestration */}
     <CrossDomainPanel />
   </div>
-);
+  );
+};
 
 // ── Live Alerts Tab ───────────────────────────────────────────────────────────
 const LiveAlertsTab: React.FC = () => {
