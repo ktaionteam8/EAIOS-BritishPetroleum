@@ -28,6 +28,17 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # Computing once at startup avoids per-request bcrypt cost that could enable DoS.
 _DUMMY_HASH: bytes = bcrypt.hashpw(b"dummy", bcrypt.gensalt())
 
+# Startup misconfiguration guard — warn if no users are configured.
+try:
+    _parsed_users = json.loads(getattr(settings, "auth_users", "{}"))
+    if not _parsed_users:
+        logger.warning(
+            "AUTH_USERS is empty or not set. No users will be able to log in. "
+            "Set AUTH_USERS='{\"admin\": \"<bcrypt_hash>\"}' in the environment."
+        )
+except (json.JSONDecodeError, Exception):
+    pass  # _load_users() handles this at request time with a clearer error
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -83,7 +94,12 @@ async def login(
     return TokenResponse(access_token=token)
 
 
-@router.get("/me")
-async def whoami():
-    """Public health-check — confirms the auth router is reachable."""
+@router.get("/health")
+async def auth_health():
+    """Public health-check — confirms the auth router is reachable.
+
+    NOTE: This endpoint is intentionally unauthenticated. It does not return
+    user data. Use POST /api/auth/token to obtain a JWT, then call a
+    protected endpoint to confirm authenticated access.
+    """
     return {"status": "auth service online"}
