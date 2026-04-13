@@ -2419,15 +2419,34 @@ const PART_STATUS: Record<string, { bg: string; text: string; label: string }> =
   ok:       { bg: '#052e16', text: '#4ade80', label: 'IN STOCK' },
 };
 
-const SparePartsTab: React.FC = () => (
+const SparePartsTab: React.FC = () => {
+  const [parts,  setParts]  = useState(SPARE_PARTS);
+  useEffect(() => {
+    Promise.all([API.fetchSpareParts(), API.fetchStock()])
+      .then(([apiParts, apiStock]) => {
+        if (apiParts.length === 0) return;
+        const stockMap = Object.fromEntries(apiStock.map(s => [s.part_id, s]));
+        setParts(apiParts.map(p => {
+          const s = stockMap[p.id];
+          const onHand = s?.on_hand_qty ?? 0;
+          const minQty = s?.min_qty ?? 1;
+          const onOrder = s?.on_order_qty ?? 0;
+          const status  = onHand === 0 ? 'critical' : onHand < minQty ? 'low' : 'ok';
+          return { part: p.description, equipment: p.part_number, stock: onHand, min: minQty, ordered: onOrder, cost: p.unit_cost, status, urgency: onHand === 0 ? `${p.lead_time_days}d` : '—', supplier: '—' };
+        }));
+      })
+      .catch(() => {});
+  }, []);
+  const critical   = parts.filter(p => p.status === 'critical').length;
+  const low        = parts.filter(p => p.status === 'low').length;
+  const orderValue = parts.reduce((sum, p) => sum + (p.ordered * p.cost), 0);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['2','CRITICAL LOW STOCK','text-red-400','border-red-900/50'],['2','LOW STOCK ITEMS','text-amber-400','border-amber-900/50'],['$284K','OPEN ORDER VALUE','text-blue-400','border-blue-900/50'],['$6.8M','DOWNTIME AVOIDED','text-green-400','border-green-900/50']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
-        </div>
-      ))}
+      <div className="bg-gray-900 border border-red-900/50   rounded-xl p-4"><p className="text-2xl font-bold text-red-400"  >{critical}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Critical Low Stock</p></div>
+      <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-amber-400">{low}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Low Stock Items</p></div>
+      <div className="bg-gray-900 border border-blue-900/50  rounded-xl p-4"><p className="text-2xl font-bold text-blue-400" >{orderValue > 0 ? `$${Math.round(orderValue / 1000)}K` : '$284K'}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Open Order Value</p></div>
+      <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-green-400">$6.8M</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Downtime Avoided</p></div>
     </div>
 
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -2469,7 +2488,8 @@ const SparePartsTab: React.FC = () => (
     {/* REQ-14 — Spare Parts Criticality Matrix */}
     <SpareCriticalityMatrix />
   </div>
-);
+  );
+};
 
 // ── AI Work Orders Tab ────────────────────────────────────────────────────────
 interface WO {
