@@ -4019,7 +4019,7 @@ function mapTar(e: API.TarEvent): TarItem {
   const days = Math.round((new Date(e.end_date).getTime() - new Date(e.start_date).getTime()) / 86400000);
   const cost = e.budget_usd >= 1e6 ? `$${(e.budget_usd / 1e6).toFixed(1)}M` : `$${e.budget_usd.toLocaleString()}`;
   const status = (e.status || '').toLowerCase() === 'completed' ? 'completed' : 'planned';
-  return { id: e.tar_code, site: e.site_id, unit: e.unit_name, start: e.start_date, end: e.end_date, days, status, cost, scope: Math.round(e.pct_complete ?? 0) };
+  return { id: e.tar_code, site: e.site_id, unit: e.unit_name, start: e.start_date, end: e.end_date, days: e.duration_days ?? days, status, cost, scope: e.work_scope_count ?? 0 };
 }
 
 const TARTab: React.FC = () => {
@@ -4730,7 +4730,7 @@ function mapApiPlatform(p: API.Platform): OffshorePlatformItem {
 }
 function mapApiSubseaAlert(a: API.SubseaAlert): SubseaAlertItem {
   const sev = a.failure_probability_pct >= 70 ? 'critical' : a.failure_probability_pct >= 40 ? 'warning' : 'advisory';
-  return { id: a.id, asset: a.asset_name, platform: a.id, issue: a.issue_description, failProb: a.failure_probability_pct / 100, eta: a.eta_days, sev };
+  return { id: a.id, asset: a.asset_name, platform: a.platform_id, issue: a.issue_description, failProb: a.failure_probability_pct / 100, eta: a.eta_days, sev };
 }
 function mapApiWellIntegrity(w: API.WellIntegrity): WellIntegrityItem {
   const s = (w.status || '').toLowerCase();
