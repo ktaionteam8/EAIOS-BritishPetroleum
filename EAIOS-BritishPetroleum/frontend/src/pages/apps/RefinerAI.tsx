@@ -3826,19 +3826,32 @@ const ComplianceTab: React.FC = () => {
 
 // ── REQ-23: Live Demo / Guided Tour Mode ─────────────────────────────────────
 const TOUR_STEPS: { tab: TabId; title: string; desc: string }[] = [
+  // Operations
   { tab:'dashboard',        title:'Global Operations Dashboard',        desc:'Monitor all 40 BP refineries worldwide. The AI Failure Prediction Gantt shows 90-day predicted failures for 14 critical assets, and Multi-Site Benchmarking ranks sites by OEE, MTBF, and MTTR.' },
   { tab:'live-alerts',      title:'Live Alert Intelligence',            desc:'AI-prioritised alerts powered by LSTM + XGBoost. The Anomaly Heatmap shows 7-day rolling scores for 8 assets, while the Escalation Matrix defines who to call, when, and how for every severity level.' },
   { tab:'equipment-health', title:'Equipment Health Centre',            desc:'Vibration FFT Spectrum Analyser (ISO 13373-3), Health Degradation Forecast with AI RUL projection, Oil Analysis & Lubrication Tracker, and the 5×5 Risk Matrix — all per asset.' },
-  { tab:'ai-advisor',       title:'RefinerAI Advisor — Claude Opus 4.6',desc:'Chat with Claude Opus 4.6 about any equipment, failure, spare part, or work order. Streaming responses, adaptive thinking, and full refinery domain expertise built in.' },
-  { tab:'work-orders',      title:'AI Work Orders, RCA & Crew Planner', desc:'Auto-generated work orders with OEM procedures. Root Cause Analysis runs 5-Why on top failures. Crew Planner shows live roster, certifications, and WO assignments across all sites.' },
   { tab:'spare-parts',      title:'Spare Parts — Criticality Matrix',   desc:'AI-prioritised parts inventory with stock levels, reorder urgency, and supplier lead times. The Criticality Matrix plots every part by criticality vs lead time for strategic stockholding decisions.' },
-  { tab:'roi',              title:'ROI Analytics & Budget Tracker',     desc:'Track BP\'s 40% unplanned downtime reduction target (currently 38.2%). MTBF/MTTR/OEE fleet KPIs, Maintenance Budget vs Actuals across all sites, and quarterly savings trend.' },
+  // AI & Models
+  { tab:'ai-advisor',       title:'RefinerAI Advisor — Claude Opus 4.6',desc:'Chat with Claude Opus 4.6 about any equipment, failure, spare part, or work order. Streaming responses, adaptive thinking, and full refinery domain expertise built in.' },
   { tab:'ml-models',        title:'ML Models & AI Feedback Loop',       desc:'Six production models — LSTM, XGBoost, Prophet, Random Forest, CNN, Isolation Forest. The AI Feedback Loop tracks confirmed predictions, false positives, and missed failures for continuous model improvement.' },
+  { tab:'digital-twin',     title:'Digital Twin — Plant Simulation',    desc:'High-fidelity digital twins for every critical asset. Run what-if scenarios, compare operating envelope parameters, and predict RUL impact before making physical changes to the plant.' },
+  // Reliability
   { tab:'reliability',      title:'FMEA Failure Mode Library',          desc:'IEC 60812 FMEA table with RPN scoring (Severity × Occurrence × Detection). All critical failure modes, causes, current controls, and recommended corrective actions across equipment types.' },
   { tab:'compliance',       title:'Regulatory Compliance Tracker',      desc:'API 510/570, ASME B31.3, ISO 13374, PSM, and ISO 45001 compliance status for every site. Real-time compliance scores, next inspection dates, and overdue alerts.' },
-  { tab:'energy',           title:'Energy Consumption Monitor',         desc:'GJ/tonne energy intensity and carbon footprint per site. Bar chart vs targets, YTD reduction tracking, and steam/power consumption — aligned with BP\'s net-zero decarbonisation roadmap.' },
+  // Field & Sustainability
   { tab:'field-ops',        title:'Inspection Route Optimiser',         desc:'AI-optimised inspection routes minimise travel distance and maximise coverage. Live status per route, inspector assignments, and a digital inspection checklist with CMMS upload.' },
+  { tab:'energy',           title:'Energy Consumption Monitor',         desc:'GJ/tonne energy intensity and carbon footprint per site. Bar chart vs targets, YTD reduction tracking, and steam/power consumption — aligned with BP\'s net-zero decarbonisation roadmap.' },
   { tab:'tar',              title:'TAR Shutdown Planning',              desc:'Turnaround schedule for 2026: three planned shutdowns totalling $29.4M. Gantt view with month gridlines, plus work scope count, duration, and budget per event.' },
+  // Specialty
+  { tab:'castrol',          title:'Castrol Blending Quality Intelligence',desc:'Real-time in-process quality prediction for Castrol lubricant blends. AI forecasts viscosity, pour point, and TBN before the batch completes — reducing LIMS rework and lab testing cycles.' },
+  { tab:'offshore',         title:'North Sea Offshore Operations',      desc:'Live platform monitoring for all North Sea assets. Subsea alert management, well integrity barrier status, weather workability windows, and vessel scheduling in one unified view.' },
+  { tab:'ot-data',          title:'OT Data — PI Historian Integration', desc:'Operational technology data ingestion from Honeywell, ABB, and Emerson DCS systems. Quality scoring, tag normalisation, schema mapping, and live stream health monitoring.' },
+  { tab:'adoption',         title:'User Adoption & Change Management',  desc:'Track EAIOS adoption across all 5 refinery sites. Training completion, response time metrics, champion leaderboard, and adoption barrier identification to drive behaviour change.' },
+  { tab:'wave-tracker',     title:'Implementation Wave Tracker',        desc:'Programme delivery tracking across 3 implementation waves. Milestones, delivery risks, budget vs actuals, and completion percentage — keeping the BP digital transformation on schedule.' },
+  { tab:'edge-ai',          title:'Edge AI — On-Premise Inference',     desc:'Deploy AI inference to Jetson Orin NX nodes on the plant floor. Sub-20ms latency benchmarks, model deployment status per node, and CPU/memory utilisation — zero cloud dependency for critical predictions.' },
+  // Planning
+  { tab:'work-orders',      title:'AI Work Orders, RCA & Crew Planner', desc:'Auto-generated work orders with OEM procedures. Root Cause Analysis runs 5-Why on top failures. Crew Planner shows live roster, certifications, and WO assignments across all sites.' },
+  { tab:'roi',              title:'ROI Analytics & Budget Tracker',     desc:'Track BP\'s 40% unplanned downtime reduction target (currently 38.2%). MTBF/MTTR/OEE fleet KPIs, Maintenance Budget vs Actuals across all sites, and quarterly savings trend.' },
 ];
 
 interface TourOverlayProps { onClose: () => void; onTabChange: (tab: TabId) => void; }
