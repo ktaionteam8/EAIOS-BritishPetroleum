@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as API from '../../api/client';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -219,6 +220,63 @@ const ALERT_DATA: AlertData[] = [
     time: '2h ago',
   },
 ];
+
+// ── Live-data hooks ───────────────────────────────────────────────────────────
+/** Map API AlertDetail → local AlertData, falling back to existing if fields missing */
+function mapApiAlert(a: API.AlertDetail): AlertData {
+  return {
+    id: a.alert_code,
+    severity: a.severity as AlertData['severity'],
+    title: a.title,
+    site: a.site_id,           // site name resolved server-side in future
+    details: a.details ?? '',
+    failureMode: a.failure_mode,
+    probability: Math.round(a.probability * 100),
+    etfDays: a.etf_days,
+    etfMin: a.etf_min,
+    etfMax: a.etf_max,
+    recommendation: a.recommendation as AlertData['recommendation'],
+    shapSignals: (a.shap_signals ?? []).map(s => ({
+      name: s.signal_name,
+      values: s.values as number[],
+      contribution: s.contribution,
+      unit: s.unit,
+    })),
+    analogues: (a.analogues ?? []).map(an => ({
+      site: an.site_name,
+      date: an.event_date,
+      outcome: an.outcome,
+      daysToFailure: an.days_to_failure,
+      match: an.match_score,
+    })),
+    time: 'live',
+  };
+}
+
+/** Fetch all alert details from the backend and merge with ALERT_DATA fallback */
+function useApiAlerts(): AlertData[] {
+  const [alerts, setAlerts] = useState<AlertData[]>(ALERT_DATA);
+  useEffect(() => {
+    API.fetchAlerts({ status: 'active' })
+      .then(list =>
+        Promise.all(list.map(a => API.fetchAlert(a.id)))
+      )
+      .then(details => {
+        if (details.length > 0) setAlerts(details.map(mapApiAlert));
+      })
+      .catch(() => { /* keep hardcoded fallback */ });
+  }, []);
+  return alerts;
+}
+
+/** Fetch dashboard stats, returns null while loading */
+function useApiDashboard() {
+  const [data, setData] = useState<API.DashboardOut | null>(null);
+  useEffect(() => {
+    API.fetchDashboard().then(setData).catch(() => {});
+  }, []);
+  return data;
+}
 
 // ── A-01: SHAP Sparkline mini-chart ──────────────────────────────────────────
 const ShapSparkline: React.FC<{ values: number[]; color: string }> = ({ values, color }) => {
@@ -752,20 +810,21 @@ const DashboardTab: React.FC = () => (
 
 // ── Live Alerts Tab ───────────────────────────────────────────────────────────
 const LiveAlertsTab: React.FC = () => {
+  const liveAlerts = useApiAlerts();        // ← live data from backend
   const [decisions,  setDecisions]  = useState<Record<string, AlertDecision>>({});
   const [woNumbers,  setWoNumbers]  = useState<Record<string, string>>({});
   const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([]);
   const [pushNotifs, setPushNotifs] = useState<PushNotification[]>([]);
   const [showAudit,  setShowAudit]  = useState(false);
 
-  // A-07: fire push banners on mount for alerts with probability > 80%
+  // A-07: fire push banners when alerts load (probability > 80%)
   useEffect(() => {
     setPushNotifs(
-      ALERT_DATA
+      liveAlerts
         .filter(a => a.probability > 80)
         .map(a => ({ id: `push-${a.id}`, title: a.title, probability: a.probability, etfDays: a.etfDays, site: a.site, severity: a.severity }))
     );
-  }, []);
+  }, [liveAlerts]);
 
   const dismissNotif = useCallback((id: string) => {
     setPushNotifs(prev => prev.filter(n => n.id !== id));
@@ -776,24 +835,28 @@ const LiveAlertsTab: React.FC = () => {
 
   const handleAccept = (id: string) => {
     const wo  = genWO();
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'accepted' }));
     setWoNumbers(p => ({ ...p, [id]: wo }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'accepted',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:'',    woNumber:wo }]);
+    // Persist decision to backend
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'accepted', reason_code: '' }).catch(() => {});
   };
 
   const handleModify = (id: string, action: string, timing: string) => {
     const wo  = genWO();
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'modified' }));
     setWoNumbers(p => ({ ...p, [id]: wo }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'modified',  timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:`${action} — ${timing}`, woNumber:wo }]);
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'modified', modified_action: action, modified_timing: timing }).catch(() => {});
   };
 
   const handleOverride = (id: string, reason: string) => {
-    const alr = ALERT_DATA.find(a => a.id === id);
+    const alr = liveAlerts.find(a => a.id === id);
     setDecisions(p => ({ ...p, [id]: 'overridden' }));
     setAuditTrail(p => [...p, { id:`AUD-${Date.now()}`, alertId:id, alertTitle: alr?.title ?? id, decision:'overridden', timestamp:nowStr(), user:'Engineer A. Rahman', reasonCode:reason, woNumber:'' }]);
+    API.postDecision(id, { user_id: 'user-eng-ruw', decision: 'overridden', reason_code: reason }).catch(() => {});
   };
 
   const accepted   = auditTrail.filter(e => e.decision === 'accepted').length;
@@ -815,9 +878,9 @@ const LiveAlertsTab: React.FC = () => {
       {/* KPI strip — live counters */}
       <div className="grid grid-cols-5 gap-3">
         {([
-          [String(ALERT_DATA.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
-          [String(ALERT_DATA.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
-          [String(ALERT_DATA.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
+          [String(liveAlerts.filter(a => a.severity === 'critical').length), 'CRITICAL',      'text-red-400',    'border-red-900/50'   ],
+          [String(liveAlerts.filter(a => a.severity === 'warning').length),  'WARNING',       'text-amber-400',  'border-amber-900/50' ],
+          [String(liveAlerts.filter(a => a.severity === 'advisory').length), 'ADVISORY',      'text-blue-400',   'border-blue-900/50'  ],
           [String(accepted + modified),                                       'ACTIONED TODAY','text-green-400',  'border-green-900/50' ],
           [String(overridden),                                                'OVERRIDDEN',    'text-gray-400',   'border-gray-800'     ],
         ] as [string,string,string,string][]).map(([v,l,t,b]) => (
@@ -829,7 +892,7 @@ const LiveAlertsTab: React.FC = () => {
       </div>
 
       {/* A-08: Alert fatigue meter */}
-      <AlertFatigueMeter total={ALERT_DATA.length} accepted={accepted} modified={modified} overridden={overridden} />
+      <AlertFatigueMeter total={liveAlerts.length} accepted={accepted} modified={modified} overridden={overridden} />
 
       {/* A-01/02/03/04/06: Alert-to-Action Cards */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
@@ -841,7 +904,7 @@ const LiveAlertsTab: React.FC = () => {
           <span className="text-xs bg-purple-900/40 text-purple-400 px-2 py-1 rounded font-mono">LSTM + XGBOOST</span>
         </div>
         <div className="space-y-4">
-          {ALERT_DATA.map(alert => (
+          {liveAlerts.map(alert => (
             <AlertCard
               key={alert.id}
               alert={alert}
@@ -2665,7 +2728,7 @@ const WorkOrdersTab: React.FC = () => {
       )}
 
       {/* B-01/02/04/05/07: SAP Integration Panel */}
-      <SAPIntegrationPanel records={sapRecords} totalAlerts={ALERT_DATA.length} />
+      <SAPIntegrationPanel records={sapRecords} totalAlerts={4} />
 
       {/* REQ-13 — Root Cause Analysis */}
       <RCAPanel />
