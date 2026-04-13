@@ -87,7 +87,7 @@ class ArbitrageOpportunityOut(BaseModel):
     confidence_pct: float
     status: str
     regulatory_tier: str
-    approved_by: str | None
+    approved_by: str | None  # display name only — must not contain email/PII
     approved_at: datetime | None
     created_at: datetime
 
