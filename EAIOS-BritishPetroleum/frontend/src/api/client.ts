@@ -3,7 +3,7 @@
  * All domain-specific fetchers live here so components stay thin.
  */
 
-const BASE = "http://localhost:8000";
+const BASE = process.env.REACT_APP_API_URL ?? "http://localhost:8000";
 
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`);
