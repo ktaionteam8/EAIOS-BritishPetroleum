@@ -21,6 +21,7 @@ airflow.db
 
 # DB
 *.sqlite3
+*.db
 
 # OS
 .DS_Store
