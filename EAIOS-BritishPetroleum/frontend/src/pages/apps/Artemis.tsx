@@ -235,6 +235,184 @@ const CastrolTab: React.FC = () => (
   </div>
 );
 
+// ── Aviation Fuel Tab ─────────────────────────────────────────────────────────
+const AIRPORTS = [
+  { airport: 'London Heathrow (LHR)', airline: 'British Airways, Virgin',  d30: '42.8ML',  d90: '41.2ML', delta: '-3.7%', renewal: '87 days' },
+  { airport: 'Frankfurt (FRA)',        airline: 'Lufthansa, Ryanair',        d30: '38.1ML',  d90: '39.4ML', delta: '+3.4%', renewal: '87 days' },
+  { airport: 'Dubai (DXB)',            airline: 'Emirates, flydubai',        d30: '61.4ML',  d90: '64.2ML', delta: '+4.6%', renewal: '194 days' },
+  { airport: 'Singapore (SIN)',        airline: 'Singapore Airlines, Scoot', d30: '29.7ML',  d90: '31.1ML', delta: '+4.7%', renewal: '241 days' },
+  { airport: 'Chicago O\'Hare (ORD)',  airline: 'United, American',          d30: '33.5ML',  d90: '32.8ML', delta: '-2.1%', renewal: '312 days' },
+];
+
+const AviationTab: React.FC = () => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KPICard label="Airports Covered" value="600+" sub="Daily demand forecast" accent="text-purple-400" border="border-purple-800/30" />
+      <KPICard label="90-Day Forecast Acc." value="88%" sub="MAPE target — current vs actuals" accent="text-amber-400" border="border-amber-800/30" />
+      <KPICard label="Renewals Due 90 Days" value="14" sub="Contract negotiation packs ready" accent="text-orange-400" border="border-orange-800/20" />
+      <KPICard label="Jet Crack Spread" value="$18.4/bbl" sub="Current Brent → Jet A-1 margin" accent="text-blue-400" border="border-blue-800/20" />
+    </div>
+
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-white uppercase tracking-widest">Airport Demand Forecast — Top 5 by Volume</h2>
+        <span className="text-xs text-gray-500">Updated daily · 90-day horizon</span>
+      </div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+          <span className="col-span-2">Airport</span><span>Airlines</span><span>30-Day Actual</span><span>90-Day Forecast</span><span>Contract Renewal</span>
+        </div>
+        {AIRPORTS.map((a, i) => (
+          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+            <div className="col-span-2">
+              <p className="text-white text-sm font-medium">{a.airport}</p>
+            </div>
+            <span className="text-gray-400 text-xs">{a.airline}</span>
+            <span className="text-amber-400 font-mono text-sm">{a.d30}</span>
+            <div>
+              <span className="text-purple-400 font-mono text-sm">{a.d90}</span>
+              <span className={`ml-2 text-xs font-semibold ${a.delta.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>{a.delta}</span>
+            </div>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${parseInt(a.renewal) < 100 ? 'bg-orange-900/30 text-orange-400' : 'bg-gray-800 text-gray-400'}`}>{a.renewal}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="bg-purple-900/10 border border-purple-800/30 rounded-xl p-5">
+      <p className="text-xs text-purple-400 font-bold uppercase tracking-widest mb-2">Contract Negotiation Pack — FRA &amp; LHR Due in 87 Days</p>
+      <p className="text-gray-400 text-sm">ARTEMIS-Aviation Agent has generated 90-day demand forecasts with confidence intervals, recommended fixed-price vs index-linked structure analysis, leverage assessment, and three-scenario P&amp;L models for both renewals. Available for download.</p>
+      <button className="mt-3 text-xs border border-purple-700/50 text-purple-400 hover:bg-purple-900/20 px-3 py-1.5 rounded-lg transition-colors">View Contract Pack</button>
+    </div>
+  </div>
+);
+
+// ── Carbon Portfolio Tab ──────────────────────────────────────────────────────
+const CARBON_CREDITS = [
+  { type: 'EU ETS Dec-25',  holdings: '180,000t',  obligation: '210,000t', surplus: '-30,000t', price: '€48.20', action: 'BUY', urgency: 'High'   },
+  { type: 'EU ETS Dec-26',  holdings: '420,000t',  obligation: '380,000t', surplus: '+40,000t', price: '€45.80', action: 'HOLD', urgency: 'Low'   },
+  { type: 'VCS Forestry',   holdings: '85,000t',   obligation: 'Voluntary',surplus: '+85,000t', price: '$14.20', action: 'SELL', urgency: 'Medium' },
+  { type: 'Gold Standard',  holdings: '32,000t',   obligation: 'Voluntary',surplus: '+32,000t', price: '$16.80', action: 'HOLD', urgency: 'Low'   },
+];
+
+const CarbonTab: React.FC = () => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KPICard label="EU ETS Net Position" value="-30kt" sub="Dec-25 deficit — purchase recommended" accent="text-red-400" border="border-red-800/30" />
+      <KPICard label="ETS Allowance Price" value="€48.20" sub="ICE Futures Europe · Dec-25" accent="text-amber-400" border="border-amber-800/30" />
+      <KPICard label="Scope 1+2 Trajectory" value="On Track" sub="vs. Net-Zero 2030 milestone" accent="text-emerald-400" border="border-emerald-800/20" />
+      <KPICard label="Portfolio Savings Target" value="$10–20M" sub="Per year vs unmanaged benchmark" accent="text-blue-400" border="border-blue-800/20" />
+    </div>
+
+    <div>
+      <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Carbon Credit Portfolio</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+          <span className="col-span-2">Credit Type</span><span>Holdings</span><span>Obligation</span><span>Net Position</span><span>Agent Action</span>
+        </div>
+        {CARBON_CREDITS.map((c, i) => (
+          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+            <div className="col-span-2">
+              <p className="text-white text-sm font-medium">{c.type}</p>
+              <p className="text-gray-500 text-xs">{c.price}</p>
+            </div>
+            <span className="text-gray-300 font-mono text-sm">{c.holdings}</span>
+            <span className="text-gray-400 font-mono text-sm">{c.obligation}</span>
+            <span className={`font-mono text-sm font-semibold ${c.surplus.startsWith('+') ? 'text-emerald-400' : 'text-red-400'}`}>{c.surplus}</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit ${
+              c.action === 'BUY'  ? 'bg-emerald-900/30 text-emerald-400' :
+              c.action === 'SELL' ? 'bg-amber-900/30 text-amber-400' :
+                                   'bg-gray-800 text-gray-400'
+            }`}>{c.action} · {c.urgency}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ── Compliance Tab ────────────────────────────────────────────────────────────
+const MODELS = [
+  { name: 'Arbitrage Detection Model v2.4',   status: 'Validated',  nextReview: '18 days', drift: 'None',     accuracy: '91.3%' },
+  { name: 'Castrol Pricing Model v1.8',        status: 'Validated',  nextReview: '22 days', drift: 'None',     accuracy: '88.7%' },
+  { name: 'Aviation Demand Forecast v3.1',     status: 'Validated',  nextReview: '31 days', drift: 'Minimal',  accuracy: '88.0%' },
+  { name: 'Carbon Portfolio Optimiser v1.2',   status: 'Validated',  nextReview: '9 days',  drift: 'None',     accuracy: '92.1%' },
+];
+
+const ComplianceTab: React.FC = () => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {[
+        { framework: 'SOX — NYSE Listing',     status: 'COMPLIANT', detail: '14,820 audit records today · WORM S3 · CloudTrail enabled', color: 'emerald' },
+        { framework: 'UK FCA SYSC 10A',        status: 'COMPLIANT', detail: 'Supervisory record current · No MAR alerts · SM&CR mapped', color: 'emerald' },
+        { framework: 'EU AI Act — Tier 2 HR',  status: 'COMPLIANT', detail: 'Technical file current · Art.14 human oversight active',     color: 'emerald' },
+      ].map(f => (
+        <div key={f.framework} className={`bg-gray-900 border border-${f.color}-800/30 rounded-xl p-5`}>
+          <p className={`text-xs font-bold uppercase tracking-widest text-${f.color}-400 mb-1`}>{f.status}</p>
+          <p className="text-white font-semibold text-sm">{f.framework}</p>
+          <p className="text-gray-500 text-xs mt-2 leading-relaxed">{f.detail}</p>
+        </div>
+      ))}
+    </div>
+
+    <div>
+      <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Model Registry — SageMaker</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-5 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+          <span className="col-span-2">Model</span><span>Status</span><span>Accuracy</span><span>Next Review</span>
+        </div>
+        {MODELS.map((m, i) => (
+          <div key={i} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 items-center">
+            <div className="col-span-2">
+              <p className="text-white text-sm font-medium">{m.name}</p>
+              <p className="text-gray-500 text-xs">Drift: {m.drift}</p>
+            </div>
+            <span className="text-emerald-400 text-xs font-bold">{m.status}</span>
+            <span className="text-amber-400 font-mono text-sm">{m.accuracy}</span>
+            <span className={`text-xs font-semibold ${parseInt(m.nextReview) < 15 ? 'text-orange-400' : 'text-gray-400'}`}>{m.nextReview}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Audit Log — Today</p>
+        {[
+          { label: 'Recommendations Generated', value: '52' },
+          { label: 'Human Approvals', value: '38' },
+          { label: 'Human Overrides (with rationale)', value: '7' },
+          { label: 'Compliance Screenings Passed', value: '52 / 52' },
+          { label: 'MAR Violation Flags', value: '0' },
+        ].map(r => (
+          <div key={r.label} className="flex justify-between py-1.5 border-b border-gray-800/50 last:border-0">
+            <span className="text-gray-400 text-sm">{r.label}</span>
+            <span className="text-white font-mono text-sm">{r.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-3">Data Residency</p>
+        {[
+          { region: 'EU (Frankfurt, Ireland)', framework: 'GDPR · EU AI Act', status: 'Compliant' },
+          { region: 'UK (London)',              framework: 'UK GDPR · FCA',     status: 'Compliant' },
+          { region: 'US (N.Virginia)',          framework: 'SOX · CFTC',        status: 'Compliant' },
+          { region: 'Asia-Pacific (Singapore)', framework: 'PDPA · MAS TRM',    status: 'Compliant' },
+          { region: 'UAE (UAE Central)',        framework: 'DIFC · UAE DP',     status: 'Compliant' },
+        ].map(d => (
+          <div key={d.region} className="flex justify-between items-center py-1.5 border-b border-gray-800/50 last:border-0">
+            <div>
+              <span className="text-gray-300 text-sm">{d.region}</span>
+              <p className="text-gray-600 text-xs">{d.framework}</p>
+            </div>
+            <span className="text-emerald-400 text-xs font-semibold">{d.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // ── Tabs config ───────────────────────────────────────────────────────────────
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'command-centre', label: 'Command Centre' },
@@ -297,9 +475,9 @@ const Artemis: React.FC = () => {
         {tab === 'command-centre' && <CommandCentreTab />}
         {tab === 'arbitrage'      && <ArbitrageTab />}
         {tab === 'castrol'        && <CastrolTab />}
-        {tab === 'aviation'       && <div className="text-gray-500 text-sm">Aviation Fuel — loading…</div>}
-        {tab === 'carbon'         && <div className="text-gray-500 text-sm">Carbon Portfolio — loading…</div>}
-        {tab === 'compliance'     && <div className="text-gray-500 text-sm">Compliance — loading…</div>}
+        {tab === 'aviation'       && <AviationTab />}
+        {tab === 'carbon'         && <CarbonTab />}
+        {tab === 'compliance'     && <ComplianceTab />}
       </main>
     </div>
   );
