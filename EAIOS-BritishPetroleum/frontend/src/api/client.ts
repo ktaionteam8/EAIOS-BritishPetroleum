@@ -340,7 +340,7 @@ export interface ArtemisAuditLog {
   id: string; action_type: string; agent_key: string;
   recommendation_summary: string | null; estimated_pnl_usd: number | null;
   confidence_pct: number | null; regulatory_tier: string;
-  approver_id: string | null; created_at: string;
+  approved: boolean; created_at: string;
 }
 export interface ArtemisComplianceEvent {
   id: string; framework: string; status: string; detail: string;
