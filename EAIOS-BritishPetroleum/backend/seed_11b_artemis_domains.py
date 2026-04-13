@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
-from src.models.database import engine, Base
+from src.models.database import engine
 from src.models.artemis_castrol import ArtemisBaseOilPrice, ArtemisCastrolPricingRec
 from src.models.artemis_aviation import (
     ArtemisAviationAirport, ArtemisAviationForecast, ArtemisAviationContract,
@@ -24,9 +24,6 @@ _now = datetime.utcnow
 
 
 async def seed():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     async with AsyncSessionLocal() as db:
         today = _now().replace(hour=0, minute=0, second=0, microsecond=0)
 

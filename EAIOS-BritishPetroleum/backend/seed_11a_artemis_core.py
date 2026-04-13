@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
-from src.models.database import engine, Base
+from src.models.database import engine
 from src.models.artemis_core import (
     ArtemisAgentStatus, ArtemisModelRegistry,
     ArtemisAuditLog, ArtemisComplianceEvent,
@@ -26,9 +26,6 @@ _now = datetime.utcnow
 
 
 async def seed():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     async with AsyncSessionLocal() as db:
         # ── Agent Status ──────────────────────────────────────────────────────
         agents = [
