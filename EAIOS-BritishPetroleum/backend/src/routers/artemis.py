@@ -59,7 +59,7 @@ async def list_audit_log(
     result = await db.execute(
         select(ArtemisAuditLog).order_by(desc(ArtemisAuditLog.created_at)).limit(limit)
     )
-    return result.scalars().all()
+    return [AuditLogOut.from_orm_with_approval(row) for row in result.scalars().all()]
 
 
 @router.get("/compliance", response_model=list[ComplianceEventOut])
