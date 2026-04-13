@@ -2605,12 +2605,33 @@ const SAPIntegrationPanel: React.FC<SAPIntegrationPanelProps> = ({ records, tota
   );
 };
 
+function mapApiWO(w: API.WorkOrder): WO {
+  const priorityMap: Record<string, WO['priority']> = { emergency: 'EMERGENCY', high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
+  const statusMap:   Record<string, WO['status']>   = { open: 'Open', in_progress: 'In Progress', scheduled: 'Scheduled', completed: 'Completed' };
+  return {
+    id:          w.wo_number,
+    equipment:   w.title,
+    site:        w.site_id,
+    priority:    priorityMap[w.priority?.toLowerCase() ?? 'medium'] ?? 'MEDIUM',
+    status:      statusMap[w.status?.toLowerCase() ?? 'open'] ?? 'Open',
+    cost:        w.cost_estimate != null ? `$${w.cost_estimate.toLocaleString()}` : '—',
+    due:         w.due_date ? new Date(w.due_date).toLocaleDateString('en-GB') : '—',
+    aiGenerated: w.ai_generated,
+  };
+}
+
 const WorkOrdersTab: React.FC = () => {
   const [wos, setWos] = useState<WO[]>(INITIAL_WOS);
   const [toast, setToast] = useState<string | null>(null);
   const [prCounter, setPrCounter] = useState(1);
   // B-01/02/04: SAP BAPI records
   const [sapRecords, setSapRecords] = useState<SapRecord[]>([]);
+
+  useEffect(() => {
+    API.fetchWorkOrders()
+      .then(list => { if (list.length > 0) setWos(list.map(mapApiWO)); })
+      .catch(() => {});
+  }, []);
 
   const featuredWO = wos.find(w => w.priority === 'EMERGENCY' && w.status === 'Open') ?? null;
 
