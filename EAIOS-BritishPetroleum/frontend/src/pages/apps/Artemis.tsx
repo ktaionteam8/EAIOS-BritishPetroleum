@@ -122,6 +122,119 @@ const CommandCentreTab: React.FC = () => (
   </div>
 );
 
+// ── Arbitrage Intelligence Tab ────────────────────────────────────────────────
+const OPPORTUNITIES = [
+  { spread: 'TTF Gas ↔ UK Power (NBP spark)',     level: '£38.4/MWh', pct: '94th',  pnl: '+$2.1M', window: '2–6h',    conf: 91, tier: 'Tier 2' },
+  { spread: 'Brent/Dubai Quality Differential',   level: '$3.82/bbl', pct: '88th',  pnl: '+$3.6M', window: '1–3 days', conf: 84, tier: 'Tier 2' },
+  { spread: 'LNG JKM ↔ TTF Cargo Arb',            level: '$4.10/mmBtu', pct: '79th', pnl: '+$1.8M', window: '4–8h',  conf: 76, tier: 'Tier 2' },
+  { spread: 'EU ETS vs Carbon-Adjusted Gas Margin', level: '€6.2/tonne', pct: '72nd', pnl: '+$0.9M', window: '1–2 days', conf: 71, tier: 'Tier 2' },
+  { spread: 'Brent M1–M3 Contango',                level: '$1.44/bbl', pct: '61st',  pnl: '+$1.2M', window: '3–5 days', conf: 68, tier: 'Tier 2' },
+];
+
+const ArbitrageTab: React.FC = () => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KPICard label="Spreads Monitored" value="180" sub="Real-time, sub-60s latency" accent="text-amber-400" border="border-amber-800/30" />
+      <KPICard label="Active Opportunities" value="5" sub="Above alert threshold now" accent="text-emerald-400" border="border-emerald-800/20" />
+      <KPICard label="P&amp;L Identified Today" value="$9.6M" sub="Across all open opportunities" accent="text-amber-300" border="border-amber-800/20" />
+      <KPICard label="Avg Signal Latency" value="47s" sub="Signal → recommendation" accent="text-blue-400" border="border-blue-800/20" />
+    </div>
+
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-white uppercase tracking-widest">Live Arbitrage Opportunities</h2>
+        <span className="text-xs text-gray-500">Sorted by confidence · All require Tier 2 approval</span>
+      </div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-6 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+          <span className="col-span-2">Spread</span><span>Level</span><span>Percentile</span><span>Est. P&amp;L</span><span>Confidence</span>
+        </div>
+        {OPPORTUNITIES.map((o, i) => (
+          <div key={i} className="grid grid-cols-6 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+            <span className="col-span-2 text-white text-sm font-medium">{o.spread}</span>
+            <span className="text-amber-400 font-mono text-sm">{o.level}</span>
+            <span className="text-gray-300 text-sm">{o.pct}</span>
+            <span className="text-emerald-400 font-mono text-sm font-semibold">{o.pnl}</span>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-800 rounded-full h-1.5">
+                <div className="bg-amber-400 h-1.5 rounded-full" style={{ width: `${o.conf}%` }} />
+              </div>
+              <span className="text-xs text-gray-400 font-mono w-8">{o.conf}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="bg-amber-900/10 border border-amber-800/30 rounded-xl p-5">
+      <p className="text-xs text-amber-400 font-bold uppercase tracking-widest mb-1">Human-in-the-Loop Required</p>
+      <p className="text-gray-400 text-sm">All opportunities above require explicit trader approval before ETRM execution. FCA supervisory records are written at approval. Override rationale is captured for model retraining.</p>
+    </div>
+  </div>
+);
+
+// ── Castrol Pricing Tab ───────────────────────────────────────────────────────
+const BASE_OIL = [
+  { grade: 'Group I SN 150',  price: '$862/MT',  change: '+0.4%', status: 'Normal' },
+  { grade: 'Group II 100N',   price: '$894/MT',  change: '+1.2%', status: 'Alert'  },
+  { grade: 'Group III 4cSt',  price: '$1,108/MT', change: '+0.7%', status: 'Normal' },
+];
+const PRICING_SKU = [
+  { sku: 'Castrol Hyspin AWS 46',   segment: 'Industrial',  curr: '$3.42/L', rec: '$3.49/L', margin: '+2.0%', status: 'Update Available' },
+  { sku: 'Castrol Optigear 320',    segment: 'Industrial',  curr: '$6.18/L', rec: '$6.18/L', margin: 'Stable', status: 'At Recommended' },
+  { sku: 'Castrol Syntilo 9954',    segment: 'Metalworking', curr: '$4.85/L', rec: '$4.72/L', margin: '-2.7%', status: 'Overpriced' },
+  { sku: 'Castrol Tribol 800/W',    segment: 'Industrial',  curr: '$9.10/L', rec: '$9.32/L', margin: '+2.4%', status: 'Update Available' },
+  { sku: 'Castrol Perfecto T 46',   segment: 'Power Gen',   curr: '$4.20/L', rec: '$4.20/L', margin: 'Stable', status: 'At Recommended' },
+];
+
+const CastrolTab: React.FC = () => (
+  <div className="space-y-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KPICard label="SKUs Monitored" value="1,240" sub="Across 120+ global markets" accent="text-amber-400" border="border-amber-800/30" />
+      <KPICard label="Pricing Cycle" value="07:00 UTC" sub="Daily · Intraday on +0.5% move" accent="text-amber-300" border="border-amber-800/20" />
+      <KPICard label="Updates Pending" value="14" sub="Group II move triggered intraday run" accent="text-orange-400" border="border-orange-800/20" />
+      <KPICard label="Margin Uplift Target" value="2.0%" sub="Gross margin vs unmanaged baseline" accent="text-emerald-400" border="border-emerald-800/20" />
+    </div>
+
+    <div>
+      <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">Base Oil Cost Monitor</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {BASE_OIL.map(b => (
+          <div key={b.grade} className={`bg-gray-900 border rounded-xl p-4 ${b.status === 'Alert' ? 'border-orange-800/40' : 'border-gray-800'}`}>
+            <p className="text-white text-sm font-semibold">{b.grade}</p>
+            <p className="text-amber-400 text-2xl font-bold font-mono mt-2">{b.price}</p>
+            <p className={`text-xs mt-1 font-semibold ${b.change.startsWith('+') ? 'text-orange-400' : 'text-emerald-400'}`}>{b.change} today {b.status === 'Alert' && '· Intraday update triggered'}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div>
+      <h2 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">B2B Pricing Recommendations</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-5 gap-4 px-5 py-2.5 border-b border-gray-800 text-xs text-gray-500 font-semibold uppercase tracking-wider">
+          <span className="col-span-2">SKU</span><span>Current</span><span>Recommended</span><span>Status</span>
+        </div>
+        {PRICING_SKU.map((s, i) => (
+          <div key={i} className="grid grid-cols-5 gap-4 px-5 py-3.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 transition-colors items-center">
+            <div className="col-span-2">
+              <p className="text-white text-sm font-medium">{s.sku}</p>
+              <p className="text-gray-500 text-xs">{s.segment}</p>
+            </div>
+            <span className="text-gray-400 font-mono text-sm">{s.curr}</span>
+            <span className="text-amber-400 font-mono text-sm font-semibold">{s.rec}</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${
+              s.status === 'Update Available' ? 'bg-amber-900/30 text-amber-400' :
+              s.status === 'Overpriced'       ? 'bg-red-900/30 text-red-400' :
+                                               'bg-gray-800 text-gray-400'
+            }`}>{s.status}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // ── Tabs config ───────────────────────────────────────────────────────────────
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'command-centre', label: 'Command Centre' },
@@ -182,8 +295,8 @@ const Artemis: React.FC = () => {
       {/* Tab Content */}
       <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
         {tab === 'command-centre' && <CommandCentreTab />}
-        {tab === 'arbitrage'      && <div className="text-gray-500 text-sm">Arbitrage Intelligence — loading…</div>}
-        {tab === 'castrol'        && <div className="text-gray-500 text-sm">Castrol Pricing — loading…</div>}
+        {tab === 'arbitrage'      && <ArbitrageTab />}
+        {tab === 'castrol'        && <CastrolTab />}
         {tab === 'aviation'       && <div className="text-gray-500 text-sm">Aviation Fuel — loading…</div>}
         {tab === 'carbon'         && <div className="text-gray-500 text-sm">Carbon Portfolio — loading…</div>}
         {tab === 'compliance'     && <div className="text-gray-500 text-sm">Compliance — loading…</div>}
