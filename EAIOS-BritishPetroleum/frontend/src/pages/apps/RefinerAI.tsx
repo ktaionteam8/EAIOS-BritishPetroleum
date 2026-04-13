@@ -3723,13 +3723,33 @@ const ComplianceEnhancementsPanel: React.FC = () => (
   </div>
 );
 
-const ComplianceTab: React.FC = () => (
+type ComplianceItem = typeof COMPLIANCE_ITEMS[0];
+function mapAudit(a: API.ComplianceAudit): ComplianceItem {
+  const today = new Date();
+  const next = a.audit_date || '';
+  const daysLeft = next ? Math.round((new Date(next).getTime() - today.getTime()) / 86400000) : 0;
+  const raw = (a.status || '').toLowerCase();
+  const status = raw === 'pass' || raw === 'compliant' ? 'compliant'
+    : raw === 'warning' || raw === 'due-soon' ? 'due-soon'
+    : raw === 'fail' || raw === 'overdue' ? 'overdue'
+    : daysLeft < 0 ? 'overdue' : daysLeft < 30 ? 'due-soon' : 'compliant';
+  return { reg: a.site_id, site: a.site_id, status, next, daysLeft, inspector: '—', score: Math.round(a.score_pct) };
+}
+
+const ComplianceTab: React.FC = () => {
+  const [items, setItems] = useState<ComplianceItem[]>(COMPLIANCE_ITEMS);
+  useEffect(() => {
+    API.fetchComplianceAudits()
+      .then(list => { if (list.length > 0) setItems(list.map(mapAudit)); })
+      .catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-3 gap-3">
       {[
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='compliant').length), 'COMPLIANT', 'text-green-400','border-green-900/50'],
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='due-soon').length),  'DUE SOON',  'text-amber-400','border-amber-900/50'],
-        [String(COMPLIANCE_ITEMS.filter(i => i.status==='overdue').length),   'OVERDUE',   'text-red-400',  'border-red-900/50'],
+        [String(items.filter(i => i.status==='compliant').length), 'COMPLIANT', 'text-green-400','border-green-900/50'],
+        [String(items.filter(i => i.status==='due-soon').length),  'DUE SOON',  'text-amber-400','border-amber-900/50'],
+        [String(items.filter(i => i.status==='overdue').length),   'OVERDUE',   'text-red-400',  'border-red-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
           <p className={`text-2xl font-bold ${t}`}>{v}</p>
@@ -3743,8 +3763,8 @@ const ComplianceTab: React.FC = () => (
         <p className="text-gray-500 text-xs mt-0.5">API · ASME · ISO · PSM standards · Real-time compliance status</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {COMPLIANCE_ITEMS.map(item => {
-          const chip = COMP_CHIP[item.status];
+        {items.map(item => {
+          const chip = COMP_CHIP[item.status] ?? COMP_CHIP['compliant'];
           return (
             <div key={item.reg} className="px-5 py-4 hover:bg-gray-800/30 transition-colors">
               <div className="flex items-center gap-4">
@@ -3780,7 +3800,8 @@ const ComplianceTab: React.FC = () => (
     {/* Block N: Compliance Enhancements */}
     <ComplianceEnhancementsPanel />
   </div>
-);
+  );
+};
 
 // ── REQ-23: Live Demo / Guided Tour Mode ─────────────────────────────────────
 const TOUR_STEPS: { tab: TabId; title: string; desc: string }[] = [
