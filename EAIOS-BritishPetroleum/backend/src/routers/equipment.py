@@ -55,6 +55,37 @@ class EquipmentKPI(BaseModel):
     avg_rul_hours: Optional[float]
 
 
+# Static routes MUST come before /{equipment_id}/* dynamic routes
+@router.get("/failure-signatures", response_model=list[FailureSignature])
+async def failure_signatures():
+    return [
+        FailureSignature(equipment_type="Centrifugal Compressor", failure_mode="Bearing Failure", sensor_pattern="Vibration 1x↑ + temp↑", lead_time_hours=72, confidence_pct=87.0),
+        FailureSignature(equipment_type="Centrifugal Pump", failure_mode="Cavitation", sensor_pattern="Flow↓ + suction pressure↓", lead_time_hours=24, confidence_pct=91.0),
+        FailureSignature(equipment_type="Gas Turbine", failure_mode="Hot Section Corrosion", sensor_pattern="EGT spread↑ + vibration↑", lead_time_hours=168, confidence_pct=78.0),
+        FailureSignature(equipment_type="Heat Exchanger", failure_mode="Fouling", sensor_pattern="dT↓ + dp↑", lead_time_hours=336, confidence_pct=94.0),
+    ]
+
+
+@router.get("/kpis", response_model=list[EquipmentKPI])
+async def equipment_kpis(site_id: str | None = Query(None), db: AsyncSession = Depends(get_db)):
+    stmt = select(
+        Equipment.site_id,
+        func.count().label("total"),
+        func.sum((Equipment.ai_status == "critical").cast(func.Integer)).label("critical"),
+        func.sum((Equipment.ai_status == "warning").cast(func.Integer)).label("warning"),
+        func.sum((Equipment.ai_status == "healthy").cast(func.Integer)).label("healthy"),
+        func.avg(Equipment.health_score).label("avg_health"),
+        func.avg(Equipment.rul_hours).label("avg_rul"),
+    ).where(Equipment.is_active == True).group_by(Equipment.site_id)
+    if site_id:
+        stmt = stmt.where(Equipment.site_id == site_id)
+    rows = (await db.execute(stmt)).all()
+    return [EquipmentKPI(site_id=r.site_id, total=r.total or 0, critical=int(r.critical or 0),
+                         warning=int(r.warning or 0), healthy=int(r.healthy or 0),
+                         avg_health_score=round(float(r.avg_health or 80), 1),
+                         avg_rul_hours=round(float(r.avg_rul), 1) if r.avg_rul else None) for r in rows]
+
+
 @router.get("", response_model=list[EquipmentOut])
 async def list_equipment(
     site_id: str | None = Query(None),
@@ -173,33 +204,3 @@ async def get_rul(equipment_id: str, db: AsyncSession = Depends(get_db)):
         fail_date = (datetime.utcnow() + timedelta(hours=rul_h)).strftime("%Y-%m-%d")
     return RULOut(equipment_id=eq.id, tag=eq.tag, rul_hours=rul_h, rul_days=rul_d,
                   confidence_pct=85.0 if rul_h else 50.0, predicted_failure_date=fail_date)
-
-
-@router.get("/failure-signatures", response_model=list[FailureSignature])
-async def failure_signatures():
-    return [
-        FailureSignature(equipment_type="Centrifugal Compressor", failure_mode="Bearing Failure", sensor_pattern="Vibration 1x↑ + temp↑", lead_time_hours=72, confidence_pct=87.0),
-        FailureSignature(equipment_type="Centrifugal Pump", failure_mode="Cavitation", sensor_pattern="Flow↓ + suction pressure↓", lead_time_hours=24, confidence_pct=91.0),
-        FailureSignature(equipment_type="Gas Turbine", failure_mode="Hot Section Corrosion", sensor_pattern="EGT spread↑ + vibration↑", lead_time_hours=168, confidence_pct=78.0),
-        FailureSignature(equipment_type="Heat Exchanger", failure_mode="Fouling", sensor_pattern="dT↓ + dp↑", lead_time_hours=336, confidence_pct=94.0),
-    ]
-
-
-@router.get("/kpis", response_model=list[EquipmentKPI])
-async def equipment_kpis(site_id: str | None = Query(None), db: AsyncSession = Depends(get_db)):
-    stmt = select(
-        Equipment.site_id,
-        func.count().label("total"),
-        func.sum((Equipment.ai_status == "critical").cast(func.Integer)).label("critical"),
-        func.sum((Equipment.ai_status == "warning").cast(func.Integer)).label("warning"),
-        func.sum((Equipment.ai_status == "healthy").cast(func.Integer)).label("healthy"),
-        func.avg(Equipment.health_score).label("avg_health"),
-        func.avg(Equipment.rul_hours).label("avg_rul"),
-    ).where(Equipment.is_active == True).group_by(Equipment.site_id)
-    if site_id:
-        stmt = stmt.where(Equipment.site_id == site_id)
-    rows = (await db.execute(stmt)).all()
-    return [EquipmentKPI(site_id=r.site_id, total=r.total or 0, critical=int(r.critical or 0),
-                         warning=int(r.warning or 0), healthy=int(r.healthy or 0),
-                         avg_health_score=round(float(r.avg_health or 80), 1),
-                         avg_rul_hours=round(float(r.avg_rul), 1) if r.avg_rul else None) for r in rows]
