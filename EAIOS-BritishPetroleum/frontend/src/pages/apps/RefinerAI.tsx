@@ -278,6 +278,24 @@ function useApiDashboard() {
   return data;
 }
 
+/** Fetch equipment list with hardcoded fallback */
+const EQ_FALLBACK: API.Equipment[] = [
+  { id: '1', tag: 'C-101', name: 'Centrifugal Compressor · MAN Turbomachinery Series-7', equipment_type: 'compressor', site_id: 'Ruwais, UAE',     health_score: 38, rul_hours: 48,   ai_status: 'critical' },
+  { id: '2', tag: 'E-212', name: 'Shell & Tube Exchanger · Lummus 400v Series',           equipment_type: 'exchanger',  site_id: 'Houston, USA',     health_score: 52, rul_hours: 72,   ai_status: 'critical' },
+  { id: '3', tag: 'P-205', name: 'Centrifugal Pump · KSB Multitec 100-8',                 equipment_type: 'pump',       site_id: 'Houston, USA',     health_score: 64, rul_hours: 192,  ai_status: 'warning'  },
+  { id: '4', tag: 'T-405', name: 'Gas Turbine · GE Onsite-100A',                          equipment_type: 'turbine',    site_id: 'Ras Tanura, KSA',  health_score: 72, rul_hours: 336,  ai_status: 'warning'  },
+  { id: '5', tag: 'K-302', name: 'Centrifugal Compressor · Siemens SGT-800',              equipment_type: 'compressor', site_id: 'Jamnagar, India',  health_score: 91, rul_hours: 1080, ai_status: 'healthy'  },
+];
+function useApiEquipment(): API.Equipment[] {
+  const [equipment, setEquipment] = useState<API.Equipment[]>(EQ_FALLBACK);
+  useEffect(() => {
+    API.fetchEquipment()
+      .then(list => { if (list.length > 0) setEquipment(list); })
+      .catch(() => {});
+  }, []);
+  return equipment;
+}
+
 // ── A-01: SHAP Sparkline mini-chart ──────────────────────────────────────────
 const ShapSparkline: React.FC<{ values: number[]; color: string }> = ({ values, color }) => {
   const W = 88, H = 28;
@@ -1435,15 +1453,17 @@ const FleetHeatmap: React.FC = () => {
 const EquipmentHealthTab: React.FC = () => {
   const [fftAsset,    setFftAsset]    = useState('C-101');
   const [healthAsset, setHealthAsset] = useState('C-101');
+  const equipment = useApiEquipment();
+  const healthy  = equipment.filter(e => e.ai_status === 'healthy').length;
+  const warning  = equipment.filter(e => e.ai_status === 'warning').length;
+  const critical = equipment.filter(e => e.ai_status === 'critical').length;
   return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
-      {[['6,321','HEALTHY','text-green-400','border-green-900/50'],['387','WARNING','text-amber-400','border-amber-900/50'],['134','ACTION REQUIRED','text-red-400','border-red-900/50'],['6,842','TOTAL ASSETS','text-white','border-gray-800']].map(([v,l,t,b]) => (
-        <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
-          <p className={`text-2xl font-bold ${t}`}>{v}</p>
-          <p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">{l}</p>
-        </div>
-      ))}
+      <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-green-400">{healthy.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Healthy</p></div>
+      <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-amber-400">{warning.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Warning</p></div>
+      <div className="bg-gray-900 border border-red-900/50 rounded-xl p-4"><p className="text-2xl font-bold text-red-400">{critical.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Action Required</p></div>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4"><p className="text-2xl font-bold text-white">{equipment.length.toLocaleString()}</p><p className="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Total Assets</p></div>
     </div>
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
@@ -1459,11 +1479,12 @@ const EquipmentHealthTab: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          <EquipmentRow tag="C-101" name="Centrifugal Compressor · MAN Turbomachinery Series-7" site="Ruwais, UAE"     health={38} rul="48h"  aiStatus="CRITICAL" action="Dispatch" />
-          <EquipmentRow tag="E-212" name="Shell & Tube Exchanger · Lummus 400v Series"           site="Houston, USA"   health={52} rul="3d"   aiStatus="CRITICAL" action="Dispatch" />
-          <EquipmentRow tag="P-205" name="Centrifugal Pump · KSB Multitec 100-8"                 site="Houston, USA"   health={64} rul="8d"   aiStatus="WARNING"  action="Schedule" />
-          <EquipmentRow tag="T-405" name="Gas Turbine · GE Onsite-100A"                          site="Ras Tanura, KSA" health={72} rul="14d"  aiStatus="WARNING"  action="Schedule" />
-          <EquipmentRow tag="K-302" name="Centrifugal Compressor · Siemens SGT-800"              site="Jamnagar, India" health={91} rul="45d"  aiStatus="HEALTHY"  action="Monitor"  />
+          {equipment.map(e => {
+            const status = e.ai_status.toUpperCase() as 'CRITICAL' | 'WARNING' | 'HEALTHY';
+            const rul = e.rul_hours == null ? '—' : e.rul_hours < 24 ? `${e.rul_hours}h` : `${Math.round(e.rul_hours / 24)}d`;
+            const action = status === 'CRITICAL' ? 'Dispatch' : status === 'WARNING' ? 'Schedule' : 'Monitor';
+            return <EquipmentRow key={e.id} tag={e.tag} name={e.name} site={e.site_id} health={e.health_score} rul={rul} aiStatus={status} action={action} />;
+          })}
         </tbody>
       </table>
     </div>
