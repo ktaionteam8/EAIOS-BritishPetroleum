@@ -1601,7 +1601,27 @@ const OP_ENVELOPE: { param: string; current: number; normal_lo: number; normal_h
   { param:'Motor Current',        current:142,  normal_lo:95,   normal_hi:110,  unit:'A'     },
 ];
 
-const DigitalTwinEnhancementsPanel: React.FC = () => (
+const DigitalTwinEnhancementsPanel: React.FC = () => {
+  const [twinAssets, setTwinAssets] = useState(TWIN_ASSETS);
+  const [scenarios, setScenarios] = useState(TWIN_SCENARIOS);
+  useEffect(() => {
+    API.fetchDigitalTwinRegistry().then(list => {
+      if (list.length > 0) setTwinAssets(list.map(a => ({
+        id: a.equipment_id, name: `Twin — ${a.equipment_id}`, type: a.twin_type,
+        site: 'N/A', fidelity: a.fidelity.charAt(0).toUpperCase() + a.fidelity.slice(1),
+        lastSync: a.last_sync, status: a.status,
+      })));
+    }).catch(() => {});
+    API.fetchScenarios().then(list => {
+      if (list.length > 0) setScenarios(list.map(s => ({
+        scenario: s.name,
+        outcome: s.description ?? `RUL delta: ${(s.rul_delta_hours ?? 0).toFixed(0)}h`,
+        impact: s.impact === 'positive' ? 'positive' : 'negative',
+        runTime: '1.0s',
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     {/* K-01: Twin registry */}
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -1610,7 +1630,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
         <p className="text-gray-500 text-xs">Live fidelity status · Sync frequency · Physics-based models</p>
       </div>
       <div className="grid grid-cols-4 divide-x divide-gray-800">
-        {TWIN_ASSETS.map(a => {
+        {twinAssets.map(a => {
           const sc = { critical:'border-t-red-500 text-red-400', warning:'border-t-amber-500 text-amber-400', healthy:'border-t-green-500 text-green-400' };
           return (
             <div key={a.id} className={`p-4 border-t-2 ${a.status==='critical'?'border-t-red-500':a.status==='warning'?'border-t-amber-500':'border-t-green-500'}`}>
@@ -1661,7 +1681,7 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
         <p className="text-gray-500 text-xs">Physics-based simulation · Real-time scenario evaluation</p>
       </div>
       <div className="divide-y divide-gray-800">
-        {TWIN_SCENARIOS.map((s,i) => (
+        {scenarios.map((s,i) => (
           <div key={i} className="px-5 py-4 flex items-start gap-4">
             <span className={`flex-shrink-0 text-xs font-bold px-2 py-0.5 rounded mt-0.5 ${s.impact==='positive'?'bg-green-900/40 text-green-400':'bg-red-900/40 text-red-400'}`}>SIM {i+1}</span>
             <div className="flex-1">
@@ -1674,7 +1694,8 @@ const DigitalTwinEnhancementsPanel: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const DigitalTwinTab: React.FC = () => (
   <div className="space-y-4">
@@ -4333,13 +4354,24 @@ const FMEA_DATA = [
   { type:'Separator Vessel',       mode:'Overpressure',      effect:'Vessel rupture, HSE catastrophe',     cause:'PSV failure / instrumentation fault',  control:'PSV testing, PLC interlocks',          s:5, o:1, d:1, action:'Redundant PSV, SIL-2 interlock review' },
 ];
 
-const FMEATab: React.FC = () => (
+const FMEATab: React.FC = () => {
+  const [fmeaData, setFmeaData] = useState(FMEA_DATA);
+  useEffect(() => {
+    API.fetchFMEA().then(list => {
+      if (list.length > 0) setFmeaData(list.map(f => ({
+        type: f.equipment_type, mode: f.failure_mode, effect: f.effect, cause: f.cause,
+        control: f.current_controls, s: f.severity, o: f.occurrence, d: f.detection,
+        action: f.recommended_action,
+      })));
+    }).catch(() => {});
+  }, []);
+  return (
   <div className="space-y-4">
     <div className="grid grid-cols-4 gap-3">
       {[
-        ['7','FAILURE MODES','text-white','border-gray-800'],
-        [String(FMEA_DATA.filter(f => f.s*f.o*f.d >= 15).length),'CRITICAL RPN ≥15','text-red-400','border-red-900/50'],
-        [String(FMEA_DATA.filter(f => { const r=f.s*f.o*f.d; return r>=10&&r<15; }).length),'HIGH RPN 10–14','text-amber-400','border-amber-900/50'],
+        [String(fmeaData.length),'FAILURE MODES','text-white','border-gray-800'],
+        [String(fmeaData.filter(f => f.s*f.o*f.d >= 15).length),'CRITICAL RPN ≥15','text-red-400','border-red-900/50'],
+        [String(fmeaData.filter(f => { const r=f.s*f.o*f.d; return r>=10&&r<15; }).length),'HIGH RPN 10–14','text-amber-400','border-amber-900/50'],
         ['IEC 60812','FMEA STANDARD','text-purple-400','border-purple-900/50'],
       ].map(([v,l,t,b]) => (
         <div key={l} className={`bg-gray-900 border ${b} rounded-xl p-4`}>
@@ -4361,7 +4393,7 @@ const FMEATab: React.FC = () => (
             ))}
           </tr></thead>
           <tbody>
-            {FMEA_DATA.map((f, i) => {
+            {fmeaData.map((f, i) => {
               const rpn = f.s * f.o * f.d;
               const rpnCol = rpn >= 15 ? '#f87171' : rpn >= 10 ? '#fb923c' : rpn >= 5 ? '#fbbf24' : '#4ade80';
               return (
@@ -4386,7 +4418,8 @@ const FMEATab: React.FC = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── Tab content router ────────────────────────────────────────────────────────
 const TabContent: React.FC<{ tab: TabId }> = ({ tab }) => {
