@@ -11,6 +11,7 @@ from src.models.edge_ai import EdgeNode, EdgeModelDeployment, LatencyBenchmark
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 # ── OT Data ──────────────────────────────────────────────────────────────────
 ot_router = APIRouter(prefix="/api/ot-data", tags=["ot-data"])
@@ -33,6 +34,7 @@ class OTSourceOut(BaseModel):
 async def list_ot_sources(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(OTDataSource)
     if site_id:
@@ -59,6 +61,7 @@ async def list_quality_issues(
     source_id: str | None = Query(None),
     severity: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(OTQualityIssue).order_by(OTQualityIssue.detected_at.desc())
     if source_id:
@@ -101,6 +104,7 @@ class TrainingModuleOut(BaseModel):
 async def list_adoption_metrics(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(AdoptionMetric).order_by(AdoptionMetric.metric_date.desc())
     if site_id:
@@ -110,7 +114,10 @@ async def list_adoption_metrics(
 
 
 @adoption_router.get("/training", response_model=list[TrainingModuleOut])
-async def list_training_modules(db: AsyncSession = Depends(get_db)):
+async def list_training_modules(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(TrainingModule))
     return result.scalars().all()
 
@@ -127,7 +134,10 @@ class AdoptionBarrierOut(BaseModel):
 
 
 @adoption_router.get("/barriers", response_model=list[AdoptionBarrierOut])
-async def list_barriers(db: AsyncSession = Depends(get_db)):
+async def list_barriers(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(
         select(AdoptionBarrier).order_by(AdoptionBarrier.vote_count.desc())
     )
@@ -149,6 +159,7 @@ class ChangeChampionOut(BaseModel):
 async def list_champions(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(ChangeChampion).order_by(ChangeChampion.sessions_count.desc())
     if site_id:
@@ -196,19 +207,30 @@ class DeliveryRiskOut(BaseModel):
 
 
 @wave_router.get("", response_model=list[WaveOut])
-async def list_waves(db: AsyncSession = Depends(get_db)):
+async def list_waves(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(ImplementationWave).order_by(ImplementationWave.wave_number))
     return result.scalars().all()
 
 
 @wave_router.get("/{wave_id}/milestones", response_model=list[MilestoneOut])
-async def list_milestones(wave_id: str, db: AsyncSession = Depends(get_db)):
+async def list_milestones(
+    wave_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(WaveMilestone).where(WaveMilestone.wave_id == wave_id))
     return result.scalars().all()
 
 
 @wave_router.get("/{wave_id}/risks", response_model=list[DeliveryRiskOut])
-async def list_risks(wave_id: str, db: AsyncSession = Depends(get_db)):
+async def list_risks(
+    wave_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(DeliveryRisk).where(DeliveryRisk.wave_id == wave_id))
     return result.scalars().all()
 
@@ -225,6 +247,7 @@ async def create_risk(
     wave_id: str,
     body: DeliveryRiskCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     wave = await db.get(ImplementationWave, wave_id)
     if wave is None:
@@ -268,6 +291,7 @@ class LatencyBenchmarkOut(BaseModel):
 async def list_nodes(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(EdgeNode)
     if site_id:
@@ -277,12 +301,18 @@ async def list_nodes(
 
 
 @edge_router.get("/benchmarks", response_model=list[LatencyBenchmarkOut])
-async def list_benchmarks(db: AsyncSession = Depends(get_db)):
+async def list_benchmarks(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(LatencyBenchmark).order_by(LatencyBenchmark.benchmark_date.desc()))
     return result.scalars().all()
 
 
 @edge_router.get("/latency", response_model=list[LatencyBenchmarkOut])
-async def list_latency(db: AsyncSession = Depends(get_db)):
+async def list_latency(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(LatencyBenchmark).order_by(LatencyBenchmark.benchmark_date.desc()))
     return result.scalars().all()

@@ -2,38 +2,37 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!email.trim()) {
-      setError('Email address is required.');
+    if (!username.trim()) {
+      setError('Username is required.');
       return;
     }
-    if (!isValidEmail(email)) {
-      setError('Please enter a valid email address.');
+    if (!password) {
+      setError('Password is required.');
       return;
     }
 
     setIsLoading(true);
-    // Simulate brief auth delay for UX
-    setTimeout(() => {
-      login(email.trim());
+    try {
+      await login(username.trim(), password);
       navigate('/dashboard');
-    }, 600);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -86,25 +85,25 @@ export const LoginPage: React.FC = () => {
           <h2 className="text-lg font-semibold text-white mb-6">Sign in to your account</h2>
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* Email field */}
+            {/* Username field */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-1.5" htmlFor="email">
-                Email address
+              <label className="block text-sm font-medium text-gray-300 mb-1.5" htmlFor="username">
+                Username
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </span>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="developer@bp.com"
-                  autoComplete="email"
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="admin"
+                  autoComplete="username"
                   className="w-full bg-bp-card border border-bp-border rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-bp-blue focus:ring-1 focus:ring-bp-blue transition-colors"
                 />
               </div>
@@ -114,7 +113,6 @@ export const LoginPage: React.FC = () => {
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-1.5" htmlFor="password">
                 Password
-                <span className="ml-2 text-xs text-gray-500 font-normal">(optional)</span>
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">

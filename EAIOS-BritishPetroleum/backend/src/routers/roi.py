@@ -8,6 +8,7 @@ from src.models.roi import KpiSnapshot, RoiContribution, BudgetActual, CostSavin
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/roi", tags=["roi"])
 
@@ -38,6 +39,7 @@ async def list_kpis(
     scope: str | None = Query(None, description="fleet|site"),
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(KpiSnapshot).order_by(KpiSnapshot.snapshot_date.desc())
     if scope:
@@ -53,6 +55,7 @@ async def list_cost_savings(
     site_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(CostSavingEvent).order_by(CostSavingEvent.event_date.desc()).limit(limit)
     if site_id:

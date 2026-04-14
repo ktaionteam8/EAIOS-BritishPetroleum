@@ -8,6 +8,7 @@ from src.models.energy import EnergyReading, EnergyTarget, EnergySavingEvent
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/energy", tags=["energy"])
 
@@ -47,6 +48,7 @@ async def list_readings(
     site_id: str | None = Query(None),
     limit: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(EnergyReading).order_by(EnergyReading.reading_date.desc()).limit(limit)
     if site_id:
@@ -56,7 +58,10 @@ async def list_readings(
 
 
 @router.get("/targets", response_model=list[EnergyTargetOut])
-async def list_targets(db: AsyncSession = Depends(get_db)):
+async def list_targets(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(EnergyTarget).order_by(EnergyTarget.fiscal_year.desc()))
     return result.scalars().all()
 
@@ -66,6 +71,7 @@ async def list_savings(
     site_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(EnergySavingEvent).order_by(EnergySavingEvent.event_date.desc()).limit(limit)
     if site_id:

@@ -13,6 +13,7 @@ from src.schemas.work_orders import (
     SparePartOut, SparePartStockOut,
     ProcurementOrderCreate, ProcurementOrderOut,
 )
+from src.middleware.auth import get_current_user
 
 router = APIRouter(tags=["work-orders"])
 
@@ -24,6 +25,7 @@ async def list_work_orders(
     priority: str | None = Query(None),
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(WorkOrder).order_by(WorkOrder.created_at.desc())
     if status:
@@ -37,7 +39,11 @@ async def list_work_orders(
 
 
 @router.post("/api/work-orders", response_model=WorkOrderOut, status_code=201)
-async def create_work_order(body: WorkOrderCreate, db: AsyncSession = Depends(get_db)):
+async def create_work_order(
+    body: WorkOrderCreate,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     wo_number = f"WO-{datetime.utcnow().strftime('%Y')}-{str(uuid.uuid4())[:6].upper()}"
     wo = WorkOrder(wo_number=wo_number, **body.model_dump())
     db.add(wo)
@@ -51,6 +57,7 @@ async def update_work_order_status(
     wo_id: str,
     body: WorkOrderStatusUpdate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     wo = await db.get(WorkOrder, wo_id)
     if wo is None:
@@ -68,7 +75,10 @@ async def update_work_order_status(
 # ── Spare Parts ───────────────────────────────────────────────────────────────
 
 @router.get("/api/spare-parts", response_model=list[SparePartOut])
-async def list_spare_parts(db: AsyncSession = Depends(get_db)):
+async def list_spare_parts(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(SparePart).where(SparePart.is_active == True).order_by(SparePart.criticality_score.desc()))
     return result.scalars().all()
 
@@ -77,6 +87,7 @@ async def list_spare_parts(db: AsyncSession = Depends(get_db)):
 async def list_stock(
     site_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(SparePartStock)
     if site_id:
@@ -89,6 +100,7 @@ async def list_stock(
 async def list_procurement(
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(ProcurementOrder).order_by(ProcurementOrder.ordered_date.desc())
     if status:
@@ -101,6 +113,7 @@ async def list_procurement(
 async def create_procurement_order(
     body: ProcurementOrderCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     part = await db.get(SparePart, body.part_id)
     if part is None:

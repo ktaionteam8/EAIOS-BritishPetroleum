@@ -1,24 +1,40 @@
 /**
- * Centralised API client for EAIOS-BP backend (http://localhost:8000).
+ * Centralised API client for EAIOS-BP backend.
  * All domain-specific fetchers live here so components stay thin.
  */
+import { getAuthToken } from '../context/AuthContext';
 
-const BASE = process.env.REACT_APP_API_URL ?? "http://localhost:8000";
+if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
+  console.error(
+    '[EAIOS] REACT_APP_API_URL is not set. ' +
+    'Set it to your Render backend URL in Vercel project settings.'
+  );
+}
+
+const BASE = process.env.REACT_APP_API_URL ?? 'http://localhost:8000';
+
+function authHeaders(extra?: Record<string, string>): Record<string, string> {
+  const token = getAuthToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
 
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE}${path}`);
   if (params) {
     Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v));
   }
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: authHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`POST ${path} → ${res.status}`);
@@ -27,8 +43,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 async function patch<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    method: 'PATCH',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`PATCH ${path} → ${res.status}`);
@@ -270,3 +286,109 @@ export interface RiskMatrixEntry { equipment_id: string; tag: string; name: stri
 export interface InspectionRoute { id: string; route_code: string; name: string; priority: string; site_id: string; distance_km: number | null; estimated_duration_min: number | null; inspector_name: string | null; status: string; scheduled_date: string | null; completed_at: string | null; }
 export interface ChecklistItem { id: string; route_id: string; asset_tag: string; check_description: string; iso_standard: string | null; sort_order: number; is_completed: boolean; completed_at: string | null; pass_fail: string | null; observation_notes: string | null; }
 export interface Contractor { id: string; company_name: string; specialty: string; site_id: string | null; }
+
+// ── ARTEMIS ───────────────────────────────────────────────────────────────────
+export const fetchArtemisAgents = () =>
+  get<ArtemisAgentStatus[]>("/api/artemis/agents");
+
+export const fetchArtemisModels = () =>
+  get<ArtemisModelRegistry[]>("/api/artemis/models");
+
+export const fetchArtemisAuditLog = (limit = 50) =>
+  get<ArtemisAuditLog[]>("/api/artemis/audit-log", { limit: String(limit) });
+
+export const fetchArtemisCompliance = () =>
+  get<ArtemisComplianceEvent[]>("/api/artemis/compliance");
+
+export const fetchArbitrageOpportunities = (status = "open") =>
+  get<ArbitrageOpportunity[]>("/api/artemis/arbitrage/opportunities", { status });
+
+export const fetchArbitrageMetrics = (days = 30) =>
+  get<ArbitrageMetric[]>("/api/artemis/arbitrage/metrics", { days: String(days) });
+
+export const fetchBaseOilPrices = () =>
+  get<BaseOilPrice[]>("/api/artemis/castrol/base-oil");
+
+export const fetchCastrolPricingRecs = (geography?: string) =>
+  get<CastrolPricingRec[]>("/api/artemis/castrol/pricing", geography ? { geography } : undefined);
+
+export const fetchAviationForecasts = (limit = 10) =>
+  get<AviationForecast[]>("/api/artemis/aviation/forecasts", { limit: String(limit) });
+
+export const fetchAviationContracts = (status?: string) =>
+  get<AviationContract[]>("/api/artemis/aviation/contracts", status ? { status } : undefined);
+
+export const fetchCarbonPositions = () =>
+  get<CarbonPosition[]>("/api/artemis/carbon/positions");
+
+export const fetchCarbonRecommendations = () =>
+  get<CarbonRecommendation[]>("/api/artemis/carbon/recommendations");
+
+// ARTEMIS type stubs
+export interface ArtemisAgentStatus {
+  id: string; agent_key: string; agent_name: string; scope: string;
+  status: string; signals_today: number; last_signal_at: string | null;
+  primary_metric_value: string | null; primary_metric_label: string | null;
+  updated_at: string;
+}
+export interface ArtemisModelRegistry {
+  id: string; model_name: string; version: string; status: string;
+  accuracy_pct: number; drift_status: string; next_review_days: number;
+  agent_key: string; last_validated_at: string;
+}
+export interface ArtemisAuditLog {
+  id: string; action_type: string; agent_key: string;
+  recommendation_summary: string | null; estimated_pnl_usd: number | null;
+  confidence_pct: number | null; regulatory_tier: string;
+  approved: boolean; created_at: string;
+}
+export interface ArtemisComplianceEvent {
+  id: string; framework: string; status: string; detail: string;
+  jurisdiction: string | null; agent_key: string | null; created_at: string;
+}
+export interface ArbitrageOpportunity {
+  id: string; spread_name: string; spread_type: string; leg_a: string; leg_b: string;
+  current_level: string; current_level_numeric: number; percentile_rank: number;
+  estimated_pnl_usd: number; execution_window: string; confidence_pct: number;
+  status: string; regulatory_tier: string; approved_by: string | null;
+  approved_at: string | null; created_at: string;
+}
+export interface ArbitrageMetric {
+  id: string; metric_date: string; spreads_monitored: number;
+  opportunities_detected: number; opportunities_approved: number;
+  total_pnl_identified_usd: number; total_pnl_realised_usd: number;
+  avg_signal_latency_seconds: number;
+}
+export interface BaseOilPrice {
+  id: string; grade: string; price_per_mt: number; price_display: string;
+  change_pct: number; change_display: string; alert_status: string; price_date: string;
+}
+export interface CastrolPricingRec {
+  id: string; sku_code: string; sku_name: string; segment: string; geography: string;
+  current_display: string; recommended_display: string; margin_impact_pct: number;
+  margin_impact_display: string; rec_status: string; confidence_pct: number;
+  competitor_benchmark: string | null; is_intraday_update: boolean; generated_at: string;
+}
+export interface AviationForecast {
+  id: string; iata_code: string; airport_name: string | null;
+  d30_display: string; d90_display: string; d90_delta_pct: number;
+  d90_delta_display: string; confidence_interval_pct: number;
+  model_mape_pct: number; forecast_date: string;
+}
+export interface AviationContract {
+  id: string; iata_code: string; airline: string; contract_type: string;
+  status: string; days_to_renewal: number; contract_value_usd: number | null;
+  recommended_structure: string | null; scenario_baseline_usd: number | null;
+  pack_generated_at: string | null;
+}
+export interface CarbonPosition {
+  id: string; credit_type: string; credit_category: string;
+  holdings_display: string; obligation_display: string;
+  net_position_tonnes: number; net_position_display: string;
+  price_display: string; market_value_usd: number | null; position_date: string;
+}
+export interface CarbonRecommendation {
+  id: string; credit_type: string; action: string; urgency: string;
+  quantity_tonnes: number | null; expected_cost_benefit_usd: number | null;
+  rationale: string; status: string; created_at: string;
+}

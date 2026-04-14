@@ -8,6 +8,7 @@ from src.models.offshore import OffshorePlatform, WeatherForecast, WellIntegrity
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+from src.middleware.auth import get_current_user
 
 router = APIRouter(prefix="/api/offshore", tags=["offshore"])
 
@@ -59,7 +60,10 @@ class SubseaAlertOut(BaseModel):
 
 
 @router.get("/platforms", response_model=list[PlatformOut])
-async def list_platforms(db: AsyncSession = Depends(get_db)):
+async def list_platforms(
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
     result = await db.execute(select(OffshorePlatform))
     return result.scalars().all()
 
@@ -69,6 +73,7 @@ async def get_weather(
     platform_id: str,
     limit: int = Query(7, ge=1, le=30),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     result = await db.execute(
         select(WeatherForecast)
@@ -84,6 +89,7 @@ async def list_well_integrity(
     platform_id: str | None = Query(None),
     risk_level: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(WellIntegrity)
     if platform_id:
@@ -97,6 +103,7 @@ async def list_well_integrity(
 @router.get("/subsea-alerts", response_model=list[SubseaAlertOut])
 async def list_subsea_alerts(
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
 ):
     stmt = select(SubseaAlert)
     result = await db.execute(stmt)

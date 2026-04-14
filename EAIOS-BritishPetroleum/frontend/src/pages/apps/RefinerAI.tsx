@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as API from '../../api/client';
+import { getAuthToken } from '../../context/AuthContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -1903,9 +1904,13 @@ const AiAdvisorTab: React.FC = () => {
         content: m.text,
       }));
 
+      const token = getAuthToken();
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ messages: apiMessages }),
       });
 
