@@ -1,18 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { NotificationPanel } from './NotificationPanel';
+
+const UNREAD_COUNT = 3; // matches unread notifications in NotificationPanel
 
 export const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close panels when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -72,7 +80,30 @@ export const Header: React.FC = () => {
           </span>
         </div>
 
-        {/* Right — User dropdown */}
+        {/* Right — Notification bell + User dropdown */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+
+        {/* Notification bell */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => { setNotifOpen((o) => !o); setDropdownOpen(false); }}
+            className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-bp-surface hover:bg-bp-card border border-bp-border transition-colors"
+            aria-label="Notifications"
+          >
+            <svg className="w-4.5 h-4.5 text-gray-300" style={{ width: '18px', height: '18px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {UNREAD_COUNT > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                {UNREAD_COUNT}
+              </span>
+            )}
+          </button>
+          <NotificationPanel isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+        </div>
+
+        {/* User dropdown */}
         <div className="relative flex-shrink-0" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((o) => !o)}
@@ -162,6 +193,8 @@ export const Header: React.FC = () => {
             </div>
           )}
         </div>
+
+        </div>{/* end Right flex wrapper */}
       </div>
     </header>
   );
