@@ -58,6 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true);
     setLoginError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90_000);
     try {
       const form = new URLSearchParams();
       form.append('username', username);
@@ -66,6 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: form.toString(),
+        signal: controller.signal,
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { detail?: string };
@@ -75,10 +78,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(STORAGE_KEY, data.access_token);
       setUser(tokenToUser(data.access_token));
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        const msg = 'Server is starting up — Render sleeps when idle. Please try again in 30 seconds.';
+        setLoginError(msg);
+        throw new Error(msg);
+      }
       const msg = err instanceof Error ? err.message : 'Login failed.';
       setLoginError(msg);
       throw err;
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }, []);
