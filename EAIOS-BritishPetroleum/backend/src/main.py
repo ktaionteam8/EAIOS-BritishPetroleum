@@ -74,13 +74,6 @@ app.include_router(field_ops_router)
 app.include_router(artemis_router)
 app.include_router(auth_router)
 
-
-@app.get("/health", tags=["health"])
-async def health_check():
-    """Root health check — used by Render to verify the service is live."""
-    return {"status": "ok"}
-
-
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
 _anthropic = AsyncAnthropic()
 
