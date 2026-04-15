@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { User } from '../types';
 
 const STORAGE_KEY = 'eaios_bp_token';
-const BASE = process.env.REACT_APP_API_URL ?? 'http://localhost:8000';
+// Empty string → relative URLs → Vercel proxy routes to eaios-bp-api.onrender.com.
+// Local dev: set REACT_APP_API_URL=http://localhost:8000 in frontend/.env.local
+const BASE = process.env.REACT_APP_API_URL ?? '';
 
 /**
  * Returns the stored JWT access token, or null if not logged in.
