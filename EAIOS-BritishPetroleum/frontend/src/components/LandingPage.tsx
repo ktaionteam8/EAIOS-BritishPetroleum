@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { DomainDropdown } from './DomainDropdown';
 import { ApplicationCard } from './ApplicationCard';
 import { AgentCard } from './AgentCard';
-import { Domain, DOMAINS, APPLICATIONS, AGENTS } from '../types';
+import { Domain, DOMAINS, APPLICATIONS, AGENTS, AppCategory } from '../types';
+
+type CategoryFilter = 'All' | AppCategory;
+const CATEGORY_FILTERS: CategoryFilter[] = ['All', 'Transactional', 'Analytical', 'AI-Powered'];
 
 const DOMAIN_BG_COLORS: Record<string, string> = {
   '01-finance-accounting':             'from-emerald-900/20 to-transparent border-emerald-800/20',
@@ -34,10 +37,18 @@ const DOMAIN_STATS: Record<string, Array<{ label: string; value: string }>> = {
 
 export const LandingPage: React.FC = () => {
   const [selectedDomain, setSelectedDomain] = useState<Domain>(DOMAINS[0]);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
+
+  // Reset filter when domain changes
+  useEffect(() => { setCategoryFilter('All'); }, [selectedDomain]);
 
   const domainApps = APPLICATIONS.filter(
     (app) => app.domainId === selectedDomain.id
   );
+  const filteredApps = categoryFilter === 'All'
+    ? domainApps
+    : domainApps.filter((app) => app.category === categoryFilter);
+
   const domainAgents = AGENTS.filter(
     (a) => a.domainId === selectedDomain.id
   );
@@ -87,12 +98,12 @@ export const LandingPage: React.FC = () => {
 
         {/* Applications section */}
         <section>
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-lg font-semibold text-white">Applications</h2>
               <p className="text-gray-500 text-sm">
                 {domainApps.length > 0
-                  ? `${domainApps.length} application${domainApps.length !== 1 ? 's' : ''} deployed in this domain`
+                  ? `${filteredApps.length} of ${domainApps.length} application${domainApps.length !== 1 ? 's' : ''} deployed in this domain`
                   : 'No applications deployed in this domain yet'}
               </p>
             </div>
@@ -104,11 +115,45 @@ export const LandingPage: React.FC = () => {
             </button>
           </div>
 
-          {domainApps.length > 0 ? (
+          {/* Category filter tabs */}
+          {domainApps.length > 0 && (
+            <div className="flex items-center gap-2 mb-5 flex-wrap">
+              {CATEGORY_FILTERS.map((cat) => {
+                const count = cat === 'All' ? domainApps.length : domainApps.filter(a => a.category === cat).length;
+                const isActive = categoryFilter === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                      isActive
+                        ? 'bg-bp-blue/20 border-bp-blue text-bp-blue'
+                        : 'bg-transparent border-bp-border text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                    }`}
+                  >
+                    {cat}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                      isActive ? 'bg-bp-blue/30 text-bp-blue' : 'bg-bp-surface text-gray-500'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {filteredApps.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {domainApps.map((app) => (
+              {filteredApps.map((app) => (
                 <ApplicationCard key={app.id} application={app} />
               ))}
+            </div>
+          ) : domainApps.length > 0 ? (
+            /* No results for current filter */
+            <div className="border border-dashed border-bp-border rounded-2xl p-10 text-center">
+              <p className="text-gray-500 text-sm">No <span className="text-gray-300">{categoryFilter}</span> applications in this domain.</p>
+              <button onClick={() => setCategoryFilter('All')} className="mt-3 text-xs text-bp-blue hover:underline">Show all</button>
             </div>
           ) : (
             /* Empty state */
