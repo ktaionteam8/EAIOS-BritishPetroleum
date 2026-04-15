@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 
 const DashboardRoute = lazy(() => import('./pages/dashboard'));
 const RefinerAIRoute = lazy(() => import('./pages/apps/RefinerAI'));
@@ -20,17 +21,19 @@ const LoadingSpinner: React.FC = () => (
 
 const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          <Route path="/dashboard"       element={<DashboardRoute />} />
-          <Route path="/apps/refiner-ai" element={<RefinerAIRoute />} />
-          <Route path="/apps/artemis"    element={<ArtemisRoute />} />
-          <Route path="/"                element={<Navigate to="/dashboard" replace />} />
-          <Route path="*"                element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/dashboard"       element={<DashboardRoute />} />
+            <Route path="/apps/refiner-ai" element={<RefinerAIRoute />} />
+            <Route path="/apps/artemis"    element={<ArtemisRoute />} />
+            <Route path="/"                element={<Navigate to="/dashboard" replace />} />
+            <Route path="*"                element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   );
 };
 
