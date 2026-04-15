@@ -69,6 +69,9 @@ export const Header: React.FC = () => {
             <div className="text-gray-400 text-xs leading-tight hidden sm:block">
               Enterprise AI Operating System
             </div>
+            <div className="text-bp-green text-[10px] leading-tight hidden sm:block font-medium tracking-wide">
+              Powered by Capgemini
+            </div>
           </div>
         </div>
 
