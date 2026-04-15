@@ -1,17 +1,9 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
 
-const LoginRoute     = lazy(() => import('./pages/login'));
 const DashboardRoute = lazy(() => import('./pages/dashboard'));
 const RefinerAIRoute = lazy(() => import('./pages/apps/RefinerAI'));
 const ArtemisRoute   = lazy(() => import('./pages/apps/Artemis'));
-
-/** Redirects unauthenticated users to /login. */
-const PrivateRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? element : <Navigate to="/login" replace />;
-};
 
 const LoadingSpinner: React.FC = () => (
   <div className="min-h-screen bg-bp-dark flex items-center justify-center">
@@ -28,20 +20,17 @@ const LoadingSpinner: React.FC = () => (
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route path="/login"           element={<LoginRoute />} />
-            <Route path="/dashboard"       element={<PrivateRoute element={<DashboardRoute />} />} />
-            <Route path="/apps/refiner-ai" element={<PrivateRoute element={<RefinerAIRoute />} />} />
-            <Route path="/apps/artemis"    element={<PrivateRoute element={<ArtemisRoute />} />} />
-            <Route path="/"                element={<Navigate to="/dashboard" replace />} />
-            <Route path="*"                element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route path="/dashboard"       element={<DashboardRoute />} />
+          <Route path="/apps/refiner-ai" element={<RefinerAIRoute />} />
+          <Route path="/apps/artemis"    element={<ArtemisRoute />} />
+          <Route path="/"                element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"                element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
 };
 
