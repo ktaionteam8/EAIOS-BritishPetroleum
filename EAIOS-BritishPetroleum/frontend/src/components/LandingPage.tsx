@@ -28,7 +28,7 @@ const DOMAIN_ACCENT: Record<string, string> = {
 
 const DOMAIN_STATS: Record<string, Array<{ label: string; value: string }>> = {
   '01-finance-accounting':             [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '24' }, { label: 'Data Sources', value: 'SAP' }],
-  '02-human-resources-safety':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '18' }, { label: 'Data Sources', value: 'Workday, SAP HR' }],
+  '02-human-resources-safety':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '18' }, { label: 'Data Sources', value: 'SAP HR' }],
   '03-it-operations-cybersecurity':    [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '32' }, { label: 'Data Sources', value: 'SIEM, ServiceNow' }],
   '04-commercial-trading':             [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '28' }, { label: 'Data Sources', value: 'Bloomberg, ICE' }],
   '05-manufacturing-plant-operations': [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '40' }, { label: 'Data Sources', value: 'OSIsoft PI, DCS' }],
