@@ -4,14 +4,9 @@
  */
 import { getAuthToken } from '../context/AuthContext';
 
-if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
-  console.error(
-    '[EAIOS] REACT_APP_API_URL is not set. ' +
-    'Set it to your Render backend URL in Vercel project settings.'
-  );
-}
-
-const BASE = process.env.REACT_APP_API_URL ?? 'http://localhost:8000';
+// Empty string → relative URLs → Vercel proxy routes to eaios-bp-api.onrender.com.
+// Local dev: set REACT_APP_API_URL=http://localhost:8000 in frontend/.env.local
+const BASE = process.env.REACT_APP_API_URL ?? '';
 
 function authHeaders(extra?: Record<string, string>): Record<string, string> {
   const token = getAuthToken();
@@ -22,7 +17,8 @@ function authHeaders(extra?: Record<string, string>): Record<string, string> {
 }
 
 async function get<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const url = new URL(`${BASE}${path}`);
+  // Use location.origin as base so relative paths work when BASE is '' (Vercel proxy mode)
+  const url = new URL(`${BASE}${path}`, location.origin);
   if (params) {
     Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v));
   }
