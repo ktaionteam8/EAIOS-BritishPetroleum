@@ -31,7 +31,7 @@ const DOMAIN_STATS: Record<string, Array<{ label: string; value: string }>> = {
   '02-human-resources-safety':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '18' }, { label: 'Data Sources', value: 'SAP HR' }],
   '03-it-operations-cybersecurity':    [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '32' }, { label: 'Data Sources', value: 'SIEM, ServiceNow' }],
   '04-commercial-trading':             [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '28' }, { label: 'Data Sources', value: 'SAP, Bloomberg, ICE' }],
-  '05-manufacturing-plant-operations': [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '40' }, { label: 'Data Sources', value: 'OSIsoft PI, DCS' }],
+  '05-manufacturing-plant-operations': [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '40' }, { label: 'Data Sources', value: 'SAP, OSIsoft PI, DCS' }],
   '06-supply-chain-logistics':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '22' }, { label: 'Data Sources', value: 'SAP SCM, TMS' }],
 };
 
