@@ -78,7 +78,7 @@ app.include_router(auth_router)
 @app.get("/health", tags=["health"])
 async def health_check():
     """Root health check — used by Render to verify the service is live."""
-    return {"status": "ok"}
+    return {"status": "ok", "environment": settings.environment}
 
 
 # Anthropic client — reads ANTHROPIC_API_KEY from environment automatically
@@ -143,11 +143,3 @@ async def chat(
             yield "\n\n⚠️ The AI advisor is temporarily unavailable. Please try again."
 
     return StreamingResponse(generate(), media_type="text/plain; charset=utf-8")
-
-
-@app.get("/health")
-async def health():
-    return {
-        "status": "ok",
-        "environment": settings.environment,
-    }
