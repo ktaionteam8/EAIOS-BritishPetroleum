@@ -6,7 +6,7 @@ import { AgentCard } from './AgentCard';
 import { Domain, DOMAINS, APPLICATIONS, AGENTS, AppCategory } from '../types';
 
 type CategoryFilter = 'All' | AppCategory;
-const CATEGORY_FILTERS: CategoryFilter[] = ['All', 'Transactional', 'Analytical'];
+const CATEGORY_FILTERS: CategoryFilter[] = ['All', 'Transactional', 'Analytical', 'AI-Powered'];
 
 const DOMAIN_BG_COLORS: Record<string, string> = {
   '01-finance-accounting':             'from-emerald-900/20 to-transparent border-emerald-800/20',
