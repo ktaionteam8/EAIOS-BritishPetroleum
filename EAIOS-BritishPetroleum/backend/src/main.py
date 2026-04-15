@@ -46,8 +46,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.allowed_origins.split(",") if o.strip()],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # JWT Bearer tokens used — no cookies; wildcard origins require False
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
 )
