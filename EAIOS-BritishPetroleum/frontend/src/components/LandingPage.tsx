@@ -6,7 +6,7 @@ import { AgentCard } from './AgentCard';
 import { Domain, DOMAINS, APPLICATIONS, AGENTS, AppCategory } from '../types';
 
 type CategoryFilter = 'All' | AppCategory;
-const CATEGORY_FILTERS: CategoryFilter[] = ['All', 'Transactional', 'Analytical'];
+const CATEGORY_FILTERS: CategoryFilter[] = ['All', 'Transactional', 'Analytical', 'AI-Powered'];
 
 const DOMAIN_BG_COLORS: Record<string, string> = {
   '01-finance-accounting':             'from-emerald-900/20 to-transparent border-emerald-800/20',
@@ -26,13 +26,13 @@ const DOMAIN_ACCENT: Record<string, string> = {
   '06-supply-chain-logistics':         'text-cyan-400',
 };
 
-const DOMAIN_STATS: Record<string, Array<{ label: string; value: string }>> = {
-  '01-finance-accounting':             [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '24' }, { label: 'Data Sources', value: 'SAP' }],
-  '02-human-resources-safety':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '18' }, { label: 'Data Sources', value: 'SAP HR' }],
-  '03-it-operations-cybersecurity':    [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '32' }, { label: 'Data Sources', value: 'SIEM, ServiceNow' }],
-  '04-commercial-trading':             [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '28' }, { label: 'Data Sources', value: 'SAP, Bloomberg, ICE' }],
-  '05-manufacturing-plant-operations': [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '40' }, { label: 'Data Sources', value: 'SAP, OSIsoft PI, DCS' }],
-  '06-supply-chain-logistics':         [{ label: 'Agents', value: '6' }, { label: 'Workflows', value: '22' }, { label: 'Data Sources', value: 'SAP' }],
+const DOMAIN_DATA_SOURCES: Record<string, string> = {
+  '01-finance-accounting':             'SAP',
+  '02-human-resources-safety':         'SAP HR',
+  '03-it-operations-cybersecurity':    'SIEM, ServiceNow',
+  '04-commercial-trading':             'SAP, Bloomberg, ICE',
+  '05-manufacturing-plant-operations': 'SAP, OSIsoft PI, DCS',
+  '06-supply-chain-logistics':         'SAP',
 };
 
 export const LandingPage: React.FC = () => {
@@ -55,7 +55,11 @@ export const LandingPage: React.FC = () => {
 
   const accentColor = DOMAIN_ACCENT[selectedDomain.id];
   const bgGradient = DOMAIN_BG_COLORS[selectedDomain.id];
-  const stats = DOMAIN_STATS[selectedDomain.id] ?? [];
+  const stats = [
+    { label: 'Agents',       value: String(selectedDomain.agentCount) },
+    { label: 'Applications', value: String(domainApps.length) },
+    { label: 'Data Sources', value: DOMAIN_DATA_SOURCES[selectedDomain.id] ?? '' },
+  ];
 
   return (
     <div className="min-h-screen bg-bp-dark font-sans">
