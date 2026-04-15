@@ -28,7 +28,8 @@ async function get<T>(path: string, params?: Record<string, string>): Promise<T>
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const url = new URL(`${BASE}${path}`, location.origin);
+  const res = await fetch(url.toString(), {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
@@ -38,7 +39,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function patch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const url = new URL(`${BASE}${path}`, location.origin);
+  const res = await fetch(url.toString(), {
     method: 'PATCH',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
