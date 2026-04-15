@@ -22,7 +22,7 @@ from src.config import settings
 
 logger = logging.getLogger(__name__)
 
-_bearer = HTTPBearer(auto_error=True)
+_bearer = HTTPBearer(auto_error=False)
 
 # JWT settings
 _ALGORITHM = "HS256"
@@ -66,10 +66,13 @@ def decode_token(token: str) -> dict:
 
 
 def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> dict:
     """FastAPI dependency — validates Bearer JWT and returns the decoded payload.
 
     Returns a dict with at least ``{"sub": "<username>"}``.
+    When no token is provided the request is treated as a guest (public access).
     """
+    if credentials is None:
+        return {"sub": "guest"}
     return decode_token(credentials.credentials)
