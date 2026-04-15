@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +10,16 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showWakeUpHint, setShowWakeUpHint] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setShowWakeUpHint(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowWakeUpHint(true), 5000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,6 +151,19 @@ export const LoginPage: React.FC = () => {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Wake-up hint — shown after 5s of loading (Render free tier cold start) */}
+            {isLoading && showWakeUpHint && (
+              <div className="mb-4 flex items-start gap-2 bg-amber-900/30 border border-amber-700/50 rounded-lg px-3 py-2.5">
+                <svg className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <p className="text-amber-300 text-xs leading-snug">
+                  Backend is waking up — Render free tier sleeps when idle. First login may take up to 60 seconds. Please wait...
+                </p>
               </div>
             )}
 

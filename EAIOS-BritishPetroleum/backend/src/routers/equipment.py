@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import Integer, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -76,9 +76,9 @@ async def equipment_kpis(
     stmt = select(
         Equipment.site_id,
         func.count().label("total"),
-        func.sum((Equipment.ai_status == "critical").cast(func.Integer)).label("critical"),
-        func.sum((Equipment.ai_status == "warning").cast(func.Integer)).label("warning"),
-        func.sum((Equipment.ai_status == "healthy").cast(func.Integer)).label("healthy"),
+        func.sum((Equipment.ai_status == "critical").cast(Integer)).label("critical"),
+        func.sum((Equipment.ai_status == "warning").cast(Integer)).label("warning"),
+        func.sum((Equipment.ai_status == "healthy").cast(Integer)).label("healthy"),
         func.avg(Equipment.health_score).label("avg_health"),
         func.avg(Equipment.rul_hours).label("avg_rul"),
     ).where(Equipment.is_active == True).group_by(Equipment.site_id)
