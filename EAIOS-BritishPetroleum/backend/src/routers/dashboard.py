@@ -1,6 +1,6 @@
 """Dashboard router — fleet-wide summary stats."""
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, func
+from sqlalchemy import Integer, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -124,9 +124,9 @@ async def fleet_heatmap(
     stmt = select(
         Site.id,
         Site.name,
-        func.sum((Equipment.ai_status == "critical").cast(func.Integer)).label("critical"),
-        func.sum((Equipment.ai_status == "warning").cast(func.Integer)).label("warning"),
-        func.sum((Equipment.ai_status == "healthy").cast(func.Integer)).label("healthy"),
+        func.sum((Equipment.ai_status == "critical").cast(Integer)).label("critical"),
+        func.sum((Equipment.ai_status == "warning").cast(Integer)).label("warning"),
+        func.sum((Equipment.ai_status == "healthy").cast(Integer)).label("healthy"),
         func.avg(Equipment.health_score).label("avg_health"),
     ).join(Equipment, Equipment.site_id == Site.id).where(Equipment.is_active == True).group_by(Site.id, Site.name)
     rows = (await db.execute(stmt)).all()
