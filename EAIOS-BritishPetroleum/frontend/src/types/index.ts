@@ -83,26 +83,37 @@ export const DOMAINS: Domain[] = [
 ];
 
 export const APPLICATIONS: Application[] = [
-  {
-    id: 'refiner-ai',
-    name: 'Refiner AI',
-    description: 'Predictive Maintenance Intelligence Platform monitoring 6,842 assets across 40 global refineries.',
-    domainId: '05-manufacturing-plant-operations',
-    status: 'active',
-    version: '1.0.0',
-    url: '/apps/refiner-ai',
-    category: 'AI-Powered',
-  },
-  {
-    id: 'artemis',
-    name: 'Artemis',
-    description: 'AI-powered trading intelligence platform for Commercial & Trading operations.',
-    domainId: '04-commercial-trading',
-    status: 'active',
-    version: '1.0.0',
-    url: '/apps/artemis',
-    category: 'AI-Powered',
-  },
+
+  // 01 — Finance & Accounting
+  { id: 'sap-s4-finance',        name: 'SAP S/4HANA Finance',         description: 'Core ERP for financial close, accounts payable/receivable, general ledger, and intercompany settlements.',          domainId: '01-finance-accounting', status: 'active',      version: '2023.1', category: 'Transactional' },
+  { id: 'finance-analytics',     name: 'Finance Analytics Hub',       description: 'Real-time P&L, variance analysis, and cost-centre dashboards across all BP business units and geographies.',          domainId: '01-finance-accounting', status: 'active',      version: '3.2.0',  category: 'Analytical'    },
+  { id: 'financial-close-agent', name: 'Financial Close Agent',       description: 'AI agent automating period-end close: reconciliations, accruals, and intercompany eliminations.',                     domainId: '01-finance-accounting', status: 'active',      version: '1.0.0',  category: 'AI-Powered'    },
+
+  // 02 — Human Resources & Safety
+  { id: 'workday-hcm',           name: 'Workday HCM',                 description: 'Core HR system for employee records, payroll, leave management, and contractor onboarding across BP globally.',        domainId: '02-human-resources-safety', status: 'active',  version: '2024.1', category: 'Transactional' },
+  { id: 'workforce-analytics',   name: 'Workforce Analytics',         description: 'Headcount trends, attrition forecasting, skills inventory, and diversity & inclusion dashboards.',                    domainId: '02-human-resources-safety', status: 'active',  version: '2.1.0',  category: 'Analytical'    },
+  { id: 'safety-predict',        name: 'Safety Predict',              description: 'AI-powered HSE incident prediction using leading indicators, near-miss data, and environmental telemetry.',            domainId: '02-human-resources-safety', status: 'active',  version: '1.2.0',  category: 'AI-Powered'    },
+
+  // 03 — IT Operations & Cybersecurity
+  { id: 'servicenow-itsm',       name: 'ServiceNow ITSM',             description: 'IT service management platform for incident, change, and problem management across BP\'s global technology estate.',  domainId: '03-it-operations-cybersecurity', status: 'active',   version: '2024.3', category: 'Transactional' },
+  { id: 'siem-analytics',        name: 'SIEM Analytics',              description: 'Security event correlation, threat intelligence dashboards, and compliance posture reporting across IT/OT networks.',  domainId: '03-it-operations-cybersecurity', status: 'active',   version: '4.0.1',  category: 'Analytical'    },
+  { id: 'threat-detect',         name: 'Threat Detection Agent',      description: 'AI agent detecting cyber threats across IT/OT environments using behavioural analytics and anomaly detection.',       domainId: '03-it-operations-cybersecurity', status: 'active',   version: '1.1.0',  category: 'AI-Powered'    },
+
+  // 04 — Commercial & Trading
+  { id: 'endur-trading',         name: 'Endur CTRM',                  description: 'Commodity trading and risk management system for crude, gas, and LNG contracts, scheduling, and settlements.',        domainId: '04-commercial-trading', status: 'active',      version: '18.2',   category: 'Transactional' },
+  { id: 'trading-analytics',     name: 'Trading Analytics',           description: 'Real-time P&L attribution, position monitoring, and market risk dashboards for crude, gas, and carbon portfolios.',   domainId: '04-commercial-trading', status: 'active',      version: '2.4.0',  category: 'Analytical'    },
+  { id: 'artemis',               name: 'Artemis',                     description: 'AI-powered trading intelligence platform for arbitrage, Castrol pricing, aviation fuel, and carbon credit markets.',  domainId: '04-commercial-trading', status: 'active',      version: '1.0.0',  url: '/apps/artemis', category: 'AI-Powered' },
+
+  // 05 — Manufacturing & Plant Operations
+  { id: 'sap-pm',                name: 'SAP Plant Maintenance',       description: 'Work order management, equipment master data, preventive maintenance scheduling, and spare parts inventory.',          domainId: '05-manufacturing-plant-operations', status: 'active', version: '2023.1', category: 'Transactional' },
+  { id: 'production-analytics',  name: 'Production Analytics',        description: 'Refinery yield, throughput, energy intensity, and unit performance dashboards using OSIsoft PI historian data.',      domainId: '05-manufacturing-plant-operations', status: 'active', version: '3.0.2',  category: 'Analytical'    },
+  { id: 'refiner-ai',            name: 'Refiner AI',                  description: 'Predictive Maintenance Intelligence Platform monitoring 6,842 assets across 40 global refineries.',                   domainId: '05-manufacturing-plant-operations', status: 'active', version: '1.0.0',  url: '/apps/refiner-ai', category: 'AI-Powered' },
+
+  // 06 — Supply Chain & Logistics
+  { id: 'sap-scm',               name: 'SAP Supply Chain',            description: 'End-to-end supply chain execution: crude nominations, product movements, tank scheduling, and distribution orders.',  domainId: '06-supply-chain-logistics', status: 'active',    version: '2023.2', category: 'Transactional' },
+  { id: 'supply-analytics',      name: 'Supply Chain Analytics',      description: 'Inventory levels, delivery performance, demand vs supply variance, and logistics cost dashboards across all regions.', domainId: '06-supply-chain-logistics', status: 'active',    version: '2.2.0',  category: 'Analytical'    },
+  { id: 'demand-supply-agent',   name: 'Demand Supply Agent',         description: 'AI agent balancing product supply with downstream demand, optimising crude and product movements in real time.',       domainId: '06-supply-chain-logistics', status: 'active',    version: '1.0.0',  category: 'AI-Powered'    },
+
 ];
 
 export interface Agent {
