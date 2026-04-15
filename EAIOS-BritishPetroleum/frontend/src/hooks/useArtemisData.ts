@@ -50,7 +50,7 @@ export function useArtemisData(): ArtemisData {
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([
+    Promise.allSettled([
       fetchArtemisAgents(),
       fetchArtemisCompliance(),
       fetchArbitrageOpportunities('open'),
@@ -64,26 +64,32 @@ export function useArtemisData(): ArtemisData {
       fetchArtemisModels(),
       fetchArtemisAuditLog(20),
     ]).then(([
-      agents, complianceEvents,
-      opportunities, arbMetrics,
-      baseOil, pricingRecs,
-      forecasts, contracts,
-      carbonPositions, carbonRecs,
-      models, auditLog,
+      r_agents, r_compliance,
+      r_opportunities, r_arbMetrics,
+      r_baseOil, r_pricingRecs,
+      r_forecasts, r_contracts,
+      r_carbonPositions, r_carbonRecs,
+      r_models, r_auditLog,
     ]) => {
+      const ok = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
+        r.status === 'fulfilled' ? r.value : fallback;
       if (!cancelled) {
         setData({
           loading: false,
-          agents, complianceEvents,
-          opportunities, arbMetrics,
-          baseOil, pricingRecs,
-          forecasts, contracts,
-          carbonPositions, carbonRecs,
-          models, auditLog,
+          agents:          ok(r_agents, []),
+          complianceEvents: ok(r_compliance, []),
+          opportunities:   ok(r_opportunities, []),
+          arbMetrics:      ok(r_arbMetrics, []),
+          baseOil:         ok(r_baseOil, []),
+          pricingRecs:     ok(r_pricingRecs, []),
+          forecasts:       ok(r_forecasts, []),
+          contracts:       ok(r_contracts, []),
+          carbonPositions: ok(r_carbonPositions, []),
+          carbonRecs:      ok(r_carbonRecs, []),
+          models:          ok(r_models, []),
+          auditLog:        ok(r_auditLog, []),
         });
       }
-    }).catch(() => {
-      if (!cancelled) setData(prev => ({ ...prev, loading: false }));
     });
 
     return () => { cancelled = true; };
