@@ -12,6 +12,8 @@ export interface Domain {
   icon: string;
 }
 
+export type AppCategory = 'Transactional' | 'Analytical' | 'AI-Powered';
+
 export interface Application {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface Application {
   status: 'active' | 'inactive' | 'maintenance';
   version?: string;
   url?: string;
+  category: AppCategory;
 }
 
 export const DOMAINS: Domain[] = [
@@ -88,6 +91,7 @@ export const APPLICATIONS: Application[] = [
     status: 'active',
     version: '1.0.0',
     url: '/apps/refiner-ai',
+    category: 'AI-Powered',
   },
   {
     id: 'artemis',
@@ -97,6 +101,7 @@ export const APPLICATIONS: Application[] = [
     status: 'active',
     version: '1.0.0',
     url: '/apps/artemis',
+    category: 'AI-Powered',
   },
 ];
 
