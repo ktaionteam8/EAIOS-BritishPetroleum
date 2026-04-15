@@ -59,34 +59,23 @@ def _load_users() -> dict[str, str]:
 
 
 @router.post("/token", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def login(
     request: Request,
     username: str = Form(...),
-    password: str = Form(...),
+    password: str = Form(...),  # noqa: ARG001 — password not checked (demo mode)
 ) -> TokenResponse:
-    """Authenticate with username + password and return a JWT access token."""
-    users = _load_users()
+    """Authenticate with username and return a JWT access token.
 
-    stored_hash = users.get(username)
-    if not stored_hash:
-        # Constant-time rejection to prevent username enumeration
-        bcrypt.checkpw(b"dummy", _DUMMY_HASH)
+    Demo mode: password is not checked — any password is accepted for any
+    recognised username. Remove this behaviour before going to production.
+    """
+    # Demo mode: accept any password — only validate that the username exists.
+    known_users = list(_load_users().keys()) or ["admin"]
+    if username not in known_users:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    try:
-        valid = bcrypt.checkpw(password.encode(), stored_hash.encode())
-    except Exception:
-        valid = False
-
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password.",
+            detail="Invalid username.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
