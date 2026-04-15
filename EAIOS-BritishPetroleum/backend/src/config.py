@@ -7,8 +7,10 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    # Database — Supabase cloud PostgreSQL (required, no default)
-    database_url: str
+    # Database — Supabase cloud PostgreSQL.
+    # Falls back to SQLite for local dev / when DATABASE_URL is not set (e.g. Render
+    # free tier first deploy).  Auth and health endpoints work without a database.
+    database_url: str = "sqlite+aiosqlite:///./eaios_dev.db"
 
     # Redis — Upstash (production) or local Redis (dev)
     # Production: set REDIS_URL=rediss://<user>:<pass>@<host>:6380
@@ -30,14 +32,21 @@ class Settings(BaseSettings):
     auth_users: str = "{}"
 
     @model_validator(mode="after")
-    def _derive_cors(self) -> "Settings":
-        """Derive CORS origins and warn if localhost is used in production."""
+    def _derive_cors_and_warn_sqlite(self) -> "Settings":
+        """Derive CORS origins; warn loudly if production is using the SQLite fallback."""
         if not self.allowed_origins:
             self.allowed_origins = self.frontend_url
         if self.environment == "production" and "localhost" in self.allowed_origins:
             logger.warning(
                 "CORS allowed_origins contains 'localhost' in production — "
                 "set FRONTEND_URL to your production domain."
+            )
+        # Fail loudly in Render logs if DATABASE_URL was never set
+        if self.environment == "production" and self.database_url.startswith("sqlite"):
+            logger.error(
+                "DATABASE_URL is not set — production is using the SQLite fallback. "
+                "Auth and /health endpoints will work, but all database-backed endpoints "
+                "will fail.  Set DATABASE_URL in the Render dashboard immediately."
             )
         return self
 
