@@ -7,6 +7,8 @@ import { BPAssetMap } from '../../components/BPAssetMap';
 import { REFINER_AI_MOCK_LOGS } from '../../data/refinerAiAuditLogs';
 import { REFINER_AI_EXTENDED_LOGS } from '../../data/refinerAiAuditLogs_extended';
 
+const ALL_REFINER_AI_AUDIT_LOGS = [...REFINER_AI_MOCK_LOGS, ...REFINER_AI_EXTENDED_LOGS];
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
   | 'dashboard'
@@ -5907,7 +5909,7 @@ const RefinerAIPage: React.FC = () => {
         onClose={() => setAuditOpen(false)}
         domainId="05-manufacturing-plant-operations"
         title="Refiner AI — Audit Log"
-        fallbackData={[...REFINER_AI_MOCK_LOGS, ...REFINER_AI_EXTENDED_LOGS]}
+        fallbackData={ALL_REFINER_AI_AUDIT_LOGS}
       />
 
       {/* ── App Header ──────────────────────────────────────────────────────── */}

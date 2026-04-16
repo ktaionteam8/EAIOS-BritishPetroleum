@@ -114,7 +114,7 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({
       .then(data => setLogs(data.length > 0 ? data : (fallbackData ?? [])))
       .catch(() => setLogs(fallbackData ?? []))
       .finally(() => setLoading(false));
-  }, [isOpen, domainId, agentName]);
+  }, [isOpen, domainId, agentName, fallbackData]);
 
   const filtered = statusFilter ? logs.filter(l => l.status === statusFilter) : logs;
   const csvUrl = auditLogCsvUrl({ domain_id: domainId, agent_name: agentName });
