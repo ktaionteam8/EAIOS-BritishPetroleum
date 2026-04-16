@@ -7,6 +7,7 @@ interface AuditLogPanelProps {
   domainId?: string;
   agentName?: string;
   title?: string;
+  fallbackData?: AIAuditLog[];
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -100,9 +101,9 @@ function LogEntry({ entry }: { entry: AIAuditLog }) {
 }
 
 export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({
-  isOpen, onClose, domainId, agentName, title = 'AI Audit Log',
+  isOpen, onClose, domainId, agentName, title = 'AI Audit Log', fallbackData,
 }) => {
-  const [logs, setLogs] = useState<AIAuditLog[]>([]);
+  const [logs, setLogs] = useState<AIAuditLog[]>(fallbackData ?? []);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -110,7 +111,8 @@ export const AuditLogPanel: React.FC<AuditLogPanelProps> = ({
     if (!isOpen) return;
     setLoading(true);
     fetchAuditLogs({ domain_id: domainId, agent_name: agentName, limit: 50 })
-      .then(setLogs)
+      .then(data => setLogs(data.length > 0 ? data : (fallbackData ?? [])))
+      .catch(() => setLogs(fallbackData ?? []))
       .finally(() => setLoading(false));
   }, [isOpen, domainId, agentName]);
 
