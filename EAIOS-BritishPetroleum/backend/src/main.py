@@ -35,6 +35,7 @@ from src.routers.reliability import router as reliability_router
 from src.routers.field_ops import router as field_ops_router
 from src.routers.artemis import router as artemis_router
 from src.routers.auth_router import router as auth_router
+from src.routers.ai_audit_log import router as ai_audit_log_router
 
 app = FastAPI(
     title="EAIOS BP API",
@@ -73,6 +74,7 @@ app.include_router(reliability_router)
 app.include_router(field_ops_router)
 app.include_router(artemis_router)
 app.include_router(auth_router)
+app.include_router(ai_audit_log_router)
 
 
 @app.get("/health", tags=["health"])

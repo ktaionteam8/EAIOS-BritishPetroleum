@@ -32,3 +32,4 @@ from .artemis_aviation import (  # noqa: F401
     ArtemisAviationAirport, ArtemisAviationForecast, ArtemisAviationContract,
 )
 from .artemis_carbon import ArtemisCarbonPosition, ArtemisCarbonRecommendation  # noqa: F401
+from .ai_audit_log import AIAuditLog  # noqa: F401
