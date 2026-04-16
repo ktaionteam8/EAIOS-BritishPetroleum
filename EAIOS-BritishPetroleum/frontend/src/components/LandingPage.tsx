@@ -3,6 +3,7 @@ import { Header } from './Header';
 import { DomainDropdown } from './DomainDropdown';
 import { ApplicationCard } from './ApplicationCard';
 import { AgentCard } from './AgentCard';
+import { AuditLogPanel } from './AuditLogPanel';
 import { Domain, DOMAINS, APPLICATIONS, AGENTS, AppCategory } from '../types';
 
 type CategoryFilter = 'All' | AppCategory;
@@ -38,6 +39,7 @@ const DOMAIN_DATA_SOURCES: Record<string, string> = {
 export const LandingPage: React.FC = () => {
   const [selectedDomain, setSelectedDomain] = useState<Domain>(DOMAINS[0]);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('All');
+  const [auditOpen, setAuditOpen] = useState(false);
 
   // Reset filter when domain changes
   useEffect(() => { setCategoryFilter('All'); }, [selectedDomain]);
@@ -214,6 +216,54 @@ export const LandingPage: React.FC = () => {
             ))}
           </div>
         </section>
+
+        {/* Audit Trail section */}
+        <section className="mt-10">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-white">AI Audit Trail</h2>
+              <p className="text-gray-500 text-sm">Black-box recorder — every AI decision logged for accountability</p>
+            </div>
+            <button
+              onClick={() => setAuditOpen(true)}
+              className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg bg-bp-green/10 text-bp-green border border-bp-green/30 hover:bg-bp-green/20 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View Audit Log
+            </button>
+          </div>
+          <div className="bg-bp-surface/40 border border-bp-border rounded-2xl p-6 flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-bp-green/10 border border-bp-green/30 flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-bp-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-white font-semibold text-sm">Every AI decision is recorded</p>
+                <p className="text-gray-500 text-xs mt-0.5">Input context · Output · Confidence score · Model version · Attribution</p>
+                <p className="text-gray-600 text-xs mt-0.5">Exportable as CSV or PDF for regulatory audits and incident investigations.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAuditOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-bp-border hover:border-gray-500 rounded-lg px-3 py-2 transition-colors flex-shrink-0"
+            >
+              Open →
+            </button>
+          </div>
+        </section>
+
+        <AuditLogPanel
+          isOpen={auditOpen}
+          onClose={() => setAuditOpen(false)}
+          domainId={selectedDomain.id}
+          title={`${selectedDomain.shortName} — AI Audit Trail`}
+        />
       </main>
     </div>
   );
