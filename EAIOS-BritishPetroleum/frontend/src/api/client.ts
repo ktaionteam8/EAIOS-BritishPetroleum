@@ -390,3 +390,39 @@ export interface CarbonRecommendation {
   quantity_tonnes: number | null; expected_cost_benefit_usd: number | null;
   rationale: string; status: string; created_at: string;
 }
+
+// ── AI Audit Log ─────────────────────────────────────────────────────────────
+export interface AIAuditLog {
+  id: string;
+  agent_name: string;
+  domain_id: string;
+  model_version: string;
+  action: string;
+  input_context: string;
+  output_summary: string;
+  confidence_score: number;
+  status: 'auto_executed' | 'approved' | 'rejected' | 'pending_review';
+  triggered_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchAuditLogs(
+  filters: { domain_id?: string; agent_name?: string; status?: string; limit?: number } = {}
+): Promise<AIAuditLog[]> {
+  const params: Record<string, string> = {};
+  if (filters.domain_id) params.domain_id = filters.domain_id;
+  if (filters.agent_name) params.agent_name = filters.agent_name;
+  if (filters.status) params.status = filters.status;
+  if (filters.limit) params.limit = String(filters.limit);
+  return get<AIAuditLog[]>('/api/audit-log/', params);
+}
+
+export function auditLogCsvUrl(filters: { domain_id?: string; agent_name?: string } = {}): string {
+  const url = new URL(`${BASE}/api/audit-log/export/csv`, location.origin);
+  if (filters.domain_id) url.searchParams.set('domain_id', filters.domain_id);
+  if (filters.agent_name) url.searchParams.set('agent_name', filters.agent_name);
+  const token = getAuthToken();
+  if (token) url.searchParams.set('token', token);
+  return url.toString();
+}
