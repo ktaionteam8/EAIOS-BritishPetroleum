@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as API from '../../api/client';
 import { getAuthToken } from '../../context/AuthContext';
 import { AuditLogPanel } from '../../components/AuditLogPanel';
+import { BPAssetMap } from '../../components/BPAssetMap';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -915,6 +916,9 @@ const DashboardTab: React.FC = () => {
         <RefineryDot top={60} left={48}  status="healthy"  />
       </div>
     </div>
+
+    {/* BP Global Asset Map */}
+    <BPAssetMap />
 
     {/* REQ-04 — Failure Prediction Gantt */}
     <FailurePredictionGantt />
