@@ -45,8 +45,8 @@ def upgrade() -> None:
         sa.Column("current_exposure_usd", sa.Float(), nullable=False, server_default="0"),
         sa.Column("utilisation_pct", sa.Float(), nullable=False, server_default="0"),
         sa.Column("is_breached", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_position_limits_commodity", "artemis_position_limits", ["commodity"])
 
