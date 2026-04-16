@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as API from '../../api/client';
 import { getAuthToken } from '../../context/AuthContext';
+import { AuditLogPanel } from '../../components/AuditLogPanel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -5889,11 +5890,18 @@ const RefinerAIPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [tourOpen, setTourOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const handleTourTabChange = React.useCallback((tab: TabId) => setActiveTab(tab), []);
 
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: '#f9fafb', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {tourOpen && <TourOverlay onClose={() => setTourOpen(false)} onTabChange={handleTourTabChange} />}
+      <AuditLogPanel
+        isOpen={auditOpen}
+        onClose={() => setAuditOpen(false)}
+        domainId="05-manufacturing-plant-operations"
+        title="Refiner AI — Audit Log"
+      />
 
       {/* ── App Header ──────────────────────────────────────────────────────── */}
       <header style={{ background: '#0f0f1a', borderBottom: '1px solid #1f2937' }}>
@@ -5916,6 +5924,12 @@ const RefinerAIPage: React.FC = () => {
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}/>
                 LIVE
               </span>
+              <button
+                onClick={() => setAuditOpen(true)}
+                style={{ fontSize: 12, color: '#22c55e', background: '#052e16', border: '1px solid #15803d', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+              >
+                🔍 Audit Log
+              </button>
               <button
                 onClick={() => setTourOpen(true)}
                 style={{ fontSize: 12, color: '#a78bfa', background: '#1e1b4b', border: '1px solid #3730a3', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}

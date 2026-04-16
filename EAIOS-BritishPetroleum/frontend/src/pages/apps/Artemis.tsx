@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useArtemisData, ArtemisData } from '../../hooks/useArtemisData';
+import { AuditLogPanel } from '../../components/AuditLogPanel';
 import {
   ArtemisAgentStatus, ArtemisComplianceEvent,
   ArbitrageOpportunity, BaseOilPrice, CastrolPricingRec,
@@ -427,10 +428,17 @@ const TABS: Array<{ id: TabId; label: string }> = [
 const Artemis: React.FC = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>('command-centre');
+  const [auditOpen, setAuditOpen] = useState(false);
   const d: ArtemisData = useArtemisData();
 
   return (
     <div className="min-h-screen bg-bp-dark font-sans">
+      <AuditLogPanel
+        isOpen={auditOpen}
+        onClose={() => setAuditOpen(false)}
+        domainId="04-commercial-trading"
+        title="Artemis — Audit Log"
+      />
       {/* Header */}
       <div className="border-b border-gray-800 bg-gray-950">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-4">
@@ -453,6 +461,15 @@ const Artemis: React.FC = () => {
                 {d.loading ? 'Loading…' : `Live — ${d.agents.filter(a => a.status === 'active').length} Agents Active`}
               </span>
               <span className="text-xs text-gray-500 hidden sm:block">AWS · Capgemini Resonance</span>
+              <button
+                onClick={() => setAuditOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-900/30 text-emerald-400 border border-emerald-800/30 hover:bg-emerald-900/50 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Audit Log
+              </button>
             </div>
           </div>
         </div>
