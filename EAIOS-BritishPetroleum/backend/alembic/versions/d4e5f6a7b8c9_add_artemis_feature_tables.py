@@ -28,8 +28,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("trade_date", sa.DateTime(timezone=True), nullable=False),
         sa.Column("settlement_date", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_trades_opportunity_id", "artemis_trades", ["opportunity_id"])
     op.create_index("ix_artemis_trades_commodity", "artemis_trades", ["commodity"])
@@ -61,9 +61,9 @@ def upgrade() -> None:
         sa.Column("cvar_usd", sa.Float(), nullable=False),
         sa.Column("gross_exposure_usd", sa.Float(), nullable=False),
         sa.Column("net_exposure_usd", sa.Float(), nullable=False),
-        sa.Column("method", sa.String(50), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("method", sa.String(50), nullable=False, server_default="historical_simulation"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_var_snapshots_snapshot_date", "artemis_var_snapshots", ["snapshot_date"])
     op.create_index("ix_artemis_var_snapshots_portfolio", "artemis_var_snapshots", ["portfolio"])
@@ -80,8 +80,8 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("relationship_manager", sa.String(255), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_counterparties_name", "artemis_counterparties", ["name"])
     op.create_index("ix_artemis_counterparties_type", "artemis_counterparties", ["counterparty_type"])
@@ -98,8 +98,8 @@ def upgrade() -> None:
         sa.Column("days_to_expiry", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("status", sa.String(50), nullable=False, server_default="active"),
         sa.Column("renewal_recommended", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_counterparty_contracts_counterparty_id", "artemis_counterparty_contracts", ["counterparty_id"])
     op.create_index("ix_artemis_counterparty_contracts_ref", "artemis_counterparty_contracts", ["contract_reference"])
@@ -119,8 +119,8 @@ def upgrade() -> None:
         sa.Column("is_completed", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("priority", sa.String(20), nullable=False, server_default="medium"),
         sa.Column("responsible_team", sa.String(255), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_ets_deadlines_scheme", "artemis_ets_deadlines", ["scheme"])
     op.create_index("ix_artemis_ets_deadlines_date", "artemis_ets_deadlines", ["deadline_date"])
@@ -136,8 +136,8 @@ def upgrade() -> None:
         sa.Column("avg_price_eur", sa.Float(), nullable=False),
         sa.Column("total_cost_eur", sa.Float(), nullable=False),
         sa.Column("surrender_date", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_ets_surrender_scheme", "artemis_ets_surrender_events", ["scheme"])
     op.create_index("ix_artemis_ets_surrender_year", "artemis_ets_surrender_events", ["compliance_year"])
@@ -155,8 +155,8 @@ def upgrade() -> None:
         sa.Column("projected_volume_impact_pct", sa.Float(), nullable=False, server_default="0"),
         sa.Column("approved_by", sa.String(255), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_castrol_simulations_name", "artemis_castrol_simulations", ["simulation_name"])
     op.create_index("ix_artemis_castrol_simulations_created_by", "artemis_castrol_simulations", ["created_by"])
@@ -176,8 +176,8 @@ def upgrade() -> None:
         sa.Column("projected_margin_pct", sa.Float(), nullable=False),
         sa.Column("volume_elasticity", sa.Float(), nullable=False, server_default="-0.3"),
         sa.Column("projected_volume_change_pct", sa.Float(), nullable=False, server_default="0"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_castrol_sim_lines_sim_id", "artemis_castrol_sim_lines", ["simulation_id"])
 
@@ -201,8 +201,8 @@ def upgrade() -> None:
         sa.Column("last_ais_update", sa.DateTime(timezone=True), nullable=True),
         sa.Column("speed_knots", sa.Float(), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_vessels_name", "artemis_vessels", ["vessel_name"])
     op.create_index("ix_artemis_vessels_imo", "artemis_vessels", ["imo_number"], unique=True)
@@ -225,8 +225,8 @@ def upgrade() -> None:
         sa.Column("last_checked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_by", sa.String(255), nullable=False),
         sa.Column("notes", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_price_alerts_name", "artemis_price_alerts", ["alert_name"])
     op.create_index("ix_artemis_price_alerts_commodity", "artemis_price_alerts", ["commodity"])
@@ -242,7 +242,7 @@ def upgrade() -> None:
         sa.Column("message", sa.Text(), nullable=False),
         sa.Column("notification_sent", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("recipients_notified", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
     )
     op.create_index("ix_artemis_alert_events_alert_id", "artemis_alert_events", ["alert_id"])
 
