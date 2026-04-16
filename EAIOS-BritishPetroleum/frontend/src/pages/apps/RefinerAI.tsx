@@ -5,6 +5,7 @@ import { getAuthToken } from '../../context/AuthContext';
 import { AuditLogPanel } from '../../components/AuditLogPanel';
 import { BPAssetMap } from '../../components/BPAssetMap';
 import { REFINER_AI_MOCK_LOGS } from '../../data/refinerAiAuditLogs';
+import { REFINER_AI_EXTENDED_LOGS } from '../../data/refinerAiAuditLogs_extended';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabId =
@@ -5906,7 +5907,7 @@ const RefinerAIPage: React.FC = () => {
         onClose={() => setAuditOpen(false)}
         domainId="05-manufacturing-plant-operations"
         title="Refiner AI — Audit Log"
-        fallbackData={REFINER_AI_MOCK_LOGS}
+        fallbackData={[...REFINER_AI_MOCK_LOGS, ...REFINER_AI_EXTENDED_LOGS]}
       />
 
       {/* ── App Header ──────────────────────────────────────────────────────── */}
