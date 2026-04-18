@@ -3,7 +3,7 @@ import { AIAuditLog } from '../api/client';
 const ago = (h: number): string => new Date(Date.now() - h * 3_600_000).toISOString();
 
 export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
-  { id: 'ra-mock-019', agent_name: 'Refiner AI — Compliance Monitor',
+  { id: 'ra-mock-019', agent_name: 'RefAIne — Compliance Monitor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 95.8, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Compliance check passed — API 510 pressure vessel inspection schedule, Whiting',
@@ -11,7 +11,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: '11 vessels compliant. 3 vessels (V-1204, V-2108, V-3301) due within 60 days. Inspection work orders auto-created. Compliance certificate updated in digital register.',
     created_at: ago(108), updated_at: ago(108) },
 
-  { id: 'ra-mock-020', agent_name: 'Refiner AI — Field Ops Advisor',
+  { id: 'ra-mock-020', agent_name: 'RefAIne — Field Ops Advisor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 88.1, status: 'approved', triggered_by: 'field-ops@bp.com',
     action: 'Recommended inspection route optimisation — Grangemouth daily rounds',
@@ -19,7 +19,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Optimised round: reduce from 147 to 94 manual check points. Focus rounds on 53 high-value/high-risk tags. Estimated shift saving: 1.4h. Flag flagging 6 tags for automated monitoring instead.',
     created_at: ago(116), updated_at: ago(116) },
 
-  { id: 'ra-mock-021', agent_name: 'Refiner AI — Prophet Forecaster',
+  { id: 'ra-mock-021', agent_name: 'RefAIne — Prophet Forecaster',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 86.5, status: 'approved', triggered_by: 'planning@bp.com',
     action: 'Maintenance demand forecast — 90-day workload projection, Rotterdam refinery',
@@ -27,7 +27,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Forecast: 1,840 WOs in next 90 days (±180 at 95% CI). Peak weeks 18-20 (TAR prep). Recommend pre-hire 8 contractors week 14. Material spend projection: £2.4M.',
     created_at: ago(124), updated_at: ago(124) },
 
-  { id: 'ra-mock-022', agent_name: 'Refiner AI — Vibration Analyst (CNN)',
+  { id: 'ra-mock-022', agent_name: 'RefAIne — Vibration Analyst (CNN)',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 94.2, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'FFT pattern classification — outer race bearing defect detected, FD Fan FA-301',
@@ -35,7 +35,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Outer race defect detected with 94.2% confidence. Fault stage: early-to-moderate (BPFO amplitude 12dB above noise floor). Recommend planned replacement within 21 days. WO created.',
     created_at: ago(132), updated_at: ago(132) },
 
-  { id: 'ra-mock-023', agent_name: 'Refiner AI — Anomaly Detection (Isolation Forest)',
+  { id: 'ra-mock-023', agent_name: 'RefAIne — Anomaly Detection (Isolation Forest)',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 91.6, status: 'pending_review', triggered_by: 'system@eaios.bp.com',
     action: 'Multivariate process anomaly — FCC reactor section, 14 tags outside normal envelope',
@@ -43,23 +43,23 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Novel process state detected. 14 tags deviate collectively — suggests feed composition change or catalyst deactivation. Recommend process engineer review before next shift change. Not yet auto-actioned.',
     created_at: ago(140), updated_at: ago(140) },
 
-  { id: 'ra-mock-024', agent_name: 'Refiner AI — ROI Analytics',
+  { id: 'ra-mock-024', agent_name: 'RefAIne — ROI Analytics',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 89.3, status: 'approved', triggered_by: 'finance@bp.com',
-    action: 'Q1 2026 ROI report — Refiner AI predictive maintenance programme',
+    action: 'Q1 2026 ROI report — RefAIne predictive maintenance programme',
     input_context: 'Q1 metrics: 23 failures predicted and prevented, 4 false positives, 1 missed failure. Maintenance cost data pulled from SAP MM. Downtime cost: $2.1M/hr average.',
     output_summary: 'Q1 avoided downtime: 87 hours ($182.7M at $2.1M/hr). Direct maintenance saving: £4.2M. Total programme cost Q1: £340K. ROI: 54,000%. Payback period from deployment: 11 days.',
     created_at: ago(148), updated_at: ago(148) },
 
-  { id: 'ra-mock-025', agent_name: 'Refiner AI — Adoption Tracker',
+  { id: 'ra-mock-025', agent_name: 'RefAIne — Adoption Tracker',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 98.4, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
-    action: 'Monthly adoption report — Refiner AI usage across 6 refineries, March 2026',
+    action: 'Monthly adoption report — RefAIne usage across 6 refineries, March 2026',
     input_context: 'Usage telemetry: 1,284 unique logins (March). AI recommendation acceptance rate: 73%. Override rate: 14%. Non-engagement (alert closed without review): 13%.',
     output_summary: 'Adoption health: GOOD. Top site: Whiting (91% acceptance). Lagging site: Grangemouth (58%). Low acceptance pattern on Castrol blending recommendations — review UX with ops team. Trend: +8% MoM acceptance rate.',
     created_at: ago(156), updated_at: ago(156) },
 
-  { id: 'ra-mock-026', agent_name: 'Refiner AI — Multi-Site Benchmarking',
+  { id: 'ra-mock-026', agent_name: 'RefAIne — Multi-Site Benchmarking',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 87.9, status: 'approved', triggered_by: 'ops-excellence@bp.com',
     action: 'Benchmarking report — fleet OEE comparison across 6 BP refineries, Q1 2026',
@@ -67,7 +67,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Whiting leads fleet. Gelsenkirchen 9.2pp below top quartile — root cause: extended turnaround overlap and FCC unplanned shutdown. Rotterdam improving +3.1pp QoQ following AI-driven CBM rollout.',
     created_at: ago(164), updated_at: ago(164) },
 
-  { id: 'ra-mock-027', agent_name: 'Refiner AI — Random Forest Classifier',
+  { id: 'ra-mock-027', agent_name: 'RefAIne — Random Forest Classifier',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 93.1, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Failure mode classification — Centrifugal pump P-3301, Rotterdam',
@@ -75,7 +75,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Classified failure mode: Impeller wear (93.1% confidence). Alternative: cavitation (4.8%). Recommended action: schedule impeller inspection at next opportunity. Run-to-failure risk: LOW for next 30 days.',
     created_at: ago(172), updated_at: ago(172) },
 
-  { id: 'ra-mock-028', agent_name: 'Refiner AI — LSTM Health Monitor',
+  { id: 'ra-mock-028', agent_name: 'RefAIne — LSTM Health Monitor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 90.7, status: 'approved', triggered_by: 'system@eaios.bp.com',
     action: 'LSTM sequence model — detected degradation trend onset, Steam Turbine ST-101',
@@ -83,7 +83,7 @@ export const REFINER_AI_EXTENDED_LOGS: AIAuditLog[] = [
     output_summary: 'Degradation trend onset confirmed. Projected efficiency at current rate: -2.1% in 30 days. Recommend online wash at next low-load window. Expected efficiency recovery: +1.8%. WO raised.',
     created_at: ago(180), updated_at: ago(180) },
 
-  { id: 'ra-mock-029', agent_name: 'Refiner AI — Alert Decision Gate',
+  { id: 'ra-mock-029', agent_name: 'RefAIne — Alert Decision Gate',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 87.4, status: 'approved', triggered_by: 'james.morrison@bp.com',
     action: 'Operator approved AI recommendation — C-301 compressor bearing replacement',
