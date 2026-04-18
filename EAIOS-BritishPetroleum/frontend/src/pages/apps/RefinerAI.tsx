@@ -1962,7 +1962,7 @@ const AiAdvisorTab: React.FC = () => {
         <div className="flex items-center gap-3">
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🧠</div>
           <div>
-            <p className="text-white font-semibold text-sm">RefinerAI Advisor — Claude-Powered Maintenance Intelligence</p>
+            <p className="text-white font-semibold text-sm">RefAIne Advisor — Claude-Powered Maintenance Intelligence</p>
             <p className="text-gray-500 text-xs">Powered by Claude Opus 4.6 · Adaptive Thinking · Refinery domain expertise</p>
           </div>
         </div>
@@ -1993,7 +1993,7 @@ const AiAdvisorTab: React.FC = () => {
                   {m.role === 'ai' && (
                     <div className="flex items-center gap-2 mb-1">
                       <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg,#7c3aed,#2563eb)', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🧠</div>
-                      <span className="text-purple-400 text-xs font-semibold">RefinerAI Advisor</span>
+                      <span className="text-purple-400 text-xs font-semibold">RefAIne Advisor</span>
                     </div>
                   )}
                   <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line ${m.role === 'user' ? 'bg-purple-900/50 text-white' : 'bg-gray-800 text-gray-200'}`}>
@@ -3949,7 +3949,7 @@ const TOUR_STEPS: { tab: TabId; title: string; desc: string }[] = [
   { tab:'equipment-health', title:'Equipment Health Centre',            desc:'Vibration FFT Spectrum Analyser (ISO 13373-3), Health Degradation Forecast with AI RUL projection, Oil Analysis & Lubrication Tracker, and the 5×5 Risk Matrix — all per asset.' },
   { tab:'spare-parts',      title:'Spare Parts — Criticality Matrix',   desc:'AI-prioritised parts inventory with stock levels, reorder urgency, and supplier lead times. The Criticality Matrix plots every part by criticality vs lead time for strategic stockholding decisions.' },
   // AI & Models
-  { tab:'ai-advisor',       title:'RefinerAI Advisor — Claude Opus 4.6',desc:'Chat with Claude Opus 4.6 about any equipment, failure, spare part, or work order. Streaming responses, adaptive thinking, and full refinery domain expertise built in.' },
+  { tab:'ai-advisor',       title:'RefAIne Advisor — Claude Opus 4.6',desc:'Chat with Claude Opus 4.6 about any equipment, failure, spare part, or work order. Streaming responses, adaptive thinking, and full refinery domain expertise built in.' },
   { tab:'ml-models',        title:'ML Models & AI Feedback Loop',       desc:'Six production models — LSTM, XGBoost, Prophet, Random Forest, CNN, Isolation Forest. The AI Feedback Loop tracks confirmed predictions, false positives, and missed failures for continuous model improvement.' },
   { tab:'digital-twin',     title:'Digital Twin — Plant Simulation',    desc:'High-fidelity digital twins for every critical asset. Run what-if scenarios, compare operating envelope parameters, and predict RUL impact before making physical changes to the plant.' },
   // Reliability
@@ -5310,7 +5310,7 @@ const ADOPTION_METRICS = [
 
 // M-02: Training module completion
 const TRAINING_MODULES = [
-  { module:'RefinerAI Fundamentals',       type:'mandatory', completionPct:88, avgScore:84, dueDate:'30 Apr' },
+  { module:'RefAIne Fundamentals',       type:'mandatory', completionPct:88, avgScore:84, dueDate:'30 Apr' },
   { module:'Alert-to-Action Protocol',     type:'mandatory', completionPct:79, avgScore:79, dueDate:'30 Apr' },
   { module:'SHAP Explainability for Ops',  type:'optional',  completionPct:52, avgScore:77, dueDate:'—'      },
   { module:'Override & Audit Trail',       type:'mandatory', completionPct:91, avgScore:88, dueDate:'30 Apr' },
@@ -5908,7 +5908,7 @@ const RefinerAIPage: React.FC = () => {
         isOpen={auditOpen}
         onClose={() => setAuditOpen(false)}
         domainId="05-manufacturing-plant-operations"
-        title="Refiner AI — Audit Log"
+        title="RefAIne — Audit Log"
         fallbackData={ALL_REFINER_AI_AUDIT_LOGS}
       />
 
@@ -5922,7 +5922,7 @@ const RefinerAIPage: React.FC = () => {
                 RA
               </div>
               <div>
-                <p style={{ fontWeight: 700, fontSize: 15, color: '#fff', lineHeight: 1.2 }}>RefinerAI</p>
+                <p style={{ fontWeight: 700, fontSize: 15, color: '#fff', lineHeight: 1.2 }}>RefAIne</p>
                 <p style={{ fontSize: 11, color: '#6b7280' }}>Predictive Maintenance Intelligence</p>
               </div>
             </div>
