@@ -53,7 +53,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: '6',
     type: 'success',
-    title: 'RefinerAI Model Retrained',
+    title: 'RefAIne Model Retrained',
     body: 'Predictive maintenance model accuracy improved from 94.1% → 97.3% after retraining.',
     time: '5h ago',
     read: true,
