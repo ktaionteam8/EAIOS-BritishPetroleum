@@ -3,7 +3,7 @@ import { AIAuditLog } from '../api/client';
 const ago = (h: number): string => new Date(Date.now() - h * 3_600_000).toISOString();
 
 export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
-  { id: 'ra-mock-001', agent_name: 'Refiner AI — Predictive Maintenance',
+  { id: 'ra-mock-001', agent_name: 'RefAIne — Predictive Maintenance',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 93.8, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Predicted bearing failure — Compressor C-201, Whiting Refinery CDU',
@@ -11,7 +11,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Failure predicted within 72-96h (93.8% confidence). WO-2026-8847 auto-created. Spare bearing confirmed in stock. Maintenance window: Tuesday 02:00-06:00.',
     created_at: ago(2), updated_at: ago(2) },
 
-  { id: 'ra-mock-002', agent_name: 'Refiner AI — AI Advisor',
+  { id: 'ra-mock-002', agent_name: 'RefAIne — AI Advisor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 91.5, status: 'approved', triggered_by: 'john.davies@bp.com',
     action: 'AI Advisor recommended condition-based maintenance strategy for P-Series pump fleet',
@@ -19,7 +19,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Recommend CBM for P-101, P-103, P-106 (high MTBF, sensor-rich). Retain time-based for P-104, P-107 (process-critical, short inspection access window). Expected saving: £340K/yr.',
     created_at: ago(4), updated_at: ago(4) },
 
-  { id: 'ra-mock-003', agent_name: 'Refiner AI — ML Model Monitor',
+  { id: 'ra-mock-003', agent_name: 'RefAIne — ML Model Monitor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 97.1, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'XGBoost Failure Predictor v2.3 — concept drift detected, retraining triggered',
@@ -27,7 +27,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Retraining pipeline triggered with 180-day rolling window. Challenger model v2.4 deployed to shadow mode. Champion/challenger evaluation scheduled: 48h. Production rollover pending approval.',
     created_at: ago(6), updated_at: ago(6) },
 
-  { id: 'ra-mock-004', agent_name: 'Refiner AI — Digital Twin',
+  { id: 'ra-mock-004', agent_name: 'RefAIne — Digital Twin',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 84.3, status: 'approved', triggered_by: 'engineering@bp.com',
     action: 'CDU turnaround scenario simulation completed — 21-day shutdown Rotterdam 2026',
@@ -35,7 +35,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Optimal execution sequence reduces critical path by 2.5 days. 3 crane schedule conflicts identified and resolved. Simulation confidence 84% — novel catalyst limits historical data.',
     created_at: ago(10), updated_at: ago(10) },
 
-  { id: 'ra-mock-005', agent_name: 'Refiner AI — Quality Control',
+  { id: 'ra-mock-005', agent_name: 'RefAIne — Quality Control',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 98.2, status: 'rejected', triggered_by: 'plant-control@bp.com',
     action: 'Recommended naphtha cut point increase to restore Jet A-1 smoke point spec',
@@ -43,7 +43,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Increase naphtha cut to 175°C, reduce Forties to 30%. Predicted smoke point: 27mm. Operator overrode — production schedule constraints cited.',
     created_at: ago(14), updated_at: ago(14) },
 
-  { id: 'ra-mock-006', agent_name: 'Refiner AI — FMEA Library',
+  { id: 'ra-mock-006', agent_name: 'RefAIne — FMEA Library',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 88.6, status: 'pending_review', triggered_by: 'reliability@bp.com',
     action: 'Generated FMEA entry — Shell & Tube HX E-3401 tube bundle failure mode',
@@ -51,7 +51,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'FMEA-2026-HX3401 created. RPN: 168 (Severity 8, Occurrence 3, Detection 7). Recommend: reduce inspection interval to 18 months; install corrosion inhibitor dosing. Pending FMEA review board.',
     created_at: ago(18), updated_at: ago(18) },
 
-  { id: 'ra-mock-007', agent_name: 'Refiner AI — Work Order Automation',
+  { id: 'ra-mock-007', agent_name: 'RefAIne — Work Order Automation',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 99.4, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Auto-created SAP PM work order — P-2204 seal replacement',
@@ -59,7 +59,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'SAP PM WO IW21-2026-44821 created. Priority: 2 (Urgent). Assigned to Mech Team B. Materials reserved via MM41. ERP notification sent to maintenance planner.',
     created_at: ago(22), updated_at: ago(22) },
 
-  { id: 'ra-mock-008', agent_name: 'Refiner AI — Energy Efficiency',
+  { id: 'ra-mock-008', agent_name: 'RefAIne — Energy Efficiency',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 91.2, status: 'approved', triggered_by: 'sustainability@bp.com',
     action: 'Identified 3.4% energy intensity saving — Rotterdam steam distribution system',
@@ -67,7 +67,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Optimise steam trap maintenance schedule; recover condensate at 4 identified loss points. Projected CO2 reduction: 8,400 tCO2/yr. Fuel saving £1.2M/yr.',
     created_at: ago(28), updated_at: ago(28) },
 
-  { id: 'ra-mock-009', agent_name: 'Refiner AI — Castrol Blending',
+  { id: 'ra-mock-009', agent_name: 'RefAIne — Castrol Blending',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 96.7, status: 'approved', triggered_by: 'castrol-ops@bp.com',
     action: 'Batch quality check passed — Castrol Magnatec 5W-30 Batch #CM-2026-0441',
@@ -75,7 +75,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Batch approved for filling. All 6 quality parameters within spec. Estimated yield: 41,850 litres (0.4% evaporation). Release certificate R-2026-0441 issued.',
     created_at: ago(34), updated_at: ago(34) },
 
-  { id: 'ra-mock-010', agent_name: 'Refiner AI — North Sea Ops',
+  { id: 'ra-mock-010', agent_name: 'RefAIne — North Sea Ops',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 87.3, status: 'approved', triggered_by: 'offshore-ops@bp.com',
     action: 'Weather window advisory issued — Magnus platform marine ops April 17-19',
@@ -83,7 +83,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Defer crane lifts to April 18 08:00 (estimated). Vessel departure recommended April 17 18:00 to arrive on improving weather. Crew change window: April 19 confirmed viable.',
     created_at: ago(40), updated_at: ago(40) },
 
-  { id: 'ra-mock-011', agent_name: 'Refiner AI — TAR Planning',
+  { id: 'ra-mock-011', agent_name: 'RefAIne — TAR Planning',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 82.9, status: 'pending_review', triggered_by: 'tar-team@bp.com',
     action: 'Turnaround scope optimisation — Grangemouth CDU TAR 2027 scope review',
@@ -91,7 +91,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Optimised scope: 1,507 WOs, estimated 19 days. Deferred 340 WOs to next 36-month interval. Cost reduction: £4.2M. Risk: 3 deferred items flagged as medium risk — requires reliability board approval.',
     created_at: ago(48), updated_at: ago(48) },
 
-  { id: 'ra-mock-012', agent_name: 'Refiner AI — Edge AI Gateway',
+  { id: 'ra-mock-012', agent_name: 'RefAIne — Edge AI Gateway',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 99.1, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Deployed vibration anomaly model to 14 edge devices — CDU compressor train',
@@ -99,7 +99,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Model deployed successfully to 14/14 devices. Average inference latency: 31ms. Watchdog heartbeat confirmed. Central rollback preserved. Live anomaly scoring active.',
     created_at: ago(54), updated_at: ago(54) },
 
-  { id: 'ra-mock-013', agent_name: 'Refiner AI — Equipment Health',
+  { id: 'ra-mock-013', agent_name: 'RefAIne — Equipment Health',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 89.7, status: 'approved', triggered_by: 'reliability@bp.com',
     action: 'RUL assessment — Feed Pump P-1102 estimated 45-day remaining useful life',
@@ -107,7 +107,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'RUL: 45 days (90% confidence interval: 38-56 days). Recommend overhaul within 30 days to avoid unplanned failure. Lead time for impeller: 18 days — order immediately.',
     created_at: ago(60), updated_at: ago(60) },
 
-  { id: 'ra-mock-014', agent_name: 'Refiner AI — Wave Tracker',
+  { id: 'ra-mock-014', agent_name: 'RefAIne — Wave Tracker',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 85.2, status: 'pending_review', triggered_by: 'system@eaios.bp.com',
     action: 'Production anomaly detected — CDU throughput 8.4% below target for 72h',
@@ -115,7 +115,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Anomaly pattern matches HX fouling event (similarity: 91% vs 2024 incident). Recommend inspect HX-201, HX-202 bundle fouling. Estimated throughput recovery: 6.2k bbl/day.',
     created_at: ago(68), updated_at: ago(68) },
 
-  { id: 'ra-mock-015', agent_name: 'Refiner AI — Yield Optimization',
+  { id: 'ra-mock-015', agent_name: 'RefAIne — Yield Optimization',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 89.4, status: 'approved', triggered_by: 'refinery-ops@bp.com',
     action: 'Crude blend optimised — distillate yield uplift 2.1% at Whiting Refinery',
@@ -123,7 +123,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Shift to 65% Arab Light, 35% WTI. Projected distillate yield +2.1% (18k bbl/day incremental). Margin improvement: $4.1M/month at current crack spread.',
     created_at: ago(76), updated_at: ago(76) },
 
-  { id: 'ra-mock-016', agent_name: 'Refiner AI — Spare Parts AI',
+  { id: 'ra-mock-016', agent_name: 'RefAIne — Spare Parts AI',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 94.6, status: 'auto_executed', triggered_by: 'system@eaios.bp.com',
     action: 'Critical stock alert — Mechanical seal kit SK-2204 below safety stock',
@@ -131,7 +131,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Purchase order PO-2026-11847 raised for 6 units at £340 each (total £2,040). Supplier: Flowserve. Expedite flag set — 14-day delivery requested. Stock risk: MEDIUM until delivery.',
     created_at: ago(84), updated_at: ago(84) },
 
-  { id: 'ra-mock-017', agent_name: 'Refiner AI — OT Data Monitor',
+  { id: 'ra-mock-017', agent_name: 'RefAIne — OT Data Monitor',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 92.3, status: 'pending_review', triggered_by: 'system@eaios.bp.com',
     action: 'Sensor calibration drift flagged — TT-4412 temperature transmitter, FCC unit',
@@ -139,7 +139,7 @@ export const REFINER_AI_MOCK_LOGS: AIAuditLog[] = [
     output_summary: 'Recommend recalibration at next opportunity. Tag TT-4412 readings with quality flag SUSPECT in DCS. Budget readings from TT-4413 in interim. Recalibration due within 14 days.',
     created_at: ago(92), updated_at: ago(92) },
 
-  { id: 'ra-mock-018', agent_name: 'Refiner AI — Alert Intelligence',
+  { id: 'ra-mock-018', agent_name: 'RefAIne — Alert Intelligence',
     domain_id: '05-manufacturing-plant-operations', model_version: 'claude-opus-4-6',
     confidence_score: 96.1, status: 'approved', triggered_by: 'operations@bp.com',
     action: 'Alert rationalisation completed — 34% reduction in actionable alert volume',
